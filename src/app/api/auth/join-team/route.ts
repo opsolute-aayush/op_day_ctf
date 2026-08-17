@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { signTeamToken, setTeamCookie } from "@/lib/auth";
 import { logActivity, buildTeamStatus, getSessionByCode } from "@/lib/game";
 import { parseMembers } from "@/lib/json";
+import { withKeyLock } from "@/lib/mutex";
 
 // Teams are pre-created by the Game Master (see /api/admin/teams) so the
 // team count always matches the physical groups at the event — players can
@@ -44,26 +45,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "That team doesn't exist. Ask the Game Master." }, { status: 404 });
   }
 
-  const members = parseMembers(team.members);
-  const now = new Date().toISOString();
-  const existing = members.find((m) => m.name.toLowerCase() === parsed.data.memberName.toLowerCase());
-  // Rejoining reuses the stored name's original casing and just refreshes
-  // presence; a genuinely new name gets its own entry.
-  const canonicalName = existing?.name ?? parsed.data.memberName;
-  if (existing) {
-    existing.lastSeenAt = now;
-  } else {
-    members.push({ name: canonicalName, lastSeenAt: now });
-  }
+  // Two teammates can submit within milliseconds of each other (e.g. both
+  // tapping "Join" right after scanning the same QR code) — without a lock,
+  // both requests read the same members list before either write lands, and
+  // whichever write finishes last silently erases the other's entry. Locking
+  // per team serializes the read-modify-write so nobody gets dropped.
+  const canonicalName = await withKeyLock(`team-members:${team.id}`, async () => {
+    const fresh = await prisma.team.findUniqueOrThrow({ where: { id: team.id }, select: { members: true } });
+    const members = parseMembers(fresh.members);
+    const now = new Date().toISOString();
+    const existing = members.find((m) => m.name.toLowerCase() === parsed.data.memberName.toLowerCase());
+    // Rejoining reuses the stored name's original casing and just refreshes
+    // presence; a genuinely new name gets its own entry.
+    const name = existing?.name ?? parsed.data.memberName;
+    if (existing) {
+      existing.lastSeenAt = now;
+    } else {
+      members.push({ name, lastSeenAt: now });
+    }
 
-  const data: { members: string; name?: string; color?: string } = { members: JSON.stringify(members) };
-  if (parsed.data.teamName && parsed.data.teamName !== team.name) {
-    data.name = parsed.data.teamName;
-  }
-  if (parsed.data.teamColor && parsed.data.teamColor.toUpperCase() !== team.color) {
-    data.color = parsed.data.teamColor.toUpperCase();
-  }
-  await prisma.team.update({ where: { id: team.id }, data });
+    const data: { members: string; name?: string; color?: string } = { members: JSON.stringify(members) };
+    if (parsed.data.teamName && parsed.data.teamName !== team.name) {
+      data.name = parsed.data.teamName;
+    }
+    if (parsed.data.teamColor && parsed.data.teamColor.toUpperCase() !== team.color) {
+      data.color = parsed.data.teamColor.toUpperCase();
+    }
+    await prisma.team.update({ where: { id: team.id }, data });
+    return name;
+  });
 
   await logActivity(session.id, team.id, "MEMBER_JOINED", { memberName: canonicalName });
 

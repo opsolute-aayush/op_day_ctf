@@ -184,7 +184,7 @@ export default function RegisterPage() {
                   {codeError}
                 </p>
               )}
-              <NeonButton type="submit" className="w-full" disabled={checkingCode}>
+              <NeonButton type="submit" className="w-full" disabled={checkingCode} data-sfx-nav>
                 {checkingCode ? "Checking…" : "Continue"}
               </NeonButton>
             </form>
@@ -337,7 +337,7 @@ export default function RegisterPage() {
                     </p>
                   )}
 
-                  <NeonButton type="submit" disabled={submitting || !selectedTeamId} className="w-full">
+                  <NeonButton type="submit" disabled={submitting || !selectedTeamId} className="w-full" data-sfx-nav>
                     {submitting ? "Linking…" : "Join Squad"}
                   </NeonButton>
                 </form>

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parseIntArray, parseMembers } from "@/lib/json";
+import { withKeyLock } from "@/lib/mutex";
 
 export async function getSessionById(sessionId: string) {
   return prisma.gameSession.findUnique({ where: { id: sessionId } });
@@ -15,15 +16,17 @@ export async function getSessionByCode(code: string) {
 // (e.g. rosters were cleared by an admin End Game/Reset since this browser
 // last joined).
 export async function touchMemberPresence(teamId: string, memberName: string): Promise<void> {
-  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { members: true } });
-  if (!team) return;
+  await withKeyLock(`team-members:${teamId}`, async () => {
+    const team = await prisma.team.findUnique({ where: { id: teamId }, select: { members: true } });
+    if (!team) return;
 
-  const members = parseMembers(team.members);
-  const match = members.find((m) => m.name === memberName);
-  if (!match) return;
+    const members = parseMembers(team.members);
+    const match = members.find((m) => m.name === memberName);
+    if (!match) return;
 
-  match.lastSeenAt = new Date().toISOString();
-  await prisma.team.update({ where: { id: teamId }, data: { members: JSON.stringify(members) } });
+    match.lastSeenAt = new Date().toISOString();
+    await prisma.team.update({ where: { id: teamId }, data: { members: JSON.stringify(members) } });
+  });
 }
 
 export async function getTotalLevels(teamId: string): Promise<number> {

@@ -175,7 +175,7 @@ export default function AdminPage() {
                       {loginError}
                     </p>
                   )}
-                  <NeonButton type="submit" className="w-full" disabled={loggingIn}>
+                  <NeonButton type="submit" className="w-full" disabled={loggingIn} data-sfx-nav>
                     {loggingIn ? "Authenticating…" : "Authenticate"}
                   </NeonButton>
                 </form>
@@ -198,7 +198,7 @@ export default function AdminPage() {
             </p>
           )}
         </div>
-        <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-neon-100/40 hover:text-danger-400">
+        <button onClick={handleLogout} data-sfx-nav className="flex items-center gap-1.5 text-xs text-neon-100/40 hover:text-danger-400">
           <LogOut className="h-4 w-4" /> Sign out
         </button>
       </header>
@@ -314,7 +314,7 @@ function SessionCreatedPanel({
           </div>
         </div>
 
-        <NeonButton variant="cyan" className="w-full" onClick={onContinue}>
+        <NeonButton variant="cyan" className="w-full" onClick={onContinue} data-sfx-nav>
           I&apos;ve saved this — Continue
         </NeonButton>
       </div>

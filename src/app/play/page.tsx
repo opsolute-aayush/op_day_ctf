@@ -219,6 +219,7 @@ export default function PlayPage() {
           </Link>
           <button
             onClick={leaveTeam}
+            data-sfx-nav
             className={`flex items-center gap-1.5 text-xs ${
               confirmLeave ? "text-danger-400" : "text-neon-100/40 hover:text-danger-400"
             }`}
@@ -283,6 +284,7 @@ export default function PlayPage() {
 
           <div
             onClick={() => status.finalUnlocked && !status.gameFinished && router.push("/final")}
+            data-sfx-nav={status.finalUnlocked && !status.gameFinished ? true : undefined}
             className={`terminal-panel rounded-lg p-4 transition-colors ${
               status.finalUnlocked && !status.gameFinished
                 ? "cursor-pointer border-cyan-400/50 hover:border-cyan-400"

@@ -121,7 +121,7 @@ export default function FinalPage() {
             </p>
           )}
 
-          <NeonButton onClick={handleSubmit} disabled={submitting || !preview.trim()} className="w-full">
+          <NeonButton onClick={handleSubmit} disabled={submitting || !preview.trim()} className="w-full" data-sfx-nav>
             {submitting ? "Transmitting…" : "Submit Final Sentence"}
           </NeonButton>
         </div>

@@ -393,32 +393,125 @@ body {
     text-shadow: none;
     transform: translate(0, 0);
   }
-  10% {
-    text-shadow: -2px 0 var(--magenta-400), 2px 0 var(--cyan-400);
-    transform: translate(-2px, 0);
+  8% {
+    text-shadow: -3px 0 var(--magenta-400), 3px 0 var(--cyan-400);
+    transform: translate(-3px, 1px) skewX(-6deg);
   }
-  20% {
+  16% {
     text-shadow: none;
     transform: translate(0, 0);
   }
-  32% {
-    text-shadow: 2px 0 var(--magenta-400), -2px 0 var(--cyan-400);
-    transform: translate(2px, 0);
+  26% {
+    text-shadow: 3px 0 var(--magenta-400), -3px 0 var(--cyan-400);
+    transform: translate(3px, -1px) skewX(4deg);
   }
-  42% {
+  34% {
+    text-shadow: none;
+    transform: translate(0, 0);
+  }
+  44% {
+    text-shadow: -4px 0 var(--magenta-400), 4px 0 var(--cyan-400);
+    transform: translate(-2px, 0) skewX(-3deg);
+  }
+  52% {
     text-shadow: none;
   }
-  58% {
-    text-shadow: -3px 0 var(--magenta-400), 3px 0 var(--cyan-400);
-    transform: translate(-1px, 0);
+  62% {
+    text-shadow: 2px 0 var(--magenta-400), -2px 0 var(--cyan-400);
+    transform: translate(1px, 1px);
   }
-  68% {
+  70% {
     text-shadow: none;
     transform: translate(0, 0);
   }
 }
 .glitch-text-burst {
-  animation: glitch-text-burst 0.5s steps(1, jump-end) both;
+  animation: glitch-text-burst 0.55s steps(1, jump-end) both;
+}
+
+/* RGB-split ghost copies of the loading text, sliced into shifting
+   horizontal bands and offset — the classic layered glitch-text trick. */
+.glitch-text-burst::before,
+.glitch-text-burst::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.glitch-text-burst::before {
+  color: var(--magenta-400);
+  animation: glitch-text-slice-1 0.55s steps(1, jump-end) both;
+}
+.glitch-text-burst::after {
+  color: var(--cyan-400);
+  animation: glitch-text-slice-2 0.55s steps(1, jump-end) both;
+}
+@keyframes glitch-text-slice-1 {
+  0%,
+  100% {
+    clip-path: inset(0 0 100% 0);
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  9% {
+    clip-path: inset(10% 0 60% 0);
+    transform: translate(-4px, 1px);
+    opacity: 0.9;
+  }
+  18% {
+    opacity: 0;
+  }
+  30% {
+    clip-path: inset(55% 0 10% 0);
+    transform: translate(4px, -1px);
+    opacity: 0.85;
+  }
+  40% {
+    opacity: 0;
+  }
+  55% {
+    clip-path: inset(30% 0 40% 0);
+    transform: translate(-3px, 0);
+    opacity: 0.8;
+  }
+  65% {
+    opacity: 0;
+  }
+}
+@keyframes glitch-text-slice-2 {
+  0%,
+  100% {
+    clip-path: inset(100% 0 0 0);
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  11% {
+    clip-path: inset(60% 0 15% 0);
+    transform: translate(4px, -1px);
+    opacity: 0.9;
+  }
+  20% {
+    opacity: 0;
+  }
+  34% {
+    clip-path: inset(15% 0 55% 0);
+    transform: translate(-4px, 1px);
+    opacity: 0.85;
+  }
+  44% {
+    opacity: 0;
+  }
+  60% {
+    clip-path: inset(45% 0 25% 0);
+    transform: translate(3px, 0);
+    opacity: 0.8;
+  }
+  70% {
+    opacity: 0;
+  }
 }
 
 @keyframes glitch-bar {
@@ -427,67 +520,116 @@ body {
     opacity: 0;
     transform: translateX(0) scaleX(1);
   }
-  8% {
+  6% {
+    opacity: 0.95;
+    transform: translateX(-8%) scaleX(1.04);
+  }
+  11% {
+    opacity: 0;
+  }
+  19% {
+    opacity: 0.85;
+    transform: translateX(6%) scaleX(0.96);
+  }
+  24% {
+    opacity: 0;
+  }
+  33% {
     opacity: 0.9;
-    transform: translateX(-6%) scaleX(1.03);
+    transform: translateX(-5%) scaleX(1.05);
   }
-  13% {
+  38% {
     opacity: 0;
   }
-  22% {
-    opacity: 0.8;
-    transform: translateX(4%) scaleX(0.97);
+  50% {
+    opacity: 0.65;
+    transform: translateX(4%) scaleX(0.98);
   }
-  27% {
-    opacity: 0;
-  }
-  40% {
-    opacity: 0.6;
-    transform: translateX(-3%) scaleX(1.01);
-  }
-  46% {
+  55% {
     opacity: 0;
   }
 }
 .glitch-bar {
   position: absolute;
-  left: 0;
-  right: 0;
-  animation: glitch-bar 0.5s steps(1, jump-end) both;
+  animation: glitch-bar 0.55s steps(1, jump-end) both;
+}
+
+@keyframes glitch-noise-block {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.55;
+  }
+  20% {
+    opacity: 0;
+  }
+  36% {
+    opacity: 0.4;
+  }
+  41% {
+    opacity: 0;
+  }
+  57% {
+    opacity: 0.5;
+  }
+  62% {
+    opacity: 0;
+  }
+}
+.glitch-noise-block {
+  position: absolute;
+  mix-blend-mode: difference;
+  animation: glitch-noise-block 0.55s steps(1, jump-end) both;
 }
 
 @keyframes glitch-reveal {
   0% {
     clip-path: inset(0 0 100% 0);
     opacity: 0;
-    transform: translateX(0);
+    transform: translateX(0) skewX(0deg);
+    filter: none;
   }
-  8% {
-    clip-path: inset(42% 0 34% 0);
+  6% {
+    clip-path: inset(38% 0 40% 0);
     opacity: 1;
-    transform: translateX(-2.5%);
+    transform: translateX(-3.5%) skewX(-3deg);
+    filter: drop-shadow(-3px 0 var(--magenta-400)) drop-shadow(3px 0 var(--cyan-400));
   }
-  16% {
-    clip-path: inset(8% 0 72% 0);
-    transform: translateX(2%);
+  12% {
+    clip-path: inset(6% 0 76% 0);
+    transform: translateX(3%) skewX(2deg);
+  }
+  18% {
+    clip-path: inset(70% 0 3% 0);
+    transform: translateX(-2.5%) skewX(-2deg);
+    filter: drop-shadow(-2px 0 var(--magenta-400)) drop-shadow(2px 0 var(--cyan-400));
   }
   24% {
-    clip-path: inset(63% 0 4% 0);
-    transform: translateX(-1.5%);
+    clip-path: inset(20% 0 55% 0);
+    transform: translateX(2%) skewX(1deg);
   }
-  32% {
+  30% {
+    clip-path: inset(45% 0 15% 0);
+    transform: translateX(-1%) skewX(0deg);
+    filter: drop-shadow(-1px 0 var(--magenta-400)) drop-shadow(1px 0 var(--cyan-400));
+  }
+  36% {
     clip-path: inset(0 0 0 0);
-    transform: translateX(0);
+    transform: translateX(0) skewX(0deg);
+    filter: none;
     opacity: 1;
   }
   100% {
     clip-path: inset(0 0 0 0);
-    transform: translateX(0);
+    transform: translateX(0) skewX(0deg);
+    filter: none;
     opacity: 1;
   }
 }
 .glitch-reveal {
-  animation: glitch-reveal 0.42s steps(1, jump-end) both;
+  animation: glitch-reveal 0.48s steps(1, jump-end) both;
 }
 
 @keyframes hud-corner-pulse {
