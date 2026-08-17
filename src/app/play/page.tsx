@@ -13,14 +13,8 @@ import PasswordModal from "@/components/PasswordModal";
 import TeamAvatar from "@/components/TeamAvatar";
 import TeamStatsPanel from "@/components/TeamStatsPanel";
 import ColorPicker from "@/components/ColorPicker";
-import {
-  playHelpSound,
-  playRightPasswordSound,
-  playRandomWrongPasswordSound,
-  startIntroMusic,
-  stopIntroMusic,
-} from "@/lib/sfx";
-import { playVideoClip } from "@/lib/videofx";
+import { startIntroMusic, stopIntroMusic } from "@/lib/sfx";
+import { playHelpFeedback, playWrongWordFeedback, playRightFeedback } from "@/lib/gameFeedback";
 
 export default function PlayPage() {
   const router = useRouter();
@@ -45,8 +39,7 @@ export default function PlayPage() {
 
   useEffect(() => {
     if (status?.activeHint && status.activeHint !== lastHintRef.current) {
-      playHelpSound();
-      playVideoClip("help");
+      playHelpFeedback();
     }
     lastHintRef.current = status?.activeHint ?? null;
   }, [status?.activeHint]);
@@ -150,12 +143,10 @@ export default function PlayPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      playRandomWrongPasswordSound();
-      playVideoClip("wrong_pass");
+      playWrongWordFeedback();
       return { ok: false, error: data.error ?? "Wrong word." };
     }
-    playRightPasswordSound();
-    playVideoClip("right_pass");
+    playRightFeedback();
     refresh();
     return { ok: true };
   }

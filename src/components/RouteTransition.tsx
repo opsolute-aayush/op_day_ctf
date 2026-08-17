@@ -3,14 +3,18 @@
 import { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
-/**
- * A "boot flicker" overlay plus content fade, both keyed by pathname and
- * driven by plain CSS @keyframes (globals.css) rather than Framer Motion's
- * `initial`/`animate` — those bake into the SSR'd HTML as an inline style,
- * so a full-screen opaque overlay would stay opaque until JS hydrates,
- * which on a slow connection reads as "the page shows nothing". CSS
- * animations start on paint, no JS required.
- */
+// Bar colors/positions are fixed (not random) so the burst is identical
+// every navigation but still reads as chaotic thanks to steps() timing and
+// staggered delays — see the glitch-bar/-text-burst/-reveal keyframes in
+// globals.css.
+const GLITCH_BARS = [
+  { top: "18%", height: "3px", color: "var(--neon-500)", delay: "0s" },
+  { top: "34%", height: "6px", color: "var(--cyan-400)", delay: "0.03s" },
+  { top: "51%", height: "2px", color: "var(--magenta-400)", delay: "0.06s" },
+  { top: "67%", height: "4px", color: "var(--neon-500)", delay: "0.02s" },
+  { top: "78%", height: "2px", color: "var(--cyan-400)", delay: "0.08s" },
+];
+
 export default function RouteTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
@@ -23,13 +27,20 @@ export default function RouteTransition({ children }: { children: ReactNode }) {
       >
         <div className="grid-bg" />
         <div className="route-boot-sweep absolute inset-x-0 h-20 bg-gradient-to-b from-transparent via-neon-500/25 to-transparent" />
-        <p className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-xs uppercase tracking-[0.4em] text-neon-500/90 text-glow">
+        {GLITCH_BARS.map((bar, i) => (
+          <div
+            key={i}
+            className="glitch-bar"
+            style={{ top: bar.top, height: bar.height, backgroundColor: bar.color, animationDelay: bar.delay }}
+          />
+        ))}
+        <p className="glitch-text-burst absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-xs uppercase tracking-[0.4em] text-neon-500/90 text-glow">
           {"> loading_module"}
           <span className="caret-blink" />
         </p>
       </div>
 
-      <div key={`content-${pathname}`} className="fade-slide-in flex min-h-full flex-1 flex-col">
+      <div key={`content-${pathname}`} className="glitch-reveal flex min-h-full flex-1 flex-col">
         {children}
       </div>
     </>

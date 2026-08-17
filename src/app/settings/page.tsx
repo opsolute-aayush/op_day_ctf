@@ -1,12 +1,12 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ArrowLeft, Volume2, VolumeX, Video, VideoOff, Music, Music4, Play } from "lucide-react";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import { getSettings, setSettings, subscribeToSettingsStore, DEFAULT_SETTINGS, type OpDaySettings } from "@/lib/settings";
-import { playRightPasswordSound } from "@/lib/sfx";
+import { playRightPasswordSound, startSettingsMusic, stopSettingsMusic } from "@/lib/sfx";
 
 function Toggle({ on, onToggle, label }: { on: boolean; onToggle: () => void; label: string }) {
   return (
@@ -59,6 +59,12 @@ export default function SettingsPage() {
     setSettings(patch);
   }
 
+  // Loops for as long as this page is open, and stops the moment it's left.
+  useEffect(() => {
+    startSettingsMusic();
+    return () => stopSettingsMusic();
+  }, []);
+
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-8">
       <header className="flex items-center gap-3">
@@ -93,6 +99,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => playRightPasswordSound()}
                 disabled={!settings.sfxEnabled}
+                data-sfx-exempt
                 className="flex shrink-0 items-center gap-1 rounded-md border border-neon-500/40 px-2 py-1 text-[11px] uppercase tracking-widest text-neon-400 hover:bg-neon-500/10 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <Play className="h-3 w-3" /> Test
@@ -133,7 +140,9 @@ export default function SettingsPage() {
               </span>
               <Toggle on={settings.musicEnabled} onToggle={() => update({ musicEnabled: !settings.musicEnabled })} label="Toggle background music" />
             </div>
-            <p className="text-xs text-neon-100/40">Standby-screen intro loop and the post-victory outro track.</p>
+            <p className="text-xs text-neon-100/40">
+              Standby-screen intro loop, the post-victory outro track, and this page&apos;s own ambient loop.
+            </p>
             <Slider
               value={settings.musicVolume}
               onChange={(v) => update({ musicVolume: v })}

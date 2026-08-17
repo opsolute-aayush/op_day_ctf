@@ -8,8 +8,7 @@ import { useTeamStatus } from "@/hooks/useTeamStatus";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import TeamAvatar from "@/components/TeamAvatar";
-import { playWinningSound, playOutroMusic } from "@/lib/sfx";
-import { playVideoClip } from "@/lib/videofx";
+import { playWinFeedback } from "@/lib/gameFeedback";
 
 function formatDuration(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -23,6 +22,7 @@ export default function WinnerPage() {
   const { status, loading, unauthorized } = useTeamStatus(5000);
   const [duration, setDuration] = useState<string | null>(null);
   const fired = useRef(false);
+  const outroTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (unauthorized) router.replace("/register");
@@ -43,11 +43,11 @@ export default function WinnerPage() {
   useEffect(() => {
     if (!status?.completed || fired.current) return;
     fired.current = true;
-    playWinningSound();
-    playVideoClip("winning");
-    // Outro music plays a beat after the celebration lands, once the
-    // fanfare/confetti has had a moment to breathe — not stacked on top of it.
-    const outroTimer = setTimeout(() => playOutroMusic(), 7000);
+    // The timer ref is only ever cleared on real unmount (see the effect
+    // below) — this effect itself re-runs on every status poll (new object
+    // every ~5s), and if its own cleanup cleared the timer, the 7s outro
+    // delay inside playWinFeedback would never survive to fire.
+    outroTimerRef.current = playWinFeedback();
 
     const colors = [status.team.color, "#39FF14", "#00F0FF"];
     const isFirst = status.isFirstToFinish;
@@ -61,9 +61,13 @@ export default function WinnerPage() {
     })();
 
     confetti({ particleCount: isFirst ? 150 : 80, spread: 100, origin: { y: 0.5 }, colors });
-
-    return () => clearTimeout(outroTimer);
   }, [status]);
+
+  useEffect(() => {
+    return () => {
+      if (outroTimerRef.current) clearTimeout(outroTimerRef.current);
+    };
+  }, []);
 
   if (loading || !status) {
     return (

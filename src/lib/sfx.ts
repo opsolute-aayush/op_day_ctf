@@ -1,13 +1,14 @@
 "use client";
 
 // Sounds auto-discover from public/sounds/<category>/ (wrong_pass, right_pass,
-// help, winning, intro, outro) via GET /api/sounds/<category> — drop a file
-// in, no registration needed. The four one-shot categories fall back to a
-// synthesized chime when empty; intro/outro (full music) just stay silent.
+// help, winning, intro, outro, button, settings) via GET /api/sounds/<category>
+// — drop a file in, no registration needed. The one-shot categories fall back
+// to a synthesized chime when empty; the full-track categories (intro, outro,
+// settings) just stay silent with no assets.
 
 import { getSettings, subscribeToSettings } from "@/lib/settings";
 
-type Category = "wrong_pass" | "right_pass" | "help" | "winning" | "intro" | "outro";
+type Category = "wrong_pass" | "right_pass" | "help" | "winning" | "intro" | "outro" | "button" | "settings";
 
 const fileListCache = new Map<Category, string[]>();
 const fileListInFlight = new Map<Category, Promise<string[]>>();
@@ -43,6 +44,8 @@ const lastPlayed: Record<Category, string | null> = {
   winning: null,
   intro: null,
   outro: null,
+  button: null,
+  settings: null,
 };
 
 function playFile(category: Category, filename: string, volume: number) {
@@ -168,65 +171,80 @@ export function playHelpSound(baseVolume = 0.5) {
   });
 }
 
-let introAudio: HTMLAudioElement | null = null;
-let introBaseVolume = 0.35;
-
-function applyMusicSettingsToIntro() {
-  if (!introAudio) return;
-  const settings = getSettings();
-  if (!settings.musicEnabled) {
-    introAudio.pause();
-    return;
-  }
-  introAudio.volume = introBaseVolume * settings.musicVolume;
-  if (introAudio.paused) {
-    void introAudio.play().catch(() => {
-      // Still blocked (no user gesture yet) — the next status poll retries.
-    });
-  }
-}
-
-if (typeof window !== "undefined") {
-  subscribeToSettings(applyMusicSettingsToIntro);
-}
-
 /**
- * Loops background music while a team waits on the Game Master to start the
- * hunt. Idempotent — safe to call on every status poll without restarting
- * the track, since it no-ops while a track is already playing.
+ * A looping background-music channel for one category — start() is
+ * idempotent (safe to call repeatedly, e.g. on every status poll, without
+ * restarting an already-playing track) and reacts live to the Music
+ * setting (mute/volume) without needing to be restarted.
  */
-export async function startIntroMusic(baseVolume = 0.35) {
-  introBaseVolume = baseVolume;
-  if (introAudio) {
-    applyMusicSettingsToIntro();
-    return;
-  }
-  const settings = getSettings();
-  if (!settings.musicEnabled) return;
+function createLoopingMusicChannel(category: Category) {
+  let audio: HTMLAudioElement | null = null;
+  let baseVolume = 0.35;
 
-  const files = await getFileList("intro");
-  if (files.length === 0) return;
-  const filename = files[Math.floor(Math.random() * files.length)];
-  try {
-    const audio = new Audio(`/sounds/intro/${encodeURIComponent(filename)}`);
-    audio.loop = true;
-    audio.volume = introBaseVolume * settings.musicVolume;
-    introAudio = audio;
-    void audio.play().catch(() => {
-      // Autoplay blocked before any user gesture landed — safe to ignore.
-      introAudio = null;
-    });
-  } catch {
-    introAudio = null;
+  function applySettings() {
+    if (!audio) return;
+    const settings = getSettings();
+    if (!settings.musicEnabled) {
+      audio.pause();
+      return;
+    }
+    audio.volume = baseVolume * settings.musicVolume;
+    if (audio.paused) {
+      void audio.play().catch(() => {
+        // Still blocked (no user gesture yet) — the next start() call retries.
+      });
+    }
   }
+
+  if (typeof window !== "undefined") {
+    subscribeToSettings(applySettings);
+  }
+
+  async function start(volume = 0.35) {
+    baseVolume = volume;
+    if (audio) {
+      applySettings();
+      return;
+    }
+    const settings = getSettings();
+    if (!settings.musicEnabled) return;
+
+    const files = await getFileList(category);
+    if (files.length === 0) return;
+    const filename = files[Math.floor(Math.random() * files.length)];
+    try {
+      const el = new Audio(`/sounds/${category}/${encodeURIComponent(filename)}`);
+      el.loop = true;
+      el.volume = baseVolume * settings.musicVolume;
+      audio = el;
+      void el.play().catch(() => {
+        // Autoplay blocked before any user gesture landed — safe to ignore.
+        audio = null;
+      });
+    } catch {
+      audio = null;
+    }
+  }
+
+  function stop() {
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    audio = null;
+  }
+
+  return { start, stop };
 }
 
-export function stopIntroMusic() {
-  if (!introAudio) return;
-  introAudio.pause();
-  introAudio.currentTime = 0;
-  introAudio = null;
-}
+const introChannel = createLoopingMusicChannel("intro");
+/** Loops while a team waits on the Game Master to start the hunt. */
+export const startIntroMusic = introChannel.start;
+export const stopIntroMusic = introChannel.stop;
+
+const settingsChannel = createLoopingMusicChannel("settings");
+/** Loops while a player has /settings open. */
+export const startSettingsMusic = settingsChannel.start;
+export const stopSettingsMusic = settingsChannel.stop;
 
 /** Fire-and-forget, plays once — call ~7s after a team fully completes the hunt. */
 export function playOutroMusic(baseVolume = 0.5) {
@@ -235,5 +253,15 @@ export function playOutroMusic(baseVolume = 0.5) {
   const volume = baseVolume * settings.musicVolume;
   void playRandomFromCategory("outro", volume, () => {
     // No outro track dropped in yet — nothing meaningful to synthesize.
+  });
+}
+
+/** Generic UI click feedback — see ClickSound.tsx for where this fires globally. */
+export function playButtonClickSound(baseVolume = 0.3) {
+  const settings = getSettings();
+  if (!settings.sfxEnabled) return;
+  const volume = baseVolume * settings.sfxVolume;
+  void playRandomFromCategory("button", volume, () => {
+    playSynthChime([[1400, 0, 0.045]], volume);
   });
 }
