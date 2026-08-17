@@ -29,6 +29,19 @@ export async function touchMemberPresence(teamId: string, memberName: string): P
   });
 }
 
+// Called on Leave Team so the register page's live roster stops showing
+// someone who's actually gone, instead of just leaving them there until
+// their presence heartbeat times out.
+export async function removeMemberPresence(teamId: string, memberName: string): Promise<void> {
+  await withKeyLock(`team-members:${teamId}`, async () => {
+    const team = await prisma.team.findUnique({ where: { id: teamId }, select: { members: true } });
+    if (!team) return;
+
+    const members = parseMembers(team.members).filter((m) => m.name !== memberName);
+    await prisma.team.update({ where: { id: teamId }, data: { members: JSON.stringify(members) } });
+  });
+}
+
 export async function getTotalLevels(teamId: string): Promise<number> {
   const count = await prisma.levelConfig.count({ where: { teamId } });
   return count + 1; // + implicit final sentence-assembly level

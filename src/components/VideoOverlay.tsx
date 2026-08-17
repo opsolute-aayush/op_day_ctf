@@ -6,10 +6,16 @@ import { subscribeToVideoClips, VideoClipEventDetail } from "@/lib/videofx";
 
 const MAX_CLIP_MS = 9000;
 
+// wrong_pass and winning stay anchored bottom-center (unchanged); every other
+// category — right_pass being the one actually in use — pops up top-left,
+// next to the level list on /play, instead of covering the middle of the
+// screen.
+const TOP_LEFT_CATEGORIES: VideoClipEventDetail["category"][] = ["right_pass", "help"];
+
 /**
  * Global pop-up player for playVideoClip() clips, mounted once in the root
  * layout. Every category is green-screen footage, so all of them go through
- * ChromaKeyVideo and anchor to the bottom-center of the viewport.
+ * ChromaKeyVideo.
  */
 export default function VideoOverlay() {
   const [clip, setClip] = useState<VideoClipEventDetail | null>(null);
@@ -32,16 +38,22 @@ export default function VideoOverlay() {
     setClip(null);
   }
 
+  const topLeft = clip ? TOP_LEFT_CATEGORIES.includes(clip.category) : false;
+
   return (
     <AnimatePresence>
       {clip && (
         <motion.div
           key={clip.src}
-          initial={{ opacity: 0, y: 30, scale: 0.92 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.92 }}
+          initial={topLeft ? { opacity: 0, x: -30, scale: 0.92 } : { opacity: 0, y: 30, scale: 0.92 }}
+          animate={topLeft ? { opacity: 1, x: 0, scale: 1 } : { opacity: 1, y: 0, scale: 1 }}
+          exit={topLeft ? { opacity: 0, x: -20, scale: 0.92 } : { opacity: 0, y: 20, scale: 0.92 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center"
+          className={
+            topLeft
+              ? "pointer-events-none fixed left-4 top-20 z-50 sm:left-6 sm:top-24"
+              : "pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center"
+          }
         >
           <ChromaKeyVideo src={clip.src} onEnded={close} className="h-52 w-52 sm:h-72 sm:w-72" />
         </motion.div>

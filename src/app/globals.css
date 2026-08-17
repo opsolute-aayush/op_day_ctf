@@ -105,45 +105,29 @@ body {
   }
 }
 
-/* Ambient debris (AmbientGlitch.tsx) — held invisible almost the whole
-   loop, hard-cut in for a beat, hard-cut back out. steps() keeps it a
-   flicker, not a fade, so it reads as a glitch instead of a pulse. */
+/* Ambient debris (AmbientGlitch.tsx) — held invisible almost the whole loop,
+   with one slow, smooth fade in/out per cycle. A gentle ease reads as a
+   quiet background presence; the earlier hard steps()-cut version read as
+   a strobe and fought for attention against the actual UI. */
 @keyframes ambient-glitch-flicker {
   0%,
+  78%,
   100% {
     opacity: 0;
   }
-  38% {
-    opacity: 0;
-  }
-  40% {
-    opacity: 0.5;
-  }
-  43% {
-    opacity: 0.1;
-  }
-  45% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 0;
-  }
-  92% {
-    opacity: 0;
+  86% {
+    opacity: 0.3;
   }
   94% {
-    opacity: 0.35;
-  }
-  97% {
     opacity: 0;
   }
 }
 .ambient-glitch-node {
   position: absolute;
   animation-name: ambient-glitch-flicker;
-  animation-timing-function: steps(1, jump-end);
+  animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
-  text-shadow: 0 0 6px currentColor;
+  text-shadow: 0 0 4px currentColor;
 }
 
 .terminal-panel {
