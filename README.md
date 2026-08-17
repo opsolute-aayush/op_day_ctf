@@ -201,7 +201,75 @@ serverless platform (e.g. Vercel's default) unless you first port to
 Postgres, since the SQLite file (and the in-memory rate limiter) won't
 survive across serverless invocations/instances.
 
-## Deployment (Render example)
+## Deploying with Docker
+
+The `Dockerfile` builds a single self-contained image — no separate database
+or cache to provision. It's a multi-stage build (build stage has the full
+toolchain; the shipped image only has production dependencies + the
+compiled app), runs as a non-root user, and the entrypoint
+(`docker-entrypoint.sh`) syncs the SQLite schema and seeds sample data on
+first boot only, every time the container starts.
+
+```bash
+docker build -t opday-ctf .
+
+docker run -d -p 3000:3000 \
+  -e JWT_SECRET="$(openssl rand -base64 48)" \
+  -e ADMIN_KEY="$(openssl rand -hex 8)" \
+  -v opday_data:/app/data \
+  opday-ctf
+```
+
+(or `npm run docker:build` / `npm run docker:run`, which do the same thing)
+
+- **`-v opday_data:/app/data`** is required — the SQLite file lives at
+  `/app/data/prod.db` inside the container. Without a volume, every restart
+  starts from an empty database. With it, `docker rm` + `docker run` again
+  against the same volume name picks up right where you left off (verified:
+  teams, progress, and puzzles all survive container recreation).
+- **`JWT_SECRET`/`ADMIN_KEY`** are required — the container refuses to start
+  and prints a clear error if either is missing, instead of failing
+  confusingly on the first request.
+- Set **`SEED_ON_BOOT=false`** to skip auto-seeding entirely (e.g. once
+  you're running a real event and don't want any sample data ever inserted,
+  even into a fresh volume).
+- The app listens on `$PORT` (defaults to `3000`) — pass `-e PORT=8080` to
+  change it, matching whatever port your cloud platform expects.
+
+### Pull-and-run on a cloud host
+
+Build once, push to a registry, then any cloud VM/container service just
+pulls and runs — no repo checkout or Node.js install needed on the host.
+
+```bash
+docker build -t <registry>/<you>/opday-ctf:latest .
+docker push <registry>/<you>/opday-ctf:latest
+```
+
+Then on the target host/platform:
+
+```bash
+docker pull <registry>/<you>/opday-ctf:latest
+docker run -d -p 3000:3000 \
+  -e JWT_SECRET="..." -e ADMIN_KEY="..." \
+  -v opday_data:/app/data \
+  <registry>/<you>/opday-ctf:latest
+```
+
+This works as-is on any platform that runs a plain Docker image with a
+persistent volume — a VPS with Docker installed, Fly.io (`fly volumes
+create` + `fly deploy`), Render/Railway (Docker deploy + a persistent disk
+mounted at `/app/data`), or a self-managed VM. Since the container is a
+single Node process talking to a local SQLite file (see
+[Scaling notes](#scaling-notes)), avoid platforms that run multiple
+replicas of the same container or wipe the filesystem between requests
+(e.g. bare serverless functions) unless you first port to Postgres.
+
+**Updating a running deployment:** rebuild and push a new tag, then on the
+host `docker pull` the new tag and `docker run` again with the *same*
+volume name — your data carries over since it never lived in the image.
+
+## Deployment (Render example, without Docker)
 
 1. Push this repo to GitHub.
 2. Create a new Render **Web Service** from the repo.
@@ -217,6 +285,9 @@ survive across serverless invocations/instances.
 ## Project structure
 
 ```
+Dockerfile                Multi-stage build → single self-contained runtime image
+docker-entrypoint.sh       Schema sync + first-boot seed, runs before the server starts
+run.sh                     Single-command local entry point (install/setup/seed/launch)
 prisma/
   schema.prisma          Team / GameConfig / LevelConfig / TeamProgress / ActivityLog
   seed.ts                 Sample 5-team, 4-level demo puzzle

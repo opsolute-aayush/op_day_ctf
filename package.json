@@ -11,7 +11,9 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:reset": "prisma db push --force-reset && npm run db:seed"
+    "db:reset": "prisma db push --force-reset && npm run db:seed",
+    "docker:build": "docker build -t opday-ctf .",
+    "docker:run": "docker run -p 3000:3000 -e JWT_SECRET=\"$(openssl rand -base64 48)\" -e ADMIN_KEY=\"$(openssl rand -hex 8)\" -v opday_data:/app/data opday-ctf"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -30,6 +32,7 @@
     "prisma": "^6.19.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "tsx": "^4.23.12",
     "zod": "^4.4.3",
     "zustand": "^5.0.15"
   },
@@ -44,7 +47,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "tailwindcss": "^4",
-    "tsx": "^4.23.12",
     "typescript": "^5"
   },
   "allowScripts": {
