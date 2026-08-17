@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Trophy, Radio } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import TeamAvatar from "@/components/TeamAvatar";
@@ -41,12 +42,16 @@ export default function TeamStatsPanel({ highlightTeamNumber }: { highlightTeamN
       </div>
       <div className="space-y-2.5">
         {stats === null && <p className="text-sm text-neon-100/30">loading…</p>}
-        {stats?.map((team) => {
+        {stats?.map((team, index) => {
           const pct = Math.min(100, Math.round((team.currentLevel / team.totalLevels) * 100));
           const isYou = team.teamNumber === highlightTeamNumber;
           return (
-            <div
+            <motion.div
               key={team.teamNumber}
+              layout
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05, ease: "easeOut" }}
               className={`rounded-md border p-2.5 ${isYou ? "border-current bg-white/5" : "border-panel-border"}`}
               style={isYou ? { color: team.color, borderColor: team.color } : undefined}
             >
@@ -69,7 +74,7 @@ export default function TeamStatsPanel({ highlightTeamNumber }: { highlightTeamN
                   {team.completed ? "done" : `${team.currentLevel}/${team.totalLevels}`}
                 </span>
               </div>
-            </div>
+            </motion.div>
           );
         })}
         {stats?.length === 0 && <p className="text-sm text-neon-100/30">No squads yet.</p>}

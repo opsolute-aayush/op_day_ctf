@@ -16,7 +16,7 @@ run on a laptop on the office wifi with zero external services.
 | Database | SQLite via Prisma | Zero setup — no Postgres/Supabase account needed. `schema.sql` documents the exact shape and how to port to Postgres later if you outgrow it. |
 | Auth | JWT in httpOnly cookies | Players get a session token when they join a team; no passwords, no accounts to manage. Admin gets a separate JWT after entering the master key. |
 | "Realtime" | Polling (2–5s) | Simpler and more robust than WebSockets/SSE for a few dozen phones on venue wifi — no reconnect logic, works behind any proxy. Good enough for a scoreboard that updates every few seconds. See [Scaling notes](#scaling-notes) if you want true push updates later. |
-| Styling | Tailwind CSS v4 + Framer Motion | Cyberpunk/hacker terminal aesthetic: scanlines, glitch text, neon glow, monospace fonts. |
+| Styling | Tailwind CSS v4 + Framer Motion | Cyberpunk/hacker terminal aesthetic: scanlines, glitch text, neon glow, monospace fonts. Framer Motion also drives page-to-page transitions (`src/components/RouteTransition.tsx`), panel/card entrance animations, and button hover/tap feedback throughout. |
 | Rate limiting | In-memory sliding window | No Redis needed for a single-process deployment. See [Scaling notes](#scaling-notes). |
 
 ## Game model
@@ -40,8 +40,10 @@ password they overheard at a shared physical location.
   call). Decoding it gives a team its own Level 1 password.
 - **Levels 1..N-1** each belong to one team and have: a password
   (bcrypt-hashed), a location clue (revealed only after that team unlocks
-  it), a word reward, and an optional hint (only shown if the Game Master
-  manually releases it for that team).
+  it), a word reward, and an optional hint — shown either when the Game
+  Master manually releases it, or when the team spends one of their own
+  limited self-service hint requests (see
+  [Self-service hints](#self-service-hints)).
 - **Level N** (the final level) is implicit per team — it's just
   `count(that team's LevelConfig rows) + 1`. There's no config row for it:
   it's the sentence-assembly screen, unlocked once that team clears every
@@ -144,6 +146,9 @@ causes confusion about which physical group is which.
    option is shown to them. Multiple people can join the same team from
    their own phones and they'll all see and drive the same shared progress
    live. They'll land on a "waiting for Game Master" screen until you start.
+   If someone joined the wrong team, **Leave Team** on `/play` (with a
+   confirm-again step, so it's not an accidental one-click) clears their
+   session and sends them back to `/register` to pick a different one.
 6. Hit **Start** in the admin **Game Control** tab. Teams can now decode
    their whiteboard clue and start entering passwords at `/play`.
 7. Watch progress live on the admin **Overview** tab (leaderboard + activity
@@ -182,6 +187,24 @@ highlighted. It's a real sidebar next to the level list on wide screens and
 stacks below it on mobile. Deliberately excludes anything sensitive
 (attempts, collected words, clues, member names) — it's just a friendly
 "who's ahead" scoreboard, not a way to leak puzzle content.
+
+## Self-service hints
+
+Teams don't have to wait on the Game Master for help — an **"Ask for a
+Hint"** button appears on a team's active level (`src/components/LevelCard.tsx`)
+whenever that level actually has a hint configured. Each team gets
+**2 hint requests for the whole hunt** (`TeamProgress.helpCreditsRemaining`,
+resettable via the admin's **Reset** action), tracked and decremented
+per-team by `POST /api/game/help`. A few rules that keep it fair:
+
+- Re-opening a hint that's already showing for the current level is free —
+  it only ever charges a credit the first time a level's hint is revealed.
+- The admin's own manual hint release (leaderboard's **Hint** button) is a
+  completely separate, unlimited mechanism and never touches a team's
+  self-service budget.
+- Revealing a hint (either way) plays the `help/` sound effect automatically
+  on the team's screen — no separate wiring needed, it's just watching for
+  the hint becoming visible.
 
 ## Sound effects
 
@@ -409,18 +432,20 @@ src/
 
 ## Sample puzzles (from `npm run db:seed`)
 
-Five sample teams are seeded, each with its own independent 4-level puzzle
-and its own final sentence — run `npm run db:seed` and the console prints
+Five sample teams are seeded — named generically "Team 1".."Team 5", since
+team names are player-owned and never pre-defined (see
+[Game model](#game-model)) — each with its own independent 4-level puzzle
+and its own final sentence. Run `npm run db:seed` and the console prints
 every team's plaintext level passwords (for the physical cards) plus their
-sentence. Example (yours will differ per team):
+sentence:
 
-| Team | Level 1 | Level 2 | Level 3 | Level 4 | Winning sentence |
+| Team # | Level 1 | Level 2 | Level 3 | Level 4 | Winning sentence |
 |---|---|---|---|---|---|
-| Code Breakers | `ALPHA` | `BEANSTALK` | `CIRCUIT` | `FIREWALL` | THE SECRET KEY LIES BEHIND THE OLD SERVER RACK |
-| Byte Bandits | `BRAVO` | `PIXELATE` | `LATTICE` | `SKYLINE` | FOLLOW THE BLUE WIRE TO THE ROOFTOP GENERATOR |
-| Null Pointers | `CHARLIE` | `SEGFAULT` | `RECURSION` | `ESPRESSO` | THE PASSWORD WAS HIDDEN INSIDE THE COFFEE MACHINE ALL ALONG |
-| Cyber Ninjas | `DELTA` | `KEYSTONE` | `MAINFRAME` | `BLUEPRINT` | TEAMWORK UNLOCKS EVERY DOOR IN THIS ENTIRE BUILDING |
-| Kernel Panic | `ECHO` | `STACKTRACE` | `NULLBYTE` | `CHECKSUM` | PANIC LESS DEBUG MORE AND THE FLAG IS YOURS |
+| 1 | `ALPHA` | `BEANSTALK` | `CIRCUIT` | `FIREWALL` | THE SECRET KEY LIES BEHIND THE OLD SERVER RACK |
+| 2 | `BRAVO` | `PIXELATE` | `LATTICE` | `SKYLINE` | FOLLOW THE BLUE WIRE TO THE ROOFTOP GENERATOR |
+| 3 | `CHARLIE` | `SEGFAULT` | `RECURSION` | `ESPRESSO` | THE PASSWORD WAS HIDDEN INSIDE THE COFFEE MACHINE ALL ALONG |
+| 4 | `DELTA` | `KEYSTONE` | `MAINFRAME` | `BLUEPRINT` | TEAMWORK UNLOCKS EVERY DOOR IN THIS ENTIRE BUILDING |
+| 5 | `ECHO` | `STACKTRACE` | `NULLBYTE` | `CHECKSUM` | PANIC LESS DEBUG MORE AND THE FLAG IS YOURS |
 
 Edit any of this — passwords, clues, words, hints, or the sentence — for any
 team at any time from the admin **Team Puzzles** tab. See `prisma/seed.ts`

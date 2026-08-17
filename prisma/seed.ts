@@ -15,21 +15,19 @@ interface LevelSeed {
 }
 
 interface TeamSeed {
-  name: string;
   color: string;
-  members: string[];
   levels: LevelSeed[];
   winningSentence: string;
 }
 
 // Every team gets its own independent puzzle — different passwords, clues,
 // words, and final sentence — so teams can't just copy answers off each
-// other during the physical scavenger hunt.
+// other during the physical scavenger hunt. Team names are deliberately NOT
+// seeded here — they default to "Team N" (same as the admin's own zero-input
+// "Add Team" button) and it's up to whoever joins to name their own squad.
 const TEAMS: TeamSeed[] = [
   {
-    name: "Code Breakers",
     color: "#39FF14",
-    members: ["Asha", "Rohit"],
     winningSentence: "THE SECRET KEY LIES BEHIND THE OLD SERVER RACK",
     levels: [
       {
@@ -59,9 +57,7 @@ const TEAMS: TeamSeed[] = [
     ],
   },
   {
-    name: "Byte Bandits",
     color: "#00F0FF",
-    members: ["Meera", "Karan", "Divya"],
     winningSentence: "FOLLOW THE BLUE WIRE TO THE ROOFTOP GENERATOR",
     levels: [
       {
@@ -91,9 +87,7 @@ const TEAMS: TeamSeed[] = [
     ],
   },
   {
-    name: "Null Pointers",
     color: "#FF2ECC",
-    members: ["Vikram", "Sana"],
     winningSentence: "THE PASSWORD WAS HIDDEN INSIDE THE COFFEE MACHINE ALL ALONG",
     levels: [
       {
@@ -123,9 +117,7 @@ const TEAMS: TeamSeed[] = [
     ],
   },
   {
-    name: "Cyber Ninjas",
     color: "#FFD400",
-    members: ["Priya", "Arjun"],
     winningSentence: "TEAMWORK UNLOCKS EVERY DOOR IN THIS ENTIRE BUILDING",
     levels: [
       {
@@ -155,9 +147,7 @@ const TEAMS: TeamSeed[] = [
     ],
   },
   {
-    name: "Kernel Panic",
     color: "#FF6A00",
-    members: ["Nikhil", "Ishaan", "Tara"],
     winningSentence: "PANIC LESS DEBUG MORE AND THE FLAG IS YOURS",
     levels: [
       {
@@ -201,12 +191,13 @@ async function main() {
 
   for (let teamIndex = 0; teamIndex < TEAMS.length; teamIndex++) {
     const teamSeed = TEAMS[teamIndex];
+    const teamNumber = teamIndex + 1;
     const team = await prisma.team.create({
       data: {
-        teamNumber: teamIndex + 1,
-        name: teamSeed.name,
+        teamNumber,
+        name: `Team ${teamNumber}`,
         color: teamSeed.color,
-        members: JSON.stringify(teamSeed.members),
+        members: "[]",
         winningSentence: teamSeed.winningSentence,
         progress: { create: {} },
       },
@@ -226,7 +217,7 @@ async function main() {
       });
     }
 
-    console.log(`\nTeam ${teamIndex + 1} — ${teamSeed.name}`);
+    console.log(`\nTeam ${teamNumber}`);
     teamSeed.levels.forEach((l, i) => console.log(`  Level ${i + 1}: "${l.password}"`));
     console.log(`  Winning sentence: "${teamSeed.winningSentence}"`);
   }

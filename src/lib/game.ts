@@ -60,10 +60,17 @@ export async function buildTeamStatus(teamId: string) {
 
   const finalUnlocked = progress.currentLevel >= totalLevels;
 
+  const currentLevelConfig = levelConfigs.find((lc) => lc.levelNumber === progress.currentLevel);
+
   const activeHint =
     progress.hintReleasedLevel !== null && progress.hintReleasedLevel === progress.currentLevel
-      ? levelConfigs.find((lc) => lc.levelNumber === progress.currentLevel)?.hint ?? null
+      ? currentLevelConfig?.hint ?? null
       : null;
+
+  // Whether a hint *exists* for the current level (without revealing it) —
+  // lets the client only show the "Ask for a Hint" button when it would
+  // actually do something.
+  const hintAvailable = Boolean(currentLevelConfig?.hint) && !finalUnlocked;
 
   return {
     team: {
@@ -83,6 +90,8 @@ export async function buildTeamStatus(teamId: string) {
     unlockedClues,
     finalUnlocked,
     activeHint,
+    hintAvailable,
+    helpCreditsRemaining: progress.helpCreditsRemaining,
     completed: progress.completed,
     completedAt: progress.completedAt,
     gameStartedAt: config.startedAt,

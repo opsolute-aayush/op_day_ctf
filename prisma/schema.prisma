@@ -59,7 +59,8 @@ model TeamProgress {
   currentLevel      Int       @default(1)
   unlockedLevels    String    @default("[0]") // JSON int array
   collectedWords    String    @default("[]") // JSON string array, in level order
-  hintReleasedLevel Int? // level number the Game Master has released a hint for
+  hintReleasedLevel Int? // level number a hint has been released for (self-service or admin)
+  helpCreditsRemaining Int  @default(2) // self-service "Help" button uses left this game
   completed         Boolean   @default(false)
   completedAt       DateTime?
   updatedAt         DateTime  @updatedAt

@@ -21,6 +21,8 @@ export interface TeamStatus {
   unlockedClues: UnlockedClue[];
   finalUnlocked: boolean;
   activeHint: string | null;
+  hintAvailable: boolean;
+  helpCreditsRemaining: number;
   completed: boolean;
   completedAt: string | null;
   gameStartedAt: string | null;

@@ -44,6 +44,7 @@ export async function GET() {
       unlockedLevels,
       collectedWords,
       attempts: attemptsByTeam.get(team.id) ?? 0,
+      helpCreditsRemaining: progress?.helpCreditsRemaining ?? 2,
       completed: progress?.completed ?? false,
       completedAt: progress?.completedAt ?? null,
       isFirstToFinish: config.winningTeamId === team.id,

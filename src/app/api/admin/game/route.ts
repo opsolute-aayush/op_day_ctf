@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
         completed: false,
         completedAt: null,
         hintReleasedLevel: null,
+        helpCreditsRemaining: 2,
       },
     }),
     prisma.gameConfig.update({

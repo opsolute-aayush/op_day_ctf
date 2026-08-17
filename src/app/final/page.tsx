@@ -15,7 +15,9 @@ export default function FinalPage() {
   const [order, setOrder] = useState<string[] | null>(null);
   const [seededForTeam, setSeededForTeam] = useState<string | null>(null);
   const [manualText, setManualText] = useState("");
-  const [useManual, setUseManual] = useState(false);
+  // Typing is the default — drag-and-drop is opt-in for those who want it,
+  // since a plain text box is the more familiar/less confusing starting point.
+  const [useManual, setUseManual] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -36,6 +38,7 @@ export default function FinalPage() {
   if (status && seededForTeam !== status.team.id) {
     setSeededForTeam(status.team.id);
     setOrder(status.collectedWords);
+    setManualText(status.collectedWords.join(" "));
   }
 
   if (loading || !status || order === null) {
@@ -76,7 +79,7 @@ export default function FinalPage() {
         <Flag className="mx-auto h-8 w-8 text-cyan-400" />
         <GlitchTitle text="Final Assembly" className="text-2xl" as="h1" />
         <p className="text-sm text-neon-100/60">
-          Drag your collected words into the correct order, then transmit.
+          Type your assembled sentence below, then transmit.
         </p>
       </header>
 

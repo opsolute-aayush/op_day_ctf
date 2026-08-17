@@ -20,6 +20,9 @@ export default function PlayPage() {
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [requestingHint, setRequestingHint] = useState(false);
+  const [hintError, setHintError] = useState<string | null>(null);
   const lastHintRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -50,7 +53,12 @@ export default function PlayPage() {
   const passwordLevelsCount = status.totalLevels - 1;
   const isWaitingForStart = !status.gameActive && status.currentLevel === 1 && status.unlockedLevels.length <= 1 && !status.gameFinished;
 
-  async function logout() {
+  async function leaveTeam() {
+    if (!confirmLeave) {
+      setConfirmLeave(true);
+      setTimeout(() => setConfirmLeave(false), 4000);
+      return;
+    }
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/register");
   }
@@ -78,6 +86,22 @@ export default function PlayPage() {
     }
     setRenaming(false);
     refresh();
+  }
+
+  async function requestHint() {
+    setRequestingHint(true);
+    setHintError(null);
+    try {
+      const res = await fetch("/api/game/help", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setHintError(data.error ?? "Couldn't get a hint.");
+        return;
+      }
+      refresh();
+    } finally {
+      setRequestingHint(false);
+    }
   }
 
   return (
@@ -118,8 +142,13 @@ export default function PlayPage() {
             {renameError && <p className="text-xs text-danger-400">{renameError}</p>}
           </div>
         </div>
-        <button onClick={logout} className="flex shrink-0 items-center gap-1.5 text-xs text-neon-100/40 hover:text-danger-400">
-          <LogOut className="h-4 w-4" /> Sign out
+        <button
+          onClick={leaveTeam}
+          className={`flex shrink-0 items-center gap-1.5 text-xs ${
+            confirmLeave ? "text-danger-400" : "text-neon-100/40 hover:text-danger-400"
+          }`}
+        >
+          <LogOut className="h-4 w-4" /> {confirmLeave ? "Confirm leave?" : "Leave Team"}
         </button>
       </header>
 
@@ -145,6 +174,11 @@ export default function PlayPage() {
         </TerminalPanel>
       ) : (
         <div className="space-y-3">
+          {hintError && (
+            <p className="rounded-md border border-danger-400/40 bg-danger-400/10 px-3 py-2 text-sm text-danger-400">
+              {hintError}
+            </p>
+          )}
           {Array.from({ length: passwordLevelsCount }, (_, i) => i + 1).map((levelNumber, index) => {
             const unlocked = status.unlockedLevels.includes(levelNumber);
             const clue = status.unlockedClues.find((c) => c.levelNumber === levelNumber);
@@ -161,6 +195,10 @@ export default function PlayPage() {
                 locationClue={clue?.locationClue}
                 wordReward={clue?.wordReward}
                 hint={state === "active" ? status.activeHint : null}
+                hintAvailable={status.hintAvailable}
+                helpCreditsRemaining={status.helpCreditsRemaining}
+                onRequestHint={requestHint}
+                requestingHint={requestingHint}
                 onClick={() => setActiveModalLevel(levelNumber)}
               />
             );

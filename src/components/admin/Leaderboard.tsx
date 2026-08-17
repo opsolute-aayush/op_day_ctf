@@ -15,6 +15,7 @@ interface LeaderboardRow {
   currentLevel: number;
   totalLevels: number;
   attempts: number;
+  helpCreditsRemaining: number;
   completed: boolean;
   isFirstToFinish: boolean;
   updatedAt: string;
@@ -81,6 +82,7 @@ export default function Leaderboard({ refreshKey }: { refreshKey: number }) {
               <th className="pb-2 pr-3">Team</th>
               <th className="pb-2 pr-3">Level</th>
               <th className="pb-2 pr-3">Attempts</th>
+              <th className="pb-2 pr-3">Hints Left</th>
               <th className="pb-2 pr-3">Status</th>
               <th className="pb-2">Nudge / Remove</th>
             </tr>
@@ -104,6 +106,7 @@ export default function Leaderboard({ refreshKey }: { refreshKey: number }) {
                   {row.currentLevel} / {row.totalLevels}
                 </td>
                 <td className="py-2 pr-3 text-neon-100/60">{row.attempts}</td>
+                <td className="py-2 pr-3 text-neon-100/60">{row.helpCreditsRemaining}</td>
                 <td className="py-2 pr-3">
                   {row.isFirstToFinish ? (
                     <span className="text-amber-400">1st place</span>
@@ -145,7 +148,7 @@ export default function Leaderboard({ refreshKey }: { refreshKey: number }) {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-neon-100/30">
+                <td colSpan={6} className="py-6 text-center text-neon-100/30">
                   No teams yet — add some from the Team Puzzles tab.
                 </td>
               </tr>

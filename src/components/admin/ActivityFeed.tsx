@@ -31,6 +31,8 @@ function describe(item: ActivityItem): string {
       return "finished the hunt";
     case "FORCE_UNLOCK":
       return "was force-unlocked by the Game Master";
+    case "HELP_USED":
+      return `used a hint request (${String(item.details?.remaining ?? "?")} left)`;
     case "HINT_RELEASED":
       return "received a hint from the Game Master";
     case "GAME_STARTED":
