@@ -12,11 +12,20 @@ const updateSchema = z.object({
   hint: z.string().max(2000).nullable().optional(),
 });
 
+async function assertTeamOwnedByAdmin(teamId: string, sessionId: string) {
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  return Boolean(team && team.sessionId === sessionId);
+}
+
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ teamId: string; levelNumber: string }> }) {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
   const { teamId, levelNumber: levelNumberParam } = await ctx.params;
+  if (!(await assertTeamOwnedByAdmin(teamId, admin.sessionId))) {
+    return NextResponse.json({ error: "Team not found" }, { status: 404 });
+  }
+
   const levelNumber = Number(levelNumberParam);
   if (!Number.isInteger(levelNumber)) {
     return NextResponse.json({ error: "Invalid level number" }, { status: 400 });
@@ -57,10 +66,14 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ teamId: str
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ teamId: string; levelNumber: string }> }) {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
   const { teamId, levelNumber: levelNumberParam } = await ctx.params;
+  if (!(await assertTeamOwnedByAdmin(teamId, admin.sessionId))) {
+    return NextResponse.json({ error: "Team not found" }, { status: 404 });
+  }
+
   const levelNumber = Number(levelNumberParam);
   if (!Number.isInteger(levelNumber)) {
     return NextResponse.json({ error: "Invalid level number" }, { status: 400 });

@@ -1,23 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTeamFromCookies } from "@/lib/auth";
-import { getGameConfig, getTotalLevels, logActivity, buildTeamStatus } from "@/lib/game";
+import { getSessionById, getTotalLevels, logActivity, buildTeamStatus } from "@/lib/game";
 
-// Self-service hint request — each team gets a limited number of these
-// (TeamProgress.helpCreditsRemaining, default 2) for the whole game. Free,
-// unlimited hint releases by the admin (see /api/admin/force-unlock) are a
-// separate mechanism and never touch this budget.
+// Self-service hint request, limited by TeamProgress.helpCreditsRemaining
+// (default 2). The admin's own force-unlock hint release is unlimited and
+// never touches this budget.
 export async function POST() {
   const teamAuth = await getTeamFromCookies();
   if (!teamAuth) {
     return NextResponse.json({ error: "Not joined to a team" }, { status: 401 });
   }
 
-  const config = await getGameConfig();
-  if (config.isFinished) {
+  const session = await getSessionById(teamAuth.sessionId);
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+  if (session.isFinished) {
     return NextResponse.json({ error: "The hunt has ended." }, { status: 403 });
   }
-  if (!config.isActive) {
+  if (!session.isActive) {
     return NextResponse.json({ error: "The game is not currently active." }, { status: 403 });
   }
 
@@ -52,7 +54,7 @@ export async function POST() {
         helpCreditsRemaining: { decrement: 1 },
       },
     });
-    await logActivity(teamAuth.teamId, "HELP_USED", {
+    await logActivity(teamAuth.sessionId, teamAuth.teamId, "HELP_USED", {
       levelNumber: progress.currentLevel,
       remaining: progress.helpCreditsRemaining - 1,
     });

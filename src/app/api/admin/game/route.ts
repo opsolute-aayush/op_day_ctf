@@ -2,26 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
-import { getGameConfig, logActivity } from "@/lib/game";
+import { getSessionById, logActivity } from "@/lib/game";
 
 export async function GET() {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
-  const config = await getGameConfig();
+  const session = await getSessionById(admin.sessionId);
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+
   return NextResponse.json({
-    isActive: config.isActive,
-    isFinished: config.isFinished,
-    winningTeamId: config.winningTeamId,
-    startedAt: config.startedAt,
+    isActive: session.isActive,
+    isFinished: session.isFinished,
+    winningTeamId: session.winningTeamId,
+    startedAt: session.startedAt,
   });
 }
 
 const actionSchema = z.object({ action: z.enum(["start", "pause", "end", "reset"]) });
 
 export async function POST(req: NextRequest) {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
+  const { sessionId } = admin;
 
   const body = await req.json().catch(() => null);
   const parsed = actionSchema.safeParse(body);
@@ -29,39 +34,47 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
-  const current = await getGameConfig();
+  const current = await getSessionById(sessionId);
+  if (!current) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
 
   if (parsed.data.action === "start") {
-    const config = await prisma.gameConfig.update({
-      where: { id: 1 },
+    const session = await prisma.gameSession.update({
+      where: { id: sessionId },
       // Only stamp startedAt the first time — resuming from a pause keeps
       // the original clock running for accurate "time to finish" tracking.
       data: { isActive: true, startedAt: current.startedAt ?? new Date() },
     });
-    await logActivity(null, "GAME_STARTED", {});
-    return NextResponse.json({ isActive: config.isActive, isFinished: config.isFinished });
+    await logActivity(sessionId, null, "GAME_STARTED", {});
+    return NextResponse.json({ isActive: session.isActive, isFinished: session.isFinished });
   }
 
   if (parsed.data.action === "pause") {
-    const config = await prisma.gameConfig.update({ where: { id: 1 }, data: { isActive: false } });
-    await logActivity(null, "GAME_PAUSED", {});
-    return NextResponse.json({ isActive: config.isActive, isFinished: config.isFinished });
+    const session = await prisma.gameSession.update({ where: { id: sessionId }, data: { isActive: false } });
+    await logActivity(sessionId, null, "GAME_PAUSED", {});
+    return NextResponse.json({ isActive: session.isActive, isFinished: session.isFinished });
   }
 
   if (parsed.data.action === "end") {
-    // The only thing that actually locks the hunt for everyone — a team
-    // finishing its own sentence never does this on its own.
-    const config = await prisma.gameConfig.update({
-      where: { id: 1 },
-      data: { isActive: false, isFinished: true },
-    });
-    await logActivity(null, "GAME_ENDED", {});
-    return NextResponse.json({ isActive: config.isActive, isFinished: config.isFinished });
+    // Only action that locks the hunt for everyone — also clears joined-member
+    // rosters, since those names are only meaningful for the event that just ended.
+    const [session] = await prisma.$transaction([
+      prisma.gameSession.update({
+        where: { id: sessionId },
+        data: { isActive: false, isFinished: true },
+      }),
+      prisma.team.updateMany({ where: { sessionId }, data: { members: "[]" } }),
+    ]);
+    await logActivity(sessionId, null, "GAME_ENDED", {});
+    return NextResponse.json({ isActive: session.isActive, isFinished: session.isFinished });
   }
 
-  // reset: wipes progress + win state, keeps registered teams and each team's puzzle/sentence.
+  // reset: wipes progress/win state/rosters, keeps teams and their puzzles.
+  const teamIds = (await prisma.team.findMany({ where: { sessionId }, select: { id: true } })).map((t) => t.id);
   await prisma.$transaction([
     prisma.teamProgress.updateMany({
+      where: { teamId: { in: teamIds } },
       data: {
         currentLevel: 1,
         unlockedLevels: "[0]",
@@ -73,11 +86,12 @@ export async function POST(req: NextRequest) {
         helpCreditsRemaining: 2,
       },
     }),
-    prisma.gameConfig.update({
-      where: { id: 1 },
+    prisma.team.updateMany({ where: { sessionId }, data: { members: "[]" } }),
+    prisma.gameSession.update({
+      where: { id: sessionId },
       data: { isActive: false, isFinished: false, winningTeamId: null, startedAt: null },
     }),
   ]);
-  await logActivity(null, "GAME_RESET", {});
+  await logActivity(sessionId, null, "GAME_RESET", {});
   return NextResponse.json({ ok: true });
 }

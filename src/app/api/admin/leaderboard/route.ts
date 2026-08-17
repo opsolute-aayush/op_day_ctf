@@ -2,24 +2,31 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 import { parseIntArray, parseStringArray } from "@/lib/json";
-import { getGameConfig } from "@/lib/game";
+import { getSessionById } from "@/lib/game";
 
 export async function GET() {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
-  const [teams, config] = await Promise.all([
+  const [teams, session] = await Promise.all([
     prisma.team.findMany({
+      where: { sessionId: admin.sessionId },
       include: { progress: true, _count: { select: { levels: true } } },
       orderBy: { teamNumber: "asc" },
     }),
-    getGameConfig(),
+    getSessionById(admin.sessionId),
   ]);
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
 
   const attemptCounts = await prisma.activityLog.groupBy({
     by: ["teamId", "eventType"],
     _count: { _all: true },
-    where: { eventType: { in: ["WRONG_PASSWORD", "LEVEL_UNLOCKED", "WRONG_FINAL_SENTENCE"] } },
+    where: {
+      sessionId: admin.sessionId,
+      eventType: { in: ["WRONG_PASSWORD", "LEVEL_UNLOCKED", "WRONG_FINAL_SENTENCE"] },
+    },
   });
 
   const attemptsByTeam = new Map<string, number>();
@@ -47,7 +54,7 @@ export async function GET() {
       helpCreditsRemaining: progress?.helpCreditsRemaining ?? 2,
       completed: progress?.completed ?? false,
       completedAt: progress?.completedAt ?? null,
-      isFirstToFinish: config.winningTeamId === team.id,
+      isFirstToFinish: session.winningTeamId === team.id,
       updatedAt: progress?.updatedAt ?? team.createdAt,
     };
   });
@@ -66,9 +73,9 @@ export async function GET() {
   return NextResponse.json({
     leaderboard,
     gameConfig: {
-      isActive: config.isActive,
-      isFinished: config.isFinished,
-      winningTeamId: config.winningTeamId,
+      isActive: session.isActive,
+      isFinished: session.isFinished,
+      winningTeamId: session.winningTeamId,
     },
   });
 }

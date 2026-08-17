@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, Trophy, Flag, Pencil, Check, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { LogOut, Trophy, Flag, Pencil, Check, X, Settings } from "lucide-react";
 import { useTeamStatus } from "@/hooks/useTeamStatus";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
@@ -11,6 +12,7 @@ import LevelCard, { LevelCardState, WordVerifyResult } from "@/components/LevelC
 import PasswordModal from "@/components/PasswordModal";
 import TeamAvatar from "@/components/TeamAvatar";
 import TeamStatsPanel from "@/components/TeamStatsPanel";
+import ColorPicker from "@/components/ColorPicker";
 import {
   playHelpSound,
   playRightPasswordSound,
@@ -28,6 +30,7 @@ export default function PlayPage() {
   const [nameDraft, setNameDraft] = useState("");
   const [renameError, setRenameError] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [requestingHint, setRequestingHint] = useState(false);
   const [hintError, setHintError] = useState<string | null>(null);
   const lastHintRef = useRef<string | null>(null);
@@ -111,6 +114,18 @@ export default function PlayPage() {
     refresh();
   }
 
+  async function saveColor(color: string) {
+    const res = await fetch("/api/team/color", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ color }),
+    });
+    if (res.ok) {
+      setColorPickerOpen(false);
+      refresh();
+    }
+  }
+
   async function requestHint() {
     setRequestingHint(true);
     setHintError(null);
@@ -149,7 +164,7 @@ export default function PlayPage() {
     <main className="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-6 px-4 py-8 lg:grid-cols-[1fr_320px] lg:items-start">
       <div className="flex min-w-0 flex-col gap-6">
       <header className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="relative flex min-w-0 items-center gap-3">
           <TeamAvatar teamNumber={status.team.teamNumber} color={status.team.color} />
           <div className="min-w-0">
             <p className="text-xs uppercase tracking-widest text-neon-100/50">Squad #{status.team.teamNumber}</p>
@@ -178,19 +193,48 @@ export default function PlayPage() {
                 <button onClick={startRename} className="text-neon-100/30 hover:text-neon-400" aria-label="Rename squad">
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
+                <button
+                  onClick={() => setColorPickerOpen((v) => !v)}
+                  aria-label="Change squad theme color"
+                  title="Change squad theme color"
+                  className="relative h-4 w-4 shrink-0 rounded-full transition-transform hover:scale-110"
+                  style={{
+                    backgroundColor: status.team.color,
+                    boxShadow: `0 0 8px 1px ${status.team.color}99`,
+                  }}
+                />
               </h1>
             )}
             {renameError && <p className="text-xs text-danger-400">{renameError}</p>}
           </div>
+
+          <AnimatePresence>
+            {colorPickerOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                transition={{ duration: 0.15 }}
+                className="terminal-panel absolute left-0 top-full z-20 mt-2 rounded-lg p-3"
+              >
+                <ColorPicker value={status.team.color} onChange={saveColor} size="sm" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-        <button
-          onClick={leaveTeam}
-          className={`flex shrink-0 items-center gap-1.5 text-xs ${
-            confirmLeave ? "text-danger-400" : "text-neon-100/40 hover:text-danger-400"
-          }`}
-        >
-          <LogOut className="h-4 w-4" /> {confirmLeave ? "Confirm leave?" : "Leave Team"}
-        </button>
+        <div className="flex shrink-0 items-center gap-4">
+          <Link href="/settings" className="text-neon-100/40 hover:text-cyan-400" aria-label="Settings">
+            <Settings className="h-4 w-4" />
+          </Link>
+          <button
+            onClick={leaveTeam}
+            className={`flex items-center gap-1.5 text-xs ${
+              confirmLeave ? "text-danger-400" : "text-neon-100/40 hover:text-danger-400"
+            }`}
+          >
+            <LogOut className="h-4 w-4" /> {confirmLeave ? "Confirm leave?" : "Leave Team"}
+          </button>
+        </div>
       </header>
 
       {status.gameFinished && (
@@ -246,7 +290,6 @@ export default function PlayPage() {
             );
           })}
 
-          {/* Final sentence-assembly stage */}
           <div
             onClick={() => status.finalUnlocked && !status.gameFinished && router.push("/final")}
             className={`terminal-panel rounded-lg p-4 transition-colors ${

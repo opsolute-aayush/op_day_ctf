@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readdir } from "fs/promises";
 import path from "path";
 
-// Mirrors /api/sounds/[category]: drop a clip into public/videos/<category>
-// and it starts playing, no code change and no filename to type anywhere.
-// Category is whitelisted so this can't be used to list arbitrary
-// directories on the server.
+// Mirrors /api/sounds/[category] for public/videos/<category>.
 const CATEGORIES = ["wrong_pass", "right_pass", "help", "winning"] as const;
 type Category = (typeof CATEGORIES)[number];
 

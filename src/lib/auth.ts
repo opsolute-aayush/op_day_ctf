@@ -7,6 +7,7 @@ import {
   verifyTeamToken,
   verifyAdminToken,
   type TeamTokenPayload,
+  type AdminSession,
 } from "@/lib/jwt";
 
 export { TEAM_COOKIE, ADMIN_COOKIE, signTeamToken, signAdminToken, verifyTeamToken, verifyAdminToken };
@@ -52,9 +53,10 @@ export async function getTeamFromCookies(): Promise<TeamTokenPayload | null> {
   return verifyTeamToken(token);
 }
 
-export async function getIsAdminFromCookies(): Promise<boolean> {
+/** Returns the session the admin cookie is authenticated against, or null. */
+export async function getAdminSessionFromCookies(): Promise<AdminSession | null> {
   const store = await cookies();
   const token = store.get(ADMIN_COOKIE)?.value;
-  if (!token) return false;
+  if (!token) return null;
   return verifyAdminToken(token);
 }

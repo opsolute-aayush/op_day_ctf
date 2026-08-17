@@ -5,7 +5,7 @@ import { getTeamFromCookies } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { normalizeWord } from "@/lib/normalize";
 import { parseIntArray } from "@/lib/json";
-import { getGameConfig, logActivity, buildTeamStatus } from "@/lib/game";
+import { getSessionById, logActivity, buildTeamStatus } from "@/lib/game";
 
 const schema = z.object({
   levelNumber: z.number().int().positive(),
@@ -39,11 +39,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Enter the word you found." }, { status: 400 });
   }
 
-  const config = await getGameConfig();
-  if (config.isFinished) {
+  const session = await getSessionById(teamAuth.sessionId);
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+  if (session.isFinished) {
     return NextResponse.json({ error: "The hunt has ended." }, { status: 403 });
   }
-  if (!config.isActive) {
+  if (!session.isActive) {
     return NextResponse.json({ error: "The game is not currently active." }, { status: 403 });
   }
 
@@ -75,7 +78,7 @@ export async function POST(req: NextRequest) {
   const isMatch = normalizeWord(parsed.data.word) === normalizeWord(levelConfig.wordReward);
 
   if (!isMatch) {
-    await logActivity(teamAuth.teamId, "WRONG_WORD", { levelNumber, submitted: parsed.data.word });
+    await logActivity(teamAuth.sessionId, teamAuth.teamId, "WRONG_WORD", { levelNumber, submitted: parsed.data.word });
     return NextResponse.json(
       { error: "Wrong word — check what you found at the location." },
       { status: 401 }
@@ -83,10 +86,7 @@ export async function POST(req: NextRequest) {
   }
 
   verifiedWordLevels.push(levelNumber);
-  // This is the only thing that actually advances currentLevel — a correct
-  // password unlocks the clue, but the team stays "on" this level until the
-  // word is confirmed, so they can never skip ahead to the next level's
-  // password without having verified this one's word first.
+  // The only thing that advances currentLevel — see unlock-level's comment.
   await prisma.teamProgress.update({
     where: { teamId: teamAuth.teamId },
     data: {
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  await logActivity(teamAuth.teamId, "WORD_VERIFIED", { levelNumber, word: levelConfig.wordReward });
+  await logActivity(teamAuth.sessionId, teamAuth.teamId, "WORD_VERIFIED", { levelNumber, word: levelConfig.wordReward });
 
   const status = await buildTeamStatus(teamAuth.teamId);
   return NextResponse.json({ status });

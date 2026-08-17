@@ -1,13 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { parseIntArray } from "@/lib/json";
 
-export async function getGameConfig() {
-  const config = await prisma.gameConfig.upsert({
-    where: { id: 1 },
-    update: {},
-    create: { id: 1 },
-  });
-  return config;
+export async function getSessionById(sessionId: string) {
+  return prisma.gameSession.findUnique({ where: { id: sessionId } });
+}
+
+export async function getSessionByCode(code: string) {
+  return prisma.gameSession.findUnique({ where: { code } });
 }
 
 export async function getTotalLevels(teamId: string): Promise<number> {
@@ -16,12 +15,14 @@ export async function getTotalLevels(teamId: string): Promise<number> {
 }
 
 export async function logActivity(
+  sessionId: string,
   teamId: string | null,
   eventType: string,
   details?: Record<string, unknown>
 ) {
   await prisma.activityLog.create({
     data: {
+      sessionId,
       teamId: teamId ?? undefined,
       eventType,
       details: details ? JSON.stringify(details) : undefined,
@@ -29,30 +30,25 @@ export async function logActivity(
   });
 }
 
-/**
- * Builds the client-safe view of a team's progress: only clues/words for
- * levels the team has actually unlocked are ever included in the payload.
- * Every team has its own independent set of levels and its own final
- * sentence, so all lookups here are scoped to this team only.
- */
+/** Client-safe team status — only unlocked levels' clues/words are included. */
 export async function buildTeamStatus(teamId: string) {
-  const [team, progress, totalLevels, levelConfigs, config] = await Promise.all([
-    prisma.team.findUnique({ where: { id: teamId } }),
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!team) return null;
+
+  const [progress, totalLevels, levelConfigs, session] = await Promise.all([
     prisma.teamProgress.findUnique({ where: { teamId } }),
     getTotalLevels(teamId),
     prisma.levelConfig.findMany({ where: { teamId }, orderBy: { levelNumber: "asc" } }),
-    getGameConfig(),
+    prisma.gameSession.findUnique({ where: { id: team.sessionId } }),
   ]);
 
-  if (!team || !progress) return null;
+  if (!progress || !session) return null;
 
   const unlockedLevels = parseIntArray(progress.unlockedLevels);
   const verifiedWordLevels = parseIntArray(progress.verifiedWordLevels);
 
-  // The word reward is only ever revealed to the client once the team has
-  // typed in and confirmed the actual word they found at the location — a
-  // correct password alone unlocks the level's clue, but never leaks the
-  // word text itself.
+  // wordReward is only included once the team has confirmed it via
+  // verify-word — a correct password alone never leaks the word text.
   const unlockedClues = levelConfigs
     .filter((lc) => unlockedLevels.includes(lc.levelNumber))
     .map((lc) => ({
@@ -89,9 +85,9 @@ export async function buildTeamStatus(teamId: string) {
       color: team.color,
       members: JSON.parse(team.members) as string[],
     },
-    gameActive: config.isActive,
-    gameFinished: config.isFinished,
-    isFirstToFinish: config.winningTeamId === team.id,
+    gameActive: session.isActive,
+    gameFinished: session.isFinished,
+    isFirstToFinish: session.winningTeamId === team.id,
     totalLevels,
     currentLevel: progress.currentLevel,
     unlockedLevels,
@@ -103,6 +99,6 @@ export async function buildTeamStatus(teamId: string) {
     helpCreditsRemaining: progress.helpCreditsRemaining,
     completed: progress.completed,
     completedAt: progress.completedAt,
-    gameStartedAt: config.startedAt,
+    gameStartedAt: session.startedAt,
   };
 }

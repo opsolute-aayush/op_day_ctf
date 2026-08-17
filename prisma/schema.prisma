@@ -7,21 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Singleton row (id always 1) holding global game state — start/pause/finish
-// and who won. Puzzle content itself (levels, sentence) lives per-team below.
-model GameConfig {
-  id            Int       @id @default(1)
-  isActive      Boolean   @default(false)
-  isFinished    Boolean   @default(false)
-  winningTeamId String?
-  winningTeam   Team?     @relation("WinningTeam", fields: [winningTeamId], references: [id])
-  startedAt     DateTime?
-  updatedAt     DateTime  @updatedAt
+// One row per independent game a "master" (admin) runs — teams, puzzles,
+// leaderboard, and activity are all scoped to a session and never cross
+// into another. Players join by the 6-digit `code`; the master
+// authenticates against this row's own `adminPasswordHash`.
+model GameSession {
+  id                String        @id @default(uuid())
+  code              String        @unique // 6-digit join code, e.g. "482913"
+  isActive          Boolean       @default(false)
+  isFinished        Boolean       @default(false)
+  winningTeamId     String?
+  winningTeam       Team?         @relation("WinningTeam", fields: [winningTeamId], references: [id])
+  adminPasswordHash String?
+  startedAt         DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  teams             Team[]        @relation("SessionTeams")
+  activity          ActivityLog[]
 }
 
 model Team {
   id              String        @id @default(uuid())
-  teamNumber      Int           @unique // fixed slot assigned by the admin; never reused after a delete
+  sessionId       String
+  session         GameSession   @relation("SessionTeams", fields: [sessionId], references: [id], onDelete: Cascade)
+  teamNumber      Int           // fixed slot assigned by the admin; unique within its session, never reused after a delete
   name            String        // player-chosen display name — freely editable, not required to be unique
   color           String        @default("#39FF14")
   members         String // JSON string array
@@ -30,13 +39,13 @@ model Team {
   progress        TeamProgress?
   levels          LevelConfig[]
   activity        ActivityLog[]
-  wonGame         GameConfig[]  @relation("WinningTeam")
+  wonGame         GameSession[] @relation("WinningTeam")
+
+  @@unique([sessionId, teamNumber])
 }
 
-// Levels 1..N-1 require a password + reveal a location clue + award a word.
-// The implicit final level (N) is the sentence-assembly stage and has no row here.
-// Every row belongs to exactly one team — each team has its own independent
-// set of passwords/clues/words and its own final sentence (on Team above).
+// Levels 1..N-1; the implicit final level (N) is the sentence-assembly
+// stage and has no row here. Each row belongs to exactly one team.
 model LevelConfig {
   id           Int      @id @default(autoincrement())
   teamId       String
@@ -68,10 +77,12 @@ model TeamProgress {
 }
 
 model ActivityLog {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
+  sessionId String
+  session   GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   teamId    String?
-  team      Team?    @relation(fields: [teamId], references: [id])
-  eventType String // LEVEL_UNLOCKED | WRONG_PASSWORD | WIN | GAME_STARTED | GAME_PAUSED | GAME_RESET | FORCE_UNLOCK | TEAM_REGISTERED
+  team      Team?       @relation(fields: [teamId], references: [id])
+  eventType String // LEVEL_UNLOCKED | WRONG_PASSWORD | WIN | GAME_STARTED | GAME_PAUSED | GAME_RESET | FORCE_UNLOCK | SESSION_CREATED | ...
   details   String? // JSON string
-  createdAt DateTime @default(now())
+  createdAt DateTime    @default(now())
 }

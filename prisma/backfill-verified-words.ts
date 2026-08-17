@@ -12,13 +12,9 @@ function parseIntArray(json: string): number[] {
 }
 
 // One-time repair for teams that progressed past a level before the
-// word-verification gate existed (currentLevel used to advance on a correct
-// password alone). Those teams are stuck showing fewer words than expected
-// in the final sentence-assembly screen, because collectedWords is now
-// strictly derived from verifiedWordLevels. Any level strictly below a
-// team's currentLevel was, by construction of the old and new unlock logic,
-// a level the team already physically passed — so it's safe to mark its
-// word as verified retroactively. This never removes anything, only adds.
+// word-verification gate existed (currentLevel used to advance on password
+// alone). Any level below currentLevel was already physically passed, so
+// it's safe to mark it verified retroactively. Only adds, never removes.
 async function main() {
   const allProgress = await prisma.teamProgress.findMany({ include: { team: true } });
   let patchedTeams = 0;

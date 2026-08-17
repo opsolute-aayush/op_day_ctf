@@ -11,13 +11,18 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  }
+
+  const team = await prisma.team.findUnique({ where: { id: parsed.data.teamId } });
+  if (!team || team.sessionId !== admin.sessionId) {
+    return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
 
   const progress = await prisma.teamProgress.findUnique({ where: { teamId: parsed.data.teamId } });
@@ -33,7 +38,7 @@ export async function POST(req: NextRequest) {
       where: { teamId: parsed.data.teamId },
       data: { hintReleasedLevel: targetLevel },
     });
-    await logActivity(parsed.data.teamId, "HINT_RELEASED", { levelNumber: targetLevel });
+    await logActivity(admin.sessionId, parsed.data.teamId, "HINT_RELEASED", { levelNumber: targetLevel });
     return NextResponse.json({ ok: true });
   }
 
@@ -67,6 +72,6 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  await logActivity(parsed.data.teamId, "FORCE_UNLOCK", { levelNumber: targetLevel });
+  await logActivity(admin.sessionId, parsed.data.teamId, "FORCE_UNLOCK", { levelNumber: targetLevel });
   return NextResponse.json({ ok: true });
 }

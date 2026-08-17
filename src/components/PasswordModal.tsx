@@ -78,7 +78,6 @@ export default function PasswordModal({ levelNumber, onClose, onUnlocked }: Pass
         >
           <MatrixRain columns={8} />
 
-          {/* HUD corner brackets */}
           <span className="hud-corner pointer-events-none absolute left-2 top-2 h-4 w-4 border-l-2 border-t-2 border-neon-500/70" />
           <span className="hud-corner pointer-events-none absolute right-2 top-2 h-4 w-4 border-r-2 border-t-2 border-neon-500/70" />
           <span className="hud-corner pointer-events-none absolute bottom-2 left-2 h-4 w-4 border-b-2 border-l-2 border-neon-500/70" />

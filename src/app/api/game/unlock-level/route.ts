@@ -6,7 +6,7 @@ import { getTeamFromCookies } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { normalizePassword } from "@/lib/normalize";
 import { parseIntArray } from "@/lib/json";
-import { getGameConfig, getTotalLevels, logActivity, buildTeamStatus } from "@/lib/game";
+import { getSessionById, getTotalLevels, logActivity, buildTeamStatus } from "@/lib/game";
 
 const schema = z.object({ password: z.string().min(1).max(200) });
 
@@ -33,11 +33,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Enter a password." }, { status: 400 });
   }
 
-  const config = await getGameConfig();
-  if (!config.isActive) {
+  const session = await getSessionById(teamAuth.sessionId);
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+  if (!session.isActive) {
     return NextResponse.json({ error: "The game is not currently active." }, { status: 403 });
   }
-  if (config.isFinished) {
+  if (session.isFinished) {
     return NextResponse.json({ error: "The game has already finished." }, { status: 403 });
   }
 
@@ -70,24 +73,21 @@ export async function POST(req: NextRequest) {
   const isMatch = await bcrypt.compare(attempt, levelConfig.password);
 
   if (!isMatch) {
-    await logActivity(teamAuth.teamId, "WRONG_PASSWORD", { levelNumber: targetLevel });
+    await logActivity(teamAuth.sessionId, teamAuth.teamId, "WRONG_PASSWORD", { levelNumber: targetLevel });
     return NextResponse.json({ error: "Incorrect password. Keep hunting." }, { status: 401 });
   }
 
   const unlockedLevels = parseIntArray(progress.unlockedLevels);
   if (!unlockedLevels.includes(targetLevel)) unlockedLevels.push(targetLevel);
 
-  // Unlocking reveals the location clue only and does NOT advance
-  // currentLevel — the team stays "on" this level (now in word-verification
-  // mode) until they type in and confirm the word via
-  // /api/game/verify-word, which is the only thing that advances to the
-  // next level. A correct password alone can never skip word verification.
+  // Reveals the clue only — currentLevel doesn't advance until verify-word
+  // confirms the physical word, so a password alone can't skip verification.
   await prisma.teamProgress.update({
     where: { teamId: teamAuth.teamId },
     data: { unlockedLevels: JSON.stringify(unlockedLevels) },
   });
 
-  await logActivity(teamAuth.teamId, "LEVEL_UNLOCKED", { levelNumber: targetLevel });
+  await logActivity(teamAuth.sessionId, teamAuth.teamId, "LEVEL_UNLOCKED", { levelNumber: targetLevel });
 
   const status = await buildTeamStatus(teamAuth.teamId);
   return NextResponse.json({ status });

@@ -1,18 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getGameConfig } from "@/lib/game";
+import { getTeamFromCookies } from "@/lib/auth";
+import { getSessionById } from "@/lib/game";
 
-// Public live-progress board shown to every player, not just the admin —
-// intentionally excludes anything sensitive (attempts, collected words,
-// clues, member names) so it's just a friendly "who's ahead" scoreboard.
+// Live progress board for every player, scoped to their own session.
+// Deliberately excludes anything sensitive (attempts, words, clues).
 export async function GET() {
-  const [teams, config] = await Promise.all([
+  const teamAuth = await getTeamFromCookies();
+  if (!teamAuth) {
+    return NextResponse.json({ error: "Not registered" }, { status: 401 });
+  }
+
+  const [teams, session] = await Promise.all([
     prisma.team.findMany({
+      where: { sessionId: teamAuth.sessionId },
       include: { progress: true, _count: { select: { levels: true } } },
       orderBy: { teamNumber: "asc" },
     }),
-    getGameConfig(),
+    getSessionById(teamAuth.sessionId),
   ]);
+  if (!session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
 
   const stats = teams.map((team) => {
     const totalLevels = team._count.levels + 1;
@@ -23,7 +32,7 @@ export async function GET() {
       currentLevel: team.progress?.currentLevel ?? 1,
       totalLevels,
       completed: team.progress?.completed ?? false,
-      isFirstToFinish: config.winningTeamId === team.id,
+      isFirstToFinish: session.winningTeamId === team.id,
     };
   });
 
@@ -33,5 +42,5 @@ export async function GET() {
     return b.currentLevel / b.totalLevels - a.currentLevel / a.totalLevels;
   });
 
-  return NextResponse.json({ stats, gameActive: config.isActive, gameFinished: config.isFinished });
+  return NextResponse.json({ stats, gameActive: session.isActive, gameFinished: session.isFinished });
 }

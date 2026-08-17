@@ -6,10 +6,11 @@ import { logActivity } from "@/lib/game";
 const PALETTE = ["#39FF14", "#00F0FF", "#FF2ECC", "#FFD400", "#FF6A00", "#B026FF", "#FF3B3B", "#3B82F6"];
 
 export async function GET() {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
   const teams = await prisma.team.findMany({
+    where: { sessionId: admin.sessionId },
     orderBy: { teamNumber: "asc" },
     select: { id: true, teamNumber: true, name: true, color: true },
   });
@@ -17,19 +18,22 @@ export async function GET() {
   return NextResponse.json({ teams });
 }
 
-// One click, zero fields — creates the next numbered team slot. Players can
-// never do this themselves (see /api/auth/join-team), so the team count is
-// always exactly what the admin clicked into existence for the physical
-// event. The team's display name is left for whoever joins it to pick.
+// Zero-input team creation, scoped to the admin's own session — players can
+// never create teams themselves (see /api/auth/join-team).
 export async function POST() {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
-  const highest = await prisma.team.findFirst({ orderBy: { teamNumber: "desc" }, select: { teamNumber: true } });
+  const highest = await prisma.team.findFirst({
+    where: { sessionId: admin.sessionId },
+    orderBy: { teamNumber: "desc" },
+    select: { teamNumber: true },
+  });
   const teamNumber = (highest?.teamNumber ?? 0) + 1;
 
   const team = await prisma.team.create({
     data: {
+      sessionId: admin.sessionId,
       teamNumber,
       name: `Team ${teamNumber}`,
       color: PALETTE[(teamNumber - 1) % PALETTE.length],
@@ -38,6 +42,6 @@ export async function POST() {
     },
   });
 
-  await logActivity(team.id, "TEAM_CREATED", { teamNumber });
+  await logActivity(admin.sessionId, team.id, "TEAM_CREATED", { teamNumber });
   return NextResponse.json({ team: { id: team.id, teamNumber: team.teamNumber, name: team.name, color: team.color } });
 }

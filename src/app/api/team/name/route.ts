@@ -4,9 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getTeamFromCookies } from "@/lib/auth";
 import { logActivity } from "@/lib/game";
 
-// Players own their squad's display name — this is the only write path for
-// it, and it only ever touches the team already baked into the caller's
-// session cookie. The team's number (assigned by the admin) never changes.
+// Players own their squad's display name; teamNumber (admin-assigned) never changes.
 const schema = z.object({ name: z.string().trim().min(1, "Enter a team name").max(60) });
 
 export async function PUT(req: NextRequest) {
@@ -26,6 +24,6 @@ export async function PUT(req: NextRequest) {
     data: { name: parsed.data.name },
   });
 
-  await logActivity(teamAuth.teamId, "TEAM_RENAMED", { name: team.name });
+  await logActivity(teamAuth.sessionId, teamAuth.teamId, "TEAM_RENAMED", { name: team.name });
   return NextResponse.json({ name: team.name });
 }

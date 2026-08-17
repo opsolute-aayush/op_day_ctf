@@ -1,18 +1,10 @@
 "use client";
 
-// Video clips are segregated by moment and auto-discovered from disk, the
-// same way public/sounds/<category> works (see src/lib/sfx.ts) — drop a clip
-// into the matching folder and it starts playing alongside the sound effect:
-// public/videos/wrong_pass/  — an incorrect password or word
-// public/videos/right_pass/  — a password or word confirmed correctly
-// public/videos/help/        — a hint being released
-// public/videos/winning/     — a team finishing the whole hunt (green-screen —
-//                               rendered chroma-keyed by VideoOverlay, not
-//                               played as a plain rectangle)
-//
-// Discovery happens via GET /api/videos/<category>. A category with no clips
-// dropped in yet is a silent no-op — unlike sfx.ts there's no meaningful
-// synthesized substitute for video, so nothing plays until an asset exists.
+// Video clips auto-discover from public/videos/<category>/ the same way
+// sfx.ts does for sounds — winning/ clips are green-screen, chroma-keyed
+// live by VideoOverlay rather than played as a plain rectangle.
+
+import { getSettings } from "@/lib/settings";
 
 export type VideoCategory = "wrong_pass" | "right_pass" | "help" | "winning";
 
@@ -65,6 +57,7 @@ const lastPlayed: Record<VideoCategory, string | null> = {
  */
 export async function playVideoClip(category: VideoCategory) {
   if (typeof window === "undefined") return;
+  if (!getSettings().videoEnabled) return;
   const files = await getFileList(category);
   if (files.length === 0) return;
 

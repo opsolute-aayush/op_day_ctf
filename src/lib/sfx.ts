@@ -1,21 +1,11 @@
 "use client";
 
-// Sound effects are segregated by moment, and auto-discovered from disk —
-// just drop an .mp3 into the matching folder and it starts playing, no
-// filename to register anywhere:
-// public/sounds/wrong_pass/  — an incorrect password
-// public/sounds/right_pass/  — a level unlocking correctly
-// public/sounds/help/        — the Game Master releasing a hint
-// public/sounds/winning/     — a team finishing the whole hunt
-// public/sounds/intro/       — background music while a team waits for the hunt to start
-// public/sounds/outro/       — plays once a team has fully completed the hunt
-//
-// Discovery happens via GET /api/sounds/<category>, which lists whatever
-// audio files actually exist in that folder (src/app/api/sounds/[category]).
-// A category with no files falls back to a small synthesized chime for the
-// one-shot stingers, so the feature works with zero assets. intro/outro are
-// full music tracks — there's no meaningful synthesized substitute for those,
-// so they simply stay silent until a file is dropped in.
+// Sounds auto-discover from public/sounds/<category>/ (wrong_pass, right_pass,
+// help, winning, intro, outro) via GET /api/sounds/<category> — drop a file
+// in, no registration needed. The four one-shot categories fall back to a
+// synthesized chime when empty; intro/outro (full music) just stay silent.
+
+import { getSettings, subscribeToSettings } from "@/lib/settings";
 
 type Category = "wrong_pass" | "right_pass" | "help" | "winning" | "intro" | "outro";
 
@@ -112,7 +102,10 @@ function playSynthChime(notes: Array<[freq: number, offset: number, duration: nu
   }
 }
 
-export function playRandomWrongPasswordSound(volume = 0.6) {
+export function playRandomWrongPasswordSound(baseVolume = 0.6) {
+  const settings = getSettings();
+  if (!settings.sfxEnabled) return;
+  const volume = baseVolume * settings.sfxVolume;
   void playRandomFromCategory("wrong_pass", volume, () => {
     // No files dropped in yet — a low, jarring double-buzz.
     playSynthChime(
@@ -125,7 +118,10 @@ export function playRandomWrongPasswordSound(volume = 0.6) {
   });
 }
 
-export function playRightPasswordSound(volume = 0.5) {
+export function playRightPasswordSound(baseVolume = 0.5) {
+  const settings = getSettings();
+  if (!settings.sfxEnabled) return;
+  const volume = baseVolume * settings.sfxVolume;
   void playRandomFromCategory("right_pass", volume, () => {
     // Two quick rising blips — a satisfying "unlocked" chirp.
     playSynthChime(
@@ -138,7 +134,10 @@ export function playRightPasswordSound(volume = 0.5) {
   });
 }
 
-export function playWinningSound(volume = 0.4) {
+export function playWinningSound(baseVolume = 0.4) {
+  const settings = getSettings();
+  if (!settings.sfxEnabled) return;
+  const volume = baseVolume * settings.sfxVolume;
   void playRandomFromCategory("winning", volume, () => {
     // A short ascending arpeggio fanfare.
     playSynthChime(
@@ -153,7 +152,10 @@ export function playWinningSound(volume = 0.4) {
   });
 }
 
-export function playHelpSound(volume = 0.5) {
+export function playHelpSound(baseVolume = 0.5) {
+  const settings = getSettings();
+  if (!settings.sfxEnabled) return;
+  const volume = baseVolume * settings.sfxVolume;
   void playRandomFromCategory("help", volume, () => {
     // A short two-note "attention" chime.
     playSynthChime(
@@ -167,21 +169,48 @@ export function playHelpSound(volume = 0.5) {
 }
 
 let introAudio: HTMLAudioElement | null = null;
+let introBaseVolume = 0.35;
+
+function applyMusicSettingsToIntro() {
+  if (!introAudio) return;
+  const settings = getSettings();
+  if (!settings.musicEnabled) {
+    introAudio.pause();
+    return;
+  }
+  introAudio.volume = introBaseVolume * settings.musicVolume;
+  if (introAudio.paused) {
+    void introAudio.play().catch(() => {
+      // Still blocked (no user gesture yet) — the next status poll retries.
+    });
+  }
+}
+
+if (typeof window !== "undefined") {
+  subscribeToSettings(applyMusicSettingsToIntro);
+}
 
 /**
  * Loops background music while a team waits on the Game Master to start the
  * hunt. Idempotent — safe to call on every status poll without restarting
  * the track, since it no-ops while a track is already playing.
  */
-export async function startIntroMusic(volume = 0.35) {
-  if (introAudio) return;
+export async function startIntroMusic(baseVolume = 0.35) {
+  introBaseVolume = baseVolume;
+  if (introAudio) {
+    applyMusicSettingsToIntro();
+    return;
+  }
+  const settings = getSettings();
+  if (!settings.musicEnabled) return;
+
   const files = await getFileList("intro");
   if (files.length === 0) return;
   const filename = files[Math.floor(Math.random() * files.length)];
   try {
     const audio = new Audio(`/sounds/intro/${encodeURIComponent(filename)}`);
     audio.loop = true;
-    audio.volume = volume;
+    audio.volume = introBaseVolume * settings.musicVolume;
     introAudio = audio;
     void audio.play().catch(() => {
       // Autoplay blocked before any user gesture landed — safe to ignore.
@@ -200,7 +229,10 @@ export function stopIntroMusic() {
 }
 
 /** Fire-and-forget, plays once — call ~7s after a team fully completes the hunt. */
-export function playOutroMusic(volume = 0.5) {
+export function playOutroMusic(baseVolume = 0.5) {
+  const settings = getSettings();
+  if (!settings.musicEnabled) return;
+  const volume = baseVolume * settings.musicVolume;
   void playRandomFromCategory("outro", volume, () => {
     // No outro track dropped in yet — nothing meaningful to synthesize.
   });

@@ -5,12 +5,12 @@ import { requireAdmin } from "@/lib/adminGuard";
 import { logActivity } from "@/lib/game";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ teamId: string }> }) {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
   const { teamId } = await ctx.params;
   const team = await prisma.team.findUnique({ where: { id: teamId } });
-  if (!team) {
+  if (!team || team.sessionId !== admin.sessionId) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
 
@@ -29,32 +29,37 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ teamId: st
 const updateSchema = z.object({ winningSentence: z.string().trim().min(1).max(2000) });
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ teamId: string }> }) {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
   const { teamId } = await ctx.params;
+  const existing = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!existing || existing.sessionId !== admin.sessionId) {
+    return NextResponse.json({ error: "Team not found" }, { status: 404 });
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
   }
 
-  const team = await prisma.team
-    .update({ where: { id: teamId }, data: { winningSentence: parsed.data.winningSentence } })
-    .catch(() => null);
-  if (!team) {
-    return NextResponse.json({ error: "Team not found" }, { status: 404 });
-  }
+  const team = await prisma.team.update({ where: { id: teamId }, data: { winningSentence: parsed.data.winningSentence } });
 
-  await logActivity(teamId, "SENTENCE_UPDATED", {});
+  await logActivity(admin.sessionId, teamId, "SENTENCE_UPDATED", {});
   return NextResponse.json({ winningSentence: team.winningSentence });
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ teamId: string }> }) {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
   const { teamId } = await ctx.params;
-  await prisma.team.delete({ where: { id: teamId } }).catch(() => null);
+  const existing = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!existing || existing.sessionId !== admin.sessionId) {
+    return NextResponse.json({ error: "Team not found" }, { status: 404 });
+  }
+
+  await prisma.team.delete({ where: { id: teamId } });
   return NextResponse.json({ ok: true });
 }

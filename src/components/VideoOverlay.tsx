@@ -2,18 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Radio } from "lucide-react";
 import { subscribeToVideoClips, VideoClipEventDetail } from "@/lib/videofx";
 
 const MAX_CLIP_MS = 9000;
 
 /**
- * Global pop-up player for the clips triggered by playVideoClip() — mounted
- * once in the root layout so it works from any page without prop drilling.
- * Every non-winning category plays as a small "signal intercept" clip
- * bottom-right. The winning category is rendered bigger and chroma-keyed
- * (see ChromaKeyVideo) since those clips are shot on a green screen and a
- * plain rectangle of green would look broken over the confetti/victory UI.
+ * Global pop-up player for playVideoClip() clips, mounted once in the root
+ * layout. Every category is green-screen footage, so all of them go through
+ * ChromaKeyVideo and anchor to the bottom-center of the viewport.
  */
 export default function VideoOverlay() {
   const [clip, setClip] = useState<VideoClipEventDetail | null>(null);
@@ -36,41 +32,18 @@ export default function VideoOverlay() {
     setClip(null);
   }
 
-  const isWinning = clip?.category === "winning";
-
   return (
     <AnimatePresence>
       {clip && (
         <motion.div
           key={clip.src}
-          initial={{ opacity: 0, y: 20, scale: 0.92 }}
+          initial={{ opacity: 0, y: 30, scale: 0.92 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.92 }}
+          exit={{ opacity: 0, y: 20, scale: 0.92 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className={
-            isWinning
-              ? "pointer-events-none fixed inset-x-0 bottom-2 z-50 flex justify-center"
-              : "pointer-events-none fixed bottom-4 right-4 z-50"
-          }
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center"
         >
-          {isWinning ? (
-            <ChromaKeyVideo src={clip.src} onEnded={close} className="h-56 w-56 sm:h-72 sm:w-72" />
-          ) : (
-            <div className="terminal-panel relative w-40 overflow-hidden rounded-md sm:w-52">
-              <div className="flex items-center gap-1 border-b border-panel-border bg-void-2/90 px-2 py-1">
-                <Radio className="h-3 w-3 animate-pulse text-danger-400" />
-                <span className="text-[9px] uppercase tracking-widest text-neon-100/60">signal_intercept</span>
-              </div>
-              <video
-                src={clip.src}
-                autoPlay
-                playsInline
-                className="block h-24 w-full object-cover sm:h-32"
-                onEnded={close}
-                onError={close}
-              />
-            </div>
-          )}
+          <ChromaKeyVideo src={clip.src} onEnded={close} className="h-52 w-52 sm:h-72 sm:w-72" />
         </motion.div>
       )}
     </AnimatePresence>
@@ -83,10 +56,20 @@ interface ChromaKeyVideoProps {
   className?: string;
 }
 
+// Greenness = how much green dominates over red/blue. Below KEY_LOW: opaque
+// subject; above KEY_HIGH: fully transparent background; between the two,
+// alpha ramps via smoothstep instead of a hard cutoff so edges blend cleanly.
+const KEY_LOW = 18;
+const KEY_HIGH = 65;
+
+function smoothstep(t: number): number {
+  return t * t * (3 - 2 * t);
+}
+
 /**
  * Plays a green-screen clip with the green background keyed out live, frame
- * by frame, via canvas pixel manipulation — so it reads as a floating
- * subject over the page instead of an ugly green rectangle. The source
+ * by frame, via canvas pixel manipulation — so it reads as a subject
+ * composited into the page instead of a rectangle of green. The source
  * <video> itself stays hidden; only the processed canvas is shown.
  */
 function ChromaKeyVideo({ src, onEnded, className = "" }: ChromaKeyVideoProps) {
@@ -117,14 +100,23 @@ function ChromaKeyVideo({ src, onEnded, className = "" }: ChromaKeyVideoProps) {
           const r = data[i];
           const g = data[i + 1];
           const b = data[i + 2];
-          if (g > 90 && g > r * 1.25 && g > b * 1.25) {
-            // Clearly green-screen background — cut it fully transparent.
-            data[i + 3] = 0;
-          } else if (g > r * 1.05 && g > b * 1.05) {
-            // Green spill on the subject's edges — pull the green channel
-            // down toward the other two instead of a hard cutoff, so the
-            // fringe doesn't look choppy against whatever the page shows.
-            data[i + 1] = Math.round((r + b) / 2);
+          const greenness = g - Math.max(r, b);
+
+          let alpha = 255;
+          if (greenness >= KEY_HIGH) {
+            alpha = 0;
+          } else if (greenness > KEY_LOW) {
+            const t = (greenness - KEY_LOW) / (KEY_HIGH - KEY_LOW);
+            alpha = Math.round(255 * (1 - smoothstep(t)));
+          }
+          data[i + 3] = alpha;
+
+          // Spill suppression, proportional to how keyed-out this pixel
+          // is — pulls green-tinted fringe pixels toward neutral instead of
+          // leaving a green halo around the subject's edges.
+          if (alpha < 255 && greenness > 0) {
+            const suppress = 1 - alpha / 255;
+            data[i + 1] = Math.round(g - suppress * greenness * 0.6);
           }
         }
         ctx!.putImageData(frame, 0, 0);
@@ -149,7 +141,7 @@ function ChromaKeyVideo({ src, onEnded, className = "" }: ChromaKeyVideoProps) {
   return (
     <div className={className}>
       <video ref={videoRef} src={src} playsInline className="hidden" onEnded={onEnded} onError={onEnded} />
-      <canvas ref={canvasRef} className="h-full w-full object-contain drop-shadow-[0_0_24px_rgba(57,255,20,0.35)]" />
+      <canvas ref={canvasRef} className="h-full w-full object-contain drop-shadow-[0_6px_20px_rgba(0,0,0,0.45)]" />
     </div>
   );
 }

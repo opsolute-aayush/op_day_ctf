@@ -6,10 +6,15 @@ import { requireAdmin } from "@/lib/adminGuard";
 import { normalizePassword } from "@/lib/normalize";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ teamId: string }> }) {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
   const { teamId } = await ctx.params;
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!team || team.sessionId !== admin.sessionId) {
+    return NextResponse.json({ error: "Team not found" }, { status: 404 });
+  }
+
   const levels = await prisma.levelConfig.findMany({ where: { teamId }, orderBy: { levelNumber: "asc" } });
   return NextResponse.json({
     levels: levels.map((l) => ({
@@ -31,12 +36,12 @@ const createSchema = z.object({
 });
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ teamId: string }> }) {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
   const { teamId } = await ctx.params;
   const team = await prisma.team.findUnique({ where: { id: teamId } });
-  if (!team) {
+  if (!team || team.sessionId !== admin.sessionId) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
 

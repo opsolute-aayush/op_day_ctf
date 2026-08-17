@@ -5,13 +5,13 @@ import { Play, Pause, RotateCcw, Flag } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 
-interface GameConfigResponse {
+interface SessionStateResponse {
   isActive: boolean;
   isFinished: boolean;
 }
 
 export default function GameControls({ onChanged }: { onChanged: () => void }) {
-  const [config, setConfig] = useState<GameConfigResponse | null>(null);
+  const [config, setConfig] = useState<SessionStateResponse | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [nonce, setNonce] = useState(0);

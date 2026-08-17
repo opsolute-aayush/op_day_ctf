@@ -3,10 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 
 export async function GET() {
-  const unauthorized = await requireAdmin();
-  if (unauthorized) return unauthorized;
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
 
   const logs = await prisma.activityLog.findMany({
+    where: { sessionId: admin.sessionId },
     orderBy: { createdAt: "desc" },
     take: 50,
     include: { team: true },

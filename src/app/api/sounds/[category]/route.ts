@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { readdir } from "fs/promises";
 import path from "path";
 
-// Lets the client discover whatever .mp3 files are actually sitting in
-// public/sounds/<category> — drop a file in, it plays, no code change and
-// no filename to type anywhere. Category is whitelisted so this can't be
-// used to list arbitrary directories on the server.
-// intro/outro are background music tracks (see src/lib/sfx.ts) rather than
-// one-shot stingers, but are discovered the exact same way.
+// Lists whatever audio files exist in public/sounds/<category>. Category is
+// whitelisted so this can't list arbitrary server directories.
 const CATEGORIES = ["wrong_pass", "right_pass", "help", "winning", "intro", "outro"] as const;
 type Category = (typeof CATEGORIES)[number];
 

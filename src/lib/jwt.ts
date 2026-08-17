@@ -12,9 +12,14 @@ export const ADMIN_COOKIE = "opday_admin_session";
 export interface TeamTokenPayload {
   teamId: string;
   teamName: string;
+  sessionId: string;
 }
 
-interface AdminTokenPayload {
+export interface AdminSession {
+  sessionId: string;
+}
+
+interface AdminTokenPayload extends AdminSession {
   role: "admin";
 }
 
@@ -22,15 +27,15 @@ export function signTeamToken(payload: TeamTokenPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "16h" });
 }
 
-export function signAdminToken(): string {
-  const payload: AdminTokenPayload = { role: "admin" };
+export function signAdminToken(sessionId: string): string {
+  const payload: AdminTokenPayload = { role: "admin", sessionId };
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "16h" });
 }
 
 export function verifyTeamToken(token: string): TeamTokenPayload | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (typeof decoded === "object" && decoded && "teamId" in decoded) {
+    if (typeof decoded === "object" && decoded && "teamId" in decoded && "sessionId" in decoded) {
       return decoded as unknown as TeamTokenPayload;
     }
     return null;
@@ -39,11 +44,19 @@ export function verifyTeamToken(token: string): TeamTokenPayload | null {
   }
 }
 
-export function verifyAdminToken(token: string): boolean {
+export function verifyAdminToken(token: string): AdminSession | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    return typeof decoded === "object" && decoded !== null && (decoded as { role?: string }).role === "admin";
+    if (
+      typeof decoded === "object" &&
+      decoded !== null &&
+      (decoded as { role?: string }).role === "admin" &&
+      typeof (decoded as { sessionId?: unknown }).sessionId === "string"
+    ) {
+      return { sessionId: (decoded as unknown as AdminTokenPayload).sessionId };
+    }
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }

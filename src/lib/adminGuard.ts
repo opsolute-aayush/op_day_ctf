@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
-import { getIsAdminFromCookies } from "@/lib/auth";
+import { getAdminSessionFromCookies } from "@/lib/auth";
+import type { AdminSession } from "@/lib/jwt";
 
-/** Returns a 401 response if the caller is not an authenticated admin, else null. */
-export async function requireAdmin(): Promise<NextResponse | null> {
-  const isAdmin = await getIsAdminFromCookies();
-  if (!isAdmin) {
+/**
+ * Returns the authenticated admin's session (so callers know which
+ * GameSession to scope their query to) or a ready-to-return 401 response.
+ * Callers narrow with `if (admin instanceof NextResponse) return admin;`.
+ */
+export async function requireAdmin(): Promise<AdminSession | NextResponse> {
+  const admin = await getAdminSessionFromCookies();
+  if (!admin) {
     return NextResponse.json({ error: "Admin authentication required." }, { status: 401 });
   }
-  return null;
+  return admin;
 }
