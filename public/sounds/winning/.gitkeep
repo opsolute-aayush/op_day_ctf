@@ -1,3 +1,3 @@
-Drop victory/fanfare sound effects (mp3) here, then list their filenames
-in WINNING_SOUNDS in src/lib/sfx.ts. Until you add files, a synthesized
-fanfare plays instead.
+Drop victory/fanfare sound effects (.mp3, .wav, .ogg, .m4a) here — they're
+auto-discovered and played at random, no code change needed. Until you add
+a file, a synthesized fanfare plays instead.

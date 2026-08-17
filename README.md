@@ -172,25 +172,38 @@ picks one of 10 icons by the team's number and renders it in that team's
 color; the same team always gets the same avatar everywhere (join screen,
 play hub, leaderboard, winner screen).
 
+## Live team stats for players
+
+`/play` shows a **live "all squads" side panel** (`src/components/TeamStatsPanel.tsx`,
+backed by the public `GET /api/game/stats`) so every team can see how
+everyone else is doing, not just the admin — avatar, name, a progress bar,
+and level count per team, refreshing every few seconds, with your own squad
+highlighted. It's a real sidebar next to the level list on wide screens and
+stacks below it on mobile. Deliberately excludes anything sensitive
+(attempts, collected words, clues, member names) — it's just a friendly
+"who's ahead" scoreboard, not a way to leak puzzle content.
+
 ## Sound effects
 
-`public/sounds/` is split by moment so effects are easy to swap out:
+`public/sounds/` is split by moment, and **files are auto-discovered — just
+drop one in, no code change, no filename to type anywhere**:
 
 - `wrong_pass/` — meme stingers on an incorrect password
 - `right_pass/` — plays on a correct password / level unlock
 - `help/` — plays when the Game Master releases a hint for a stuck team
 - `winning/` — plays when a team finishes the whole hunt
 
-Any category with no files falls back to a small synthesized chime instead
-(`playRightPasswordSound()` / `playWinningSound()` / `playHelpSound()` in
-`src/lib/sfx.ts`), so the feature works with zero assets out of the box —
-`winning/` currently ships empty and uses the synthesized fanfare. One file
-is picked at random per category (never the same one twice in a row) —
-wired up in `src/components/PasswordModal.tsx` (wrong/right),
-`src/app/play/page.tsx` (help, on hint reveal), and `src/app/winner/page.tsx`
-(winning). To add your own: drop an `.mp3` into the folder and list its
-exact filename in the matching array in `sfx.ts` (spaces/punctuation in
-filenames are fine — they're URL-encoded automatically).
+`GET /api/sounds/<category>` (`src/app/api/sounds/[category]/route.ts`)
+lists whatever `.mp3`/`.wav`/`.ogg`/`.m4a` files actually exist in that
+folder at request time; `src/lib/sfx.ts` fetches and caches that list on
+first use, then plays a random one (never the same one twice in a row).
+Filenames can have spaces/punctuation — they're URL-encoded automatically.
+A category with **no** files falls back to a small synthesized chime
+instead (`winning/` currently ships empty and uses one), so the feature
+works with zero assets out of the box. Wired up in
+`src/components/PasswordModal.tsx` (wrong/right), `src/app/play/page.tsx`
+(help, on hint reveal), and `src/app/winner/page.tsx` (winning). To add a
+sound: just drop the file in the right folder — that's it.
 
 ## Security notes (what's enforced server-side, not just in the UI)
 
@@ -221,7 +234,7 @@ filenames are fine — they're URL-encoded automatically).
 - Password/sentence comparisons are case-insensitive and whitespace/
   punctuation-normalized (`src/lib/normalize.ts`) so teams aren't tripped up
   by formatting, but the comparison itself always happens on the server.
-- `/api/game/unlock-level` is rate-limited to 5 attempts/minute per team;
+- `/api/game/unlock-level` is rate-limited to 10 attempts/minute per team;
   `/api/admin/login` is rate-limited per IP.
 - The "who finished first" race (two teams submitting their correct sentence
   near-simultaneously) is resolved atomically with a conditional
@@ -389,7 +402,7 @@ src/
     winner/                 Results screen (first-place or "hunt complete") + confetti
     admin/                  Game Master dashboard (login-gated)
     api/                    All routes — see inline comments for behavior
-  components/               UI primitives + game components (incl. TeamAvatar.tsx)
+  components/               UI primitives + game components (TeamAvatar.tsx, TeamStatsPanel.tsx)
   components/admin/         Leaderboard, ActivityFeed, LevelsEditor, GameControls
   hooks/useTeamStatus.ts    Polling hook for a team's live progress
 ```

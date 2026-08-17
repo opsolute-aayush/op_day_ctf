@@ -10,7 +10,7 @@ import { getGameConfig, getTotalLevels, logActivity, buildTeamStatus } from "@/l
 
 const schema = z.object({ password: z.string().min(1).max(200) });
 
-const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS = 10;
 const WINDOW_MS = 60_000;
 
 export async function POST(req: NextRequest) {

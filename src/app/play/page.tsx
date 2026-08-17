@@ -10,6 +10,7 @@ import TerminalPanel from "@/components/TerminalPanel";
 import LevelCard, { LevelCardState } from "@/components/LevelCard";
 import PasswordModal from "@/components/PasswordModal";
 import TeamAvatar from "@/components/TeamAvatar";
+import TeamStatsPanel from "@/components/TeamStatsPanel";
 import { playHelpSound } from "@/lib/sfx";
 
 export default function PlayPage() {
@@ -80,7 +81,8 @@ export default function PlayPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8">
+    <main className="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 gap-6 px-4 py-8 lg:grid-cols-[1fr_320px] lg:items-start">
+      <div className="flex min-w-0 flex-col gap-6">
       <header className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <TeamAvatar teamNumber={status.team.teamNumber} color={status.team.color} />
@@ -202,6 +204,11 @@ export default function PlayPage() {
           Go to final assembly →
         </Link>
       </div>
+      </div>
+
+      <aside className="lg:sticky lg:top-8">
+        <TeamStatsPanel highlightTeamNumber={status.team.teamNumber} />
+      </aside>
     </main>
   );
 }

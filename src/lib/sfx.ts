@@ -1,52 +1,76 @@
 "use client";
 
-// Sound effects are segregated by moment so they're easy to swap out:
+// Sound effects are segregated by moment, and auto-discovered from disk —
+// just drop an .mp3 into the matching folder and it starts playing, no
+// filename to register anywhere:
 // public/sounds/wrong_pass/  — an incorrect password
 // public/sounds/right_pass/  — a level unlocking correctly
-// public/sounds/winning/     — a team finishing the whole hunt
 // public/sounds/help/        — the Game Master releasing a hint
+// public/sounds/winning/     — a team finishing the whole hunt
 //
-// Drop your own .mp3 files into a folder and list the filenames below
-// (bare filename only — spaces/punctuation are fine, they get URL-encoded
-// automatically). Any category left empty falls back to a small synthesized
-// chime instead, so the feature works with zero assets.
+// Discovery happens via GET /api/sounds/<category>, which lists whatever
+// audio files actually exist in that folder (src/app/api/sounds/[category]).
+// A category with no files falls back to a small synthesized chime, so the
+// feature works with zero assets.
 
-const WRONG_PASSWORD_SOUNDS = [
-  "Ack Meme Sound Effect.mp3",
-  "Chicken on tree screaming viral sound effect  Meme sound.mp3",
-  "Huh sound effect.mp3",
-  "bruh.mp3",
-  "dramatic-fart.mp3",
-  "fahhh.mp3",
-  "goat-scream.mp3",
-  "roblox-oof.mp3",
-];
+type Category = "wrong_pass" | "right_pass" | "help" | "winning";
 
-const RIGHT_PASSWORD_SOUNDS = ["Chalo Meme Sound Effect.mp3", "Wow sound effect.mp3", "YOOOOOO SOUND EFFECT.mp3"];
+const fileListCache = new Map<Category, string[]>();
+const fileListInFlight = new Map<Category, Promise<string[]>>();
 
-const WINNING_SOUNDS: string[] = [];
+async function getFileList(category: Category): Promise<string[]> {
+  const cached = fileListCache.get(category);
+  if (cached) return cached;
 
-const HELP_SOUNDS = ["Help, Help Me! Sound effect from tiktok..mp3"];
+  const pending = fileListInFlight.get(category);
+  if (pending) return pending;
 
-const lastPlayed: Record<string, string | null> = {};
+  const promise = fetch(`/api/sounds/${category}`, { cache: "no-store" })
+    .then((res) => (res.ok ? res.json() : { files: [] }))
+    .then((data: { files?: string[] }) => {
+      const files = data.files ?? [];
+      fileListCache.set(category, files);
+      fileListInFlight.delete(category);
+      return files;
+    })
+    .catch(() => {
+      fileListInFlight.delete(category);
+      return [];
+    });
 
-function playRandomFile(folder: string, filenames: string[], category: string, volume: number) {
-  if (typeof Audio === "undefined" || filenames.length === 0) return false;
+  fileListInFlight.set(category, promise);
+  return promise;
+}
 
-  const candidates = filenames.length > 1 ? filenames.filter((s) => s !== lastPlayed[category]) : filenames;
-  const filename = candidates[Math.floor(Math.random() * candidates.length)];
-  lastPlayed[category] = filename;
+const lastPlayed: Record<Category, string | null> = {
+  wrong_pass: null,
+  right_pass: null,
+  help: null,
+  winning: null,
+};
 
+function playFile(category: Category, filename: string, volume: number) {
   try {
-    const audio = new Audio(`/sounds/${folder}/${encodeURIComponent(filename)}`);
+    const audio = new Audio(`/sounds/${category}/${encodeURIComponent(filename)}`);
     audio.volume = volume;
     void audio.play().catch(() => {
       // Autoplay can be blocked before any user gesture has landed — safe to ignore.
     });
-    return true;
   } catch {
-    return false;
+    // ignore
   }
+}
+
+async function playRandomFromCategory(category: Category, volume: number, fallback: () => void) {
+  const files = await getFileList(category);
+  if (files.length === 0) {
+    fallback();
+    return;
+  }
+  const candidates = files.length > 1 ? files.filter((f) => f !== lastPlayed[category]) : files;
+  const filename = candidates[Math.floor(Math.random() * candidates.length)];
+  lastPlayed[category] = filename;
+  playFile(category, filename, volume);
 }
 
 let sharedContext: AudioContext | null = null;
@@ -83,43 +107,55 @@ function playSynthChime(notes: Array<[freq: number, offset: number, duration: nu
 }
 
 export function playRandomWrongPasswordSound(volume = 0.6) {
-  playRandomFile("wrong_pass", WRONG_PASSWORD_SOUNDS, "wrong", volume);
+  void playRandomFromCategory("wrong_pass", volume, () => {
+    // No files dropped in yet — a low, jarring double-buzz.
+    playSynthChime(
+      [
+        [180, 0, 0.15],
+        [140, 0.1, 0.2],
+      ],
+      volume
+    );
+  });
 }
 
 export function playRightPasswordSound(volume = 0.5) {
-  if (playRandomFile("right_pass", RIGHT_PASSWORD_SOUNDS, "right", volume)) return;
-  // Two quick rising blips — a satisfying "unlocked" chirp.
-  playSynthChime(
-    [
-      [880, 0, 0.12],
-      [1318.5, 0.08, 0.18],
-    ],
-    volume
-  );
+  void playRandomFromCategory("right_pass", volume, () => {
+    // Two quick rising blips — a satisfying "unlocked" chirp.
+    playSynthChime(
+      [
+        [880, 0, 0.12],
+        [1318.5, 0.08, 0.18],
+      ],
+      volume
+    );
+  });
 }
 
 export function playWinningSound(volume = 0.4) {
-  if (playRandomFile("winning", WINNING_SOUNDS, "winning", volume)) return;
-  // A short ascending arpeggio fanfare.
-  playSynthChime(
-    [
-      [523.25, 0, 0.2],
-      [659.25, 0.15, 0.2],
-      [783.99, 0.3, 0.2],
-      [1046.5, 0.45, 0.5],
-    ],
-    volume
-  );
+  void playRandomFromCategory("winning", volume, () => {
+    // A short ascending arpeggio fanfare.
+    playSynthChime(
+      [
+        [523.25, 0, 0.2],
+        [659.25, 0.15, 0.2],
+        [783.99, 0.3, 0.2],
+        [1046.5, 0.45, 0.5],
+      ],
+      volume
+    );
+  });
 }
 
 export function playHelpSound(volume = 0.5) {
-  if (playRandomFile("help", HELP_SOUNDS, "help", volume)) return;
-  // A short two-note "attention" chime.
-  playSynthChime(
-    [
-      [660, 0, 0.15],
-      [660, 0.2, 0.15],
-    ],
-    volume
-  );
+  void playRandomFromCategory("help", volume, () => {
+    // A short two-note "attention" chime.
+    playSynthChime(
+      [
+        [660, 0, 0.15],
+        [660, 0.2, 0.15],
+      ],
+      volume
+    );
+  });
 }
