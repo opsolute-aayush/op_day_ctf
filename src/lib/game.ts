@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { parseIntArray, parseStringArray } from "@/lib/json";
+import { parseIntArray } from "@/lib/json";
 
 export async function getGameConfig() {
   const config = await prisma.gameConfig.upsert({
@@ -47,16 +47,25 @@ export async function buildTeamStatus(teamId: string) {
   if (!team || !progress) return null;
 
   const unlockedLevels = parseIntArray(progress.unlockedLevels);
-  const collectedWords = parseStringArray(progress.collectedWords);
+  const verifiedWordLevels = parseIntArray(progress.verifiedWordLevels);
 
+  // The word reward is only ever revealed to the client once the team has
+  // typed in and confirmed the actual word they found at the location — a
+  // correct password alone unlocks the level's clue, but never leaks the
+  // word text itself.
   const unlockedClues = levelConfigs
     .filter((lc) => unlockedLevels.includes(lc.levelNumber))
     .map((lc) => ({
       levelNumber: lc.levelNumber,
       locationClue: lc.locationClue,
-      wordReward: lc.wordReward,
+      wordReward: verifiedWordLevels.includes(lc.levelNumber) ? lc.wordReward : undefined,
       hint: lc.hint ?? undefined,
     }));
+
+  const collectedWords = levelConfigs
+    .filter((lc) => verifiedWordLevels.includes(lc.levelNumber))
+    .sort((a, b) => a.levelNumber - b.levelNumber)
+    .map((lc) => lc.wordReward);
 
   const finalUnlocked = progress.currentLevel >= totalLevels;
 

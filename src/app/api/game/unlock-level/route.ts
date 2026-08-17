@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getTeamFromCookies } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { normalizePassword } from "@/lib/normalize";
-import { parseIntArray, parseStringArray } from "@/lib/json";
+import { parseIntArray } from "@/lib/json";
 import { getGameConfig, getTotalLevels, logActivity, buildTeamStatus } from "@/lib/game";
 
 const schema = z.object({ password: z.string().min(1).max(200) });
@@ -76,24 +76,21 @@ export async function POST(req: NextRequest) {
 
   const unlockedLevels = parseIntArray(progress.unlockedLevels);
   if (!unlockedLevels.includes(targetLevel)) unlockedLevels.push(targetLevel);
-  const collectedWords = parseStringArray(progress.collectedWords);
-  collectedWords.push(levelConfig.wordReward);
 
   const nextLevel = targetLevel + 1;
 
+  // Unlocking reveals the location clue only — the word itself still has to
+  // be typed in and confirmed via /api/game/verify-word once the team
+  // actually finds it, so a correct password alone can't leak the word.
   await prisma.teamProgress.update({
     where: { teamId: teamAuth.teamId },
     data: {
       currentLevel: nextLevel,
       unlockedLevels: JSON.stringify(unlockedLevels),
-      collectedWords: JSON.stringify(collectedWords),
     },
   });
 
-  await logActivity(teamAuth.teamId, "LEVEL_UNLOCKED", {
-    levelNumber: targetLevel,
-    wordReward: levelConfig.wordReward,
-  });
+  await logActivity(teamAuth.teamId, "LEVEL_UNLOCKED", { levelNumber: targetLevel });
 
   const status = await buildTeamStatus(teamAuth.teamId);
   return NextResponse.json({ status });

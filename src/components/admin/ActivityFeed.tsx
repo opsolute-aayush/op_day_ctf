@@ -23,6 +23,10 @@ function describe(item: ActivityItem): string {
       return "unlocked a level";
     case "WRONG_PASSWORD":
       return "entered a wrong password";
+    case "WORD_VERIFIED":
+      return `confirmed the word "${String(item.details?.word ?? "")}"`;
+    case "WRONG_WORD":
+      return "typed the wrong word for a level";
     case "WRONG_FINAL_SENTENCE":
       return "submitted an incorrect final sentence";
     case "WIN":

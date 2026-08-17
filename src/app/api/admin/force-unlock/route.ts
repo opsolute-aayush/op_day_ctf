@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
-import { parseIntArray, parseStringArray } from "@/lib/json";
+import { parseIntArray } from "@/lib/json";
 import { getTotalLevels, logActivity } from "@/lib/game";
 
 const schema = z.object({
@@ -51,15 +51,18 @@ export async function POST(req: NextRequest) {
 
   const unlockedLevels = parseIntArray(progress.unlockedLevels);
   if (!unlockedLevels.includes(targetLevel)) unlockedLevels.push(targetLevel);
-  const collectedWords = parseStringArray(progress.collectedWords);
-  collectedWords.push(levelConfig.wordReward);
+  // The Game Master's override is a full bypass — it also confirms the
+  // word for free, since a stuck team wouldn't otherwise have any way to
+  // know it.
+  const verifiedWordLevels = parseIntArray(progress.verifiedWordLevels);
+  if (!verifiedWordLevels.includes(targetLevel)) verifiedWordLevels.push(targetLevel);
 
   await prisma.teamProgress.update({
     where: { teamId: parsed.data.teamId },
     data: {
       currentLevel: targetLevel + 1,
       unlockedLevels: JSON.stringify(unlockedLevels),
-      collectedWords: JSON.stringify(collectedWords),
+      verifiedWordLevels: JSON.stringify(verifiedWordLevels),
       hintReleasedLevel: null,
     },
   });

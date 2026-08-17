@@ -7,11 +7,11 @@ import { LogOut, Trophy, Flag, Pencil, Check, X } from "lucide-react";
 import { useTeamStatus } from "@/hooks/useTeamStatus";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
-import LevelCard, { LevelCardState } from "@/components/LevelCard";
+import LevelCard, { LevelCardState, WordVerifyResult } from "@/components/LevelCard";
 import PasswordModal from "@/components/PasswordModal";
 import TeamAvatar from "@/components/TeamAvatar";
 import TeamStatsPanel from "@/components/TeamStatsPanel";
-import { playHelpSound } from "@/lib/sfx";
+import { playHelpSound, playRightPasswordSound, playRandomWrongPasswordSound } from "@/lib/sfx";
 
 export default function PlayPage() {
   const router = useRouter();
@@ -102,6 +102,22 @@ export default function PlayPage() {
     } finally {
       setRequestingHint(false);
     }
+  }
+
+  async function verifyWord(levelNumber: number, word: string): Promise<WordVerifyResult> {
+    const res = await fetch("/api/game/verify-word", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ levelNumber, word }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      playRandomWrongPasswordSound();
+      return { ok: false, error: data.error ?? "Wrong word." };
+    }
+    playRightPasswordSound();
+    refresh();
+    return { ok: true };
   }
 
   return (
@@ -199,6 +215,7 @@ export default function PlayPage() {
                 helpCreditsRemaining={status.helpCreditsRemaining}
                 onRequestHint={requestHint}
                 requestingHint={requestingHint}
+                onVerifyWord={verifyWord}
                 onClick={() => setActiveModalLevel(levelNumber)}
               />
             );

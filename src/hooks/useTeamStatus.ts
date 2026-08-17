@@ -5,7 +5,9 @@ import { useCallback, useEffect, useState } from "react";
 export interface UnlockedClue {
   levelNumber: number;
   locationClue: string;
-  wordReward: string;
+  // Only present once the team has typed the word and it's been confirmed —
+  // unlocking the level via password alone never reveals it.
+  wordReward?: string;
   hint?: string;
 }
 

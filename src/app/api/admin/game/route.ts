@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
         currentLevel: 1,
         unlockedLevels: "[0]",
         collectedWords: "[]",
+        verifiedWordLevels: "[]",
         completed: false,
         completedAt: null,
         hintReleasedLevel: null,

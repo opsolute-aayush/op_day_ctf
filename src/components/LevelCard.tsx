@@ -1,9 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Unlock, CheckCircle2, MapPin, Sparkles, LifeBuoy, Loader2 } from "lucide-react";
+import { Lock, Unlock, CheckCircle2, MapPin, Sparkles, LifeBuoy, Loader2, ArrowRight } from "lucide-react";
 
 export type LevelCardState = "locked" | "active" | "completed";
+
+export interface WordVerifyResult {
+  ok: boolean;
+  error?: string;
+}
 
 interface LevelCardProps {
   levelNumber: number;
@@ -17,6 +23,7 @@ interface LevelCardProps {
   helpCreditsRemaining?: number;
   onRequestHint?: () => void;
   requestingHint?: boolean;
+  onVerifyWord?: (levelNumber: number, word: string) => Promise<WordVerifyResult>;
 }
 
 export default function LevelCard({
@@ -31,9 +38,26 @@ export default function LevelCard({
   helpCreditsRemaining,
   onRequestHint,
   requestingHint,
+  onVerifyWord,
 }: LevelCardProps) {
   const clickable = state === "active";
   const showHelpButton = state === "active" && !hint && hintAvailable && (helpCreditsRemaining ?? 0) > 0;
+
+  const [wordDraft, setWordDraft] = useState("");
+  const [wordError, setWordError] = useState<string | null>(null);
+  const [wordSubmitting, setWordSubmitting] = useState(false);
+
+  async function handleVerifyWord(e: React.FormEvent) {
+    e.preventDefault();
+    if (!wordDraft.trim() || !onVerifyWord || wordSubmitting) return;
+    setWordSubmitting(true);
+    setWordError(null);
+    const result = await onVerifyWord(levelNumber, wordDraft);
+    setWordSubmitting(false);
+    if (!result.ok) {
+      setWordError(result.error ?? "Wrong word.");
+    }
+  }
 
   return (
     <motion.div
@@ -113,11 +137,51 @@ export default function LevelCard({
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-neon-500" /> {locationClue}
             </p>
           )}
-          {wordReward && (
-            <span className="inline-block rounded-full border border-neon-500/40 bg-neon-500/10 px-3 py-1 text-xs font-semibold tracking-wide text-neon-400">
-              WORD COLLECTED: “{wordReward}”
-            </span>
-          )}
+
+          <AnimatePresence mode="wait">
+            {wordReward ? (
+              <motion.span
+                key="collected"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="inline-block rounded-full border border-neon-500/40 bg-neon-500/10 px-3 py-1 text-xs font-semibold tracking-wide text-neon-400"
+              >
+                WORD COLLECTED: “{wordReward}”
+              </motion.span>
+            ) : (
+              <motion.form
+                key="verify-form"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onSubmit={handleVerifyWord}
+                className="space-y-1.5"
+              >
+                <p className="text-xs text-neon-100/50">Type the exact word you found at this location:</p>
+                <div className="flex gap-2">
+                  <input
+                    value={wordDraft}
+                    onChange={(e) => {
+                      setWordDraft(e.target.value);
+                      if (wordError) setWordError(null);
+                    }}
+                    placeholder="Enter word"
+                    autoComplete="off"
+                    className="w-full min-w-0 flex-1 rounded-md border border-panel-border bg-void-2 px-3 py-2 text-sm uppercase tracking-wide text-neon-100 placeholder:text-neon-100/30 placeholder:normal-case outline-none focus:border-neon-500 focus:ring-1 focus:ring-neon-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={wordSubmitting || !wordDraft.trim()}
+                    className="flex shrink-0 items-center gap-1 rounded-md border border-neon-500/50 bg-neon-500/10 px-3 text-xs font-semibold uppercase text-neon-400 hover:bg-neon-500/20 disabled:opacity-40"
+                  >
+                    {wordSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                {wordError && (
+                  <p className="shake text-xs text-danger-400">{wordError}</p>
+                )}
+              </motion.form>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </motion.div>

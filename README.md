@@ -44,6 +44,14 @@ password they overheard at a shared physical location.
   Master manually releases it, or when the team spends one of their own
   limited self-service hint requests (see
   [Self-service hints](#self-service-hints)).
+- **Unlocking a level never hands over its word.** Getting the password
+  right only unlocks the level and reveals its location clue — the team
+  still has to go find the physical card and type in the *exact word*
+  printed on it (see
+  [Confirming the word you found](#confirming-the-word-you-found)) before
+  it counts toward their final sentence. This closes the gap where a lucky
+  password guess would otherwise auto-hand over the word without the team
+  ever visiting the location.
 - **Level N** (the final level) is implicit per team — it's just
   `count(that team's LevelConfig rows) + 1`. There's no config row for it:
   it's the sentence-assembly screen, unlocked once that team clears every
@@ -206,6 +214,37 @@ per-team by `POST /api/game/help`. A few rules that keep it fair:
   on the team's screen — no separate wiring needed, it's just watching for
   the hint becoming visible.
 
+## Confirming the word you found
+
+Once a level is unlocked, its card shows a plain single-line prompt —
+**"Type the exact word you found at this location"** — instead of
+immediately handing over the word. The team types what's printed on the
+physical card and hits the arrow button (`POST /api/game/verify-word`):
+
+- **Wrong word** → an inline red "Wrong word — check what you found at the
+  location" message, same shake feedback as a wrong password. Nothing is
+  recorded against the team except a rate-limited attempt (10/minute,
+  same as password guesses).
+- **Correct word** → the prompt is replaced with the familiar
+  "WORD COLLECTED: "..."" badge, and it now counts toward the team's final
+  sentence.
+- The check is **case- and spacing-insensitive on purpose** — "The Secret",
+  "THE  SECRET", and "TheSecret" all match the same word reward, so a team
+  isn't penalized for how they transcribed a physical card
+  (`normalizeWord` in `src/lib/normalize.ts` compares on letters/digits
+  only).
+- Re-submitting an already-confirmed word is a harmless no-op, not an
+  error.
+- The Game Master's own **force-unlock** button (leaderboard's **Unlock**
+  icon) is a complete bypass, same as it always was — it confirms the word
+  for free too, since a team that's stuck wouldn't have any way to type in
+  a word they never found.
+
+`src/app/api/team/status`'s `unlockedClues[].wordReward` is `undefined`
+until a level's word is actually confirmed — the word text itself is never
+sent to the client before that point, so there's no way to read it off the
+network tab either.
+
 ## Sound effects
 
 `public/sounds/` is split by moment, and **files are auto-discovered — just
@@ -243,8 +282,11 @@ sound: just drop the file in the right folder — that's it.
   the database and the signed JWT cookie, so there's no client-suppliable
   "level" or "team ID" parameter to tamper with.
 - `unlockedClues` in `/api/team/status` only ever includes levels the team
-  has actually unlocked — a level's location clue and word reward are never
-  sent to the client before that level's password is verified.
+  has actually unlocked — the location clue is sent once the password is
+  verified, but the **word reward specifically waits until the word itself
+  is separately confirmed** via `/api/game/verify-word` (see
+  [Confirming the word you found](#confirming-the-word-you-found)) — a
+  correct password alone can never leak the word text.
 - Every level lookup (`unlock-level`, `force-unlock`) is scoped by both
   `teamId` *and* `levelNumber` — a team's password only ever matches its own
   levels, never another team's, even if they happen to be on the same level
