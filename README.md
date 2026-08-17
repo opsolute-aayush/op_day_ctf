@@ -114,55 +114,83 @@ openssl rand -hex 8         # → ADMIN_KEY (this is what the Game Master types 
 
 ## Running the event
 
-**Only the Game Master creates teams.** Players can never mint a new team
-from the app — they can only join one that already exists — so the number
-of digital teams always matches however many physical groups you actually
-have at the event. No duplicate/joke/extra teams from open self-service
-sign-up.
+**Only the Game Master creates teams**, and each gets a permanent number
+(Team 1, Team 2, ...) the moment it's created. Players can never mint a new
+team from the app — they can only join one that already exists — so the
+number of digital teams always matches however many physical groups you
+actually have. A team's **number never changes**, but its **display name is
+entirely up to whoever joins it** — they can call themselves "Code Breakers"
+or anything else, rename it any time, and the admin dashboard, leaderboard,
+and join screen all show both (`#3 — Code Breakers`) so renaming never
+causes confusion about which physical group is which.
 
-1. **Create each team** ahead of time: log into `/admin` with `ADMIN_KEY`,
-   go to the **Team Puzzles** tab, and use **Create Team** (name + color) —
-   once per physical group. This is required before you can configure a
-   team's puzzle, since levels are tied to a team's ID once it exists.
+1. **Add each team** ahead of time: log into `/admin` with `ADMIN_KEY`, go to
+   the **Team Puzzles** tab, and click **Add Team** once per physical
+   group — zero typing, each gets the next number and a colored hacker-badge
+   avatar automatically. This is required before you can configure a team's
+   puzzle, since levels are tied to a team's ID once it exists.
 2. **Configure each team's own puzzle**: still in **Team Puzzles**, pick a
    team from the selector and set its passwords, location clues, word
    rewards, optional hints, and its own final winning sentence. Add/remove
    levels with **Add Level** / **Delete** — numbering stays contiguous
-   automatically, per team. Repeat for every team you created (they can all
-   be totally different puzzles, or variations on a theme — up to you).
+   automatically, per team.
 3. Print/write each team's Level 1 password's cipher onto the physical
    whiteboard (or hand out per-team QR codes/cards) — this is Level 0 and
    lives entirely outside the app.
-4. Hide your physical word cards + next-level cipher at each location —
-   remember each team may be heading to different locations for the same
-   "level number" if you gave them different clues.
+4. Hide your physical word cards + next-level cipher at each location.
 5. **Have players join** at `/register`: they see the list of teams you
-   created, pick theirs, and add their own name — no team creation option is
-   shown to them. Multiple people can join the same team from their own
-   phones and they'll all see and drive the same shared progress live.
-   They'll land on a "waiting for Game Master" screen until you start.
-6. Hit **Start** in the admin **Game Control** tab. This starts the clock
-   for every team at once. Teams can now decode their whiteboard clue and
-   start entering passwords at `/play`.
+   created (each with its avatar), pick theirs, optionally give their squad
+   its own name, and add their own name to the member list. No team creation
+   option is shown to them. Multiple people can join the same team from
+   their own phones and they'll all see and drive the same shared progress
+   live. They'll land on a "waiting for Game Master" screen until you start.
+6. Hit **Start** in the admin **Game Control** tab. Teams can now decode
+   their whiteboard clue and start entering passwords at `/play`.
 7. Watch progress live on the admin **Overview** tab (leaderboard + activity
    feed, both refresh every few seconds). If a team is stuck, use the
-   unlock (⚡) or hint (💡) icons next to their row to nudge them without
+   **Unlock** or **Hint** buttons next to their row to nudge them without
    giving away the whole puzzle.
-8. First team to correctly assemble and submit *their own* sentence at
-   `/final` wins — the game auto-locks (`isFinished`) for everyone the
-   instant that happens.
-9. **Reset** (Game Control tab) wipes all progress back to Level 1 for a
-   re-run — teams and their puzzle/sentence (configured in step 2) are
-   untouched, so you can replay without recreating anything.
+8. A team correctly assembling and submitting *their own* sentence at
+   `/final` gets its own results screen immediately — **this never stops the
+   hunt for anyone else.** The first team to do it is tagged 🏆 on the
+   leaderboard for bragging rights, but every other team keeps playing
+   exactly as before.
+9. **End Game** (Game Control tab, in the "danger zone") is the *only*
+   thing that stops the hunt for everyone — nobody can unlock levels or
+   submit sentences anymore once you hit it. Use it when you're ready to
+   wrap up, not automatically.
+10. **Reset** (also in the danger zone) wipes all progress back to Level 1
+    for a re-run — teams stay joined, and each team's puzzle/sentence
+    (configured in step 2) is untouched, so you can replay without
+    recreating anything.
+
+## Team avatars
+
+Every team gets a deterministic "hacker badge" avatar — no image uploads
+needed, so there's nothing to store or moderate. `src/components/TeamAvatar.tsx`
+picks one of 10 icons by the team's number and renders it in that team's
+color; the same team always gets the same avatar everywhere (join screen,
+play hub, leaderboard, winner screen).
 
 ## Sound effects
 
-`public/sounds/` holds a set of meme sound effects (`bruh.mp3`,
-`dramatic-fart.mp3`, `fahhh.mp3`, `goat-scream.mp3`, `roblox-oof.mp3`,
-`yeet.mp3`). One is picked at random (never the same one twice in a row) and
-played whenever a team enters a wrong level password — wired up in
-`src/components/PasswordModal.tsx` via `src/lib/sfx.ts`. Drop in your own
-files and update the list in `sfx.ts` to change the roster.
+`public/sounds/` is split by moment so effects are easy to swap out:
+
+- `wrong_pass/` — meme stingers on an incorrect password
+- `right_pass/` — plays on a correct password / level unlock
+- `help/` — plays when the Game Master releases a hint for a stuck team
+- `winning/` — plays when a team finishes the whole hunt
+
+Any category with no files falls back to a small synthesized chime instead
+(`playRightPasswordSound()` / `playWinningSound()` / `playHelpSound()` in
+`src/lib/sfx.ts`), so the feature works with zero assets out of the box —
+`winning/` currently ships empty and uses the synthesized fanfare. One file
+is picked at random per category (never the same one twice in a row) —
+wired up in `src/components/PasswordModal.tsx` (wrong/right),
+`src/app/play/page.tsx` (help, on hint reveal), and `src/app/winner/page.tsx`
+(winning). To add your own: drop an `.mp3` into the folder and list its
+exact filename in the matching array in `sfx.ts` (spaces/punctuation in
+filenames are fine — they're URL-encoded automatically).
 
 ## Security notes (what's enforced server-side, not just in the UI)
 
@@ -195,9 +223,19 @@ files and update the list in `sfx.ts` to change the roster.
   by formatting, but the comparison itself always happens on the server.
 - `/api/game/unlock-level` is rate-limited to 5 attempts/minute per team;
   `/api/admin/login` is rate-limited per IP.
-- The final-win race (two teams submitting the correct sentence near-
-  simultaneously) is resolved atomically with a conditional `updateMany`
-  against `GameConfig.isFinished`, so exactly one team can ever win.
+- The "who finished first" race (two teams submitting their correct sentence
+  near-simultaneously) is resolved atomically with a conditional
+  `updateMany` against `GameConfig.winningTeamId`, so exactly one team can
+  ever hold that title — but it's purely informational: finishing never sets
+  `isFinished` or stops any other team. Only the admin's explicit **End
+  Game** action (`POST /api/admin/game {action:"end"}`) does that.
+- Team creation is admin-only (`POST /api/admin/teams`, requires the admin
+  session) and needs no input — the server assigns the next `teamNumber` and
+  a color, so there's no path for a player to influence how many teams
+  exist. The only self-service writes to a `Team` row are joining
+  (`POST /api/auth/join-team`, adds a member) and renaming
+  (`PUT /api/team/name`) — neither can create a new team or change its
+  number.
 
 ## Scaling notes
 
@@ -231,17 +269,44 @@ compiled app), runs as a non-root user, and the entrypoint
 (`docker-entrypoint.sh`) syncs the SQLite schema and seeds sample data on
 first boot only, every time the container starts.
 
+### Step 1 — build the image
+
 ```bash
 docker build -t opday-ctf .
+```
 
+### Step 2 — generate your credentials
+
+The admin key isn't looked up anywhere — it's whatever string you pass in
+when you start the container. Generate strong values and print the admin
+key so you can note it down:
+
+```bash
+JWT_SECRET=$(openssl rand -base64 48)
+ADMIN_KEY=$(openssl rand -hex 8)
+
+echo "Your admin master key is: $ADMIN_KEY"
+```
+
+(To reuse a specific key instead of generating one, just set
+`ADMIN_KEY="your-chosen-key"` directly instead of the `openssl rand` line.)
+
+### Step 3 — run it
+
+```bash
 docker run -d -p 3000:3000 \
-  -e JWT_SECRET="$(openssl rand -base64 48)" \
-  -e ADMIN_KEY="$(openssl rand -hex 8)" \
+  -e JWT_SECRET="$JWT_SECRET" \
+  -e ADMIN_KEY="$ADMIN_KEY" \
   -v opday_data:/app/data \
+  --name opday-ctf \
   opday-ctf
 ```
 
-(or `npm run docker:build` / `npm run docker:run`, which do the same thing)
+Then open `http://localhost:3000/admin` and log in with the `ADMIN_KEY` you
+printed in Step 2. (`npm run docker:build` / `npm run docker:run` wrap
+Steps 1 and 3 if you'd rather not type the full commands.)
+
+A few operational notes:
 
 - **`-v opday_data:/app/data`** is required — the SQLite file lives at
   `/app/data/prod.db` inside the container. Without a volume, every restart
@@ -315,16 +380,16 @@ prisma/
 src/
   proxy.ts                Route guarding (redirect unauthenticated browsers)
   lib/                     jwt.ts, auth.ts (cookies), game.ts (progress logic),
-                           rateLimit.ts, normalize.ts, json.ts, adminGuard.ts
+                           rateLimit.ts, normalize.ts, json.ts, adminGuard.ts, sfx.ts
   app/
     page.tsx               Landing
     register/               Join an existing team (no team creation here)
-    play/                   Level hub
+    play/                   Level hub, squad rename control
     final/                  Sentence assembly
-    winner/                 Victory screen + confetti
+    winner/                 Results screen (first-place or "hunt complete") + confetti
     admin/                  Game Master dashboard (login-gated)
     api/                    All routes — see inline comments for behavior
-  components/               UI primitives + game components
+  components/               UI primitives + game components (incl. TeamAvatar.tsx)
   components/admin/         Leaderboard, ActivityFeed, LevelsEditor, GameControls
   hooks/useTeamStatus.ts    Polling hook for a team's live progress
 ```

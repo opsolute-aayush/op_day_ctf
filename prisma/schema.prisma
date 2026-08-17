@@ -21,7 +21,8 @@ model GameConfig {
 
 model Team {
   id              String        @id @default(uuid())
-  name            String        @unique
+  teamNumber      Int           @unique // fixed slot assigned by the admin; never reused after a delete
+  name            String        // player-chosen display name — freely editable, not required to be unique
   color           String        @default("#39FF14")
   members         String // JSON string array
   winningSentence String        @default("") // this team's own final sentence — unique per team

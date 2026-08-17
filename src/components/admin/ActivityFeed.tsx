@@ -17,6 +17,8 @@ function describe(item: ActivityItem): string {
       return "was created by the Game Master";
     case "MEMBER_JOINED":
       return `— ${String(item.details?.memberName ?? "someone")} joined`;
+    case "TEAM_RENAMED":
+      return `renamed their squad to "${String(item.details?.name ?? "")}"`;
     case "LEVEL_UNLOCKED":
       return "unlocked a level";
     case "WRONG_PASSWORD":
@@ -24,9 +26,9 @@ function describe(item: ActivityItem): string {
     case "WRONG_FINAL_SENTENCE":
       return "submitted an incorrect final sentence";
     case "WIN":
-      return "WON THE HUNT";
-    case "CORRECT_BUT_TOO_LATE":
-      return "solved it — but too late";
+      return "FINISHED FIRST 🏆";
+    case "TEAM_FINISHED":
+      return "finished the hunt";
     case "FORCE_UNLOCK":
       return "was force-unlocked by the Game Master";
     case "HINT_RELEASED":
@@ -35,6 +37,8 @@ function describe(item: ActivityItem): string {
       return "— Game Master started the game";
     case "GAME_PAUSED":
       return "— Game Master paused the game";
+    case "GAME_ENDED":
+      return "— Game Master ended the hunt for everyone";
     case "GAME_RESET":
       return "— Game Master reset the game";
     case "SENTENCE_UPDATED":

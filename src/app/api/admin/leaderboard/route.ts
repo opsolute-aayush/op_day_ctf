@@ -11,7 +11,7 @@ export async function GET() {
   const [teams, config] = await Promise.all([
     prisma.team.findMany({
       include: { progress: true, _count: { select: { levels: true } } },
-      orderBy: { createdAt: "asc" },
+      orderBy: { teamNumber: "asc" },
     }),
     getGameConfig(),
   ]);
@@ -35,6 +35,7 @@ export async function GET() {
     const totalLevels = team._count.levels + 1; // + implicit final sentence-assembly level
     return {
       teamId: team.id,
+      teamNumber: team.teamNumber,
       teamName: team.name,
       color: team.color,
       members: JSON.parse(team.members) as string[],
@@ -45,14 +46,16 @@ export async function GET() {
       attempts: attemptsByTeam.get(team.id) ?? 0,
       completed: progress?.completed ?? false,
       completedAt: progress?.completedAt ?? null,
-      isWinner: config.winningTeamId === team.id,
+      isFirstToFinish: config.winningTeamId === team.id,
       updatedAt: progress?.updatedAt ?? team.createdAt,
     };
   });
 
-  // Sort by progress ratio, since teams can have different numbers of levels.
+  // Finished teams float to the top (first-to-finish first), then sort the
+  // rest by progress ratio since teams can have different numbers of levels.
   leaderboard.sort((a, b) => {
-    if (a.isWinner !== b.isWinner) return a.isWinner ? -1 : 1;
+    if (a.isFirstToFinish !== b.isFirstToFinish) return a.isFirstToFinish ? -1 : 1;
+    if (a.completed !== b.completed) return a.completed ? -1 : 1;
     const ratioA = a.currentLevel / a.totalLevels;
     const ratioB = b.currentLevel / b.totalLevels;
     if (ratioA !== ratioB) return ratioB - ratioA;

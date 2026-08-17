@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { ShieldCheck, LogOut } from "lucide-react";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
@@ -117,16 +118,26 @@ export default function AdminPage() {
         ))}
       </nav>
 
-      {tab === "overview" && (
-        <div className="space-y-4">
-          <Leaderboard refreshKey={refreshKey} />
-          <ActivityFeed refreshKey={refreshKey} />
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+        >
+          {tab === "overview" && (
+            <div className="space-y-4">
+              <Leaderboard refreshKey={refreshKey} />
+              <ActivityFeed refreshKey={refreshKey} />
+            </div>
+          )}
 
-      {tab === "levels" && <LevelsEditor onChanged={() => setRefreshKey((k) => k + 1)} />}
+          {tab === "levels" && <LevelsEditor onChanged={() => setRefreshKey((k) => k + 1)} />}
 
-      {tab === "control" && <GameControls onChanged={() => setRefreshKey((k) => k + 1)} />}
+          {tab === "control" && <GameControls onChanged={() => setRefreshKey((k) => k + 1)} />}
+        </motion.div>
+      </AnimatePresence>
     </main>
   );
 }

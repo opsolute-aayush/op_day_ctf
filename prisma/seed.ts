@@ -199,9 +199,11 @@ async function main() {
 
   await prisma.gameConfig.create({ data: { id: 1, isActive: false, isFinished: false } });
 
-  for (const teamSeed of TEAMS) {
+  for (let teamIndex = 0; teamIndex < TEAMS.length; teamIndex++) {
+    const teamSeed = TEAMS[teamIndex];
     const team = await prisma.team.create({
       data: {
+        teamNumber: teamIndex + 1,
         name: teamSeed.name,
         color: teamSeed.color,
         members: JSON.stringify(teamSeed.members),
@@ -224,7 +226,7 @@ async function main() {
       });
     }
 
-    console.log(`\n${teamSeed.name}`);
+    console.log(`\nTeam ${teamIndex + 1} — ${teamSeed.name}`);
     teamSeed.levels.forEach((l, i) => console.log(`  Level ${i + 1}: "${l.password}"`));
     console.log(`  Winning sentence: "${teamSeed.winningSentence}"`);
   }

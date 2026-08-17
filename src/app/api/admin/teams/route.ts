@@ -1,54 +1,43 @@
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 import { logActivity } from "@/lib/game";
+
+const PALETTE = ["#39FF14", "#00F0FF", "#FF2ECC", "#FFD400", "#FF6A00", "#B026FF", "#FF3B3B", "#3B82F6"];
 
 export async function GET() {
   const unauthorized = await requireAdmin();
   if (unauthorized) return unauthorized;
 
   const teams = await prisma.team.findMany({
-    orderBy: { createdAt: "asc" },
-    select: { id: true, name: true, color: true },
+    orderBy: { teamNumber: "asc" },
+    select: { id: true, teamNumber: true, name: true, color: true },
   });
 
   return NextResponse.json({ teams });
 }
 
-const createSchema = z.object({
-  name: z.string().trim().min(2, "Team name must be at least 2 characters").max(60),
-  color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Invalid color"),
-});
-
-// Only the Game Master can create a team — players can only join one they
-// already see listed (see /api/auth/join-team), so the number of teams
-// always matches however many the admin set up for the physical event.
-export async function POST(req: NextRequest) {
+// One click, zero fields — creates the next numbered team slot. Players can
+// never do this themselves (see /api/auth/join-team), so the team count is
+// always exactly what the admin clicked into existence for the physical
+// event. The team's display name is left for whoever joins it to pick.
+export async function POST() {
   const unauthorized = await requireAdmin();
   if (unauthorized) return unauthorized;
 
-  const body = await req.json().catch(() => null);
-  const parsed = createSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
-  }
+  const highest = await prisma.team.findFirst({ orderBy: { teamNumber: "desc" }, select: { teamNumber: true } });
+  const teamNumber = (highest?.teamNumber ?? 0) + 1;
 
-  try {
-    const team = await prisma.team.create({
-      data: {
-        name: parsed.data.name,
-        color: parsed.data.color,
-        members: "[]",
-        progress: { create: {} },
-      },
-    });
-    await logActivity(team.id, "TEAM_CREATED", { teamName: team.name });
-    return NextResponse.json({ team: { id: team.id, name: team.name, color: team.color } });
-  } catch (err: unknown) {
-    if (typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002") {
-      return NextResponse.json({ error: "A team with that name already exists." }, { status: 409 });
-    }
-    return NextResponse.json({ error: "Failed to create team." }, { status: 500 });
-  }
+  const team = await prisma.team.create({
+    data: {
+      teamNumber,
+      name: `Team ${teamNumber}`,
+      color: PALETTE[(teamNumber - 1) % PALETTE.length],
+      members: "[]",
+      progress: { create: {} },
+    },
+  });
+
+  await logActivity(team.id, "TEAM_CREATED", { teamNumber });
+  return NextResponse.json({ team: { id: team.id, teamNumber: team.teamNumber, name: team.name, color: team.color } });
 }

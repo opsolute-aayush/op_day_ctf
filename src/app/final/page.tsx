@@ -11,14 +11,13 @@ import SentenceBuilder from "@/components/SentenceBuilder";
 
 export default function FinalPage() {
   const router = useRouter();
-  const { status, loading, unauthorized, refresh } = useTeamStatus(4000);
+  const { status, loading, unauthorized } = useTeamStatus(4000);
   const [order, setOrder] = useState<string[] | null>(null);
   const [seededForTeam, setSeededForTeam] = useState<string | null>(null);
   const [manualText, setManualText] = useState("");
   const [useManual, setUseManual] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<"won" | "too-late" | null>(null);
 
   useEffect(() => {
     if (unauthorized) router.replace("/register");
@@ -29,7 +28,7 @@ export default function FinalPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (status?.completed && status.isWinner) router.replace("/winner");
+    if (status?.completed) router.replace("/winner");
   }, [status, router]);
 
   // Seed the reorderable word list once, the first time this team's status arrives
@@ -64,30 +63,11 @@ export default function FinalPage() {
         setSubmitting(false);
         return;
       }
-      if (data.wonRace) {
-        router.replace("/winner");
-      } else {
-        setResult("too-late");
-        refresh();
-      }
+      router.replace("/winner");
     } catch {
       setError("Network error — try again.");
       setSubmitting(false);
     }
-  }
-
-  if (status.completed || result === "too-late") {
-    return (
-      <main className="flex flex-1 flex-col items-center justify-center px-4 py-12 text-center">
-        <TerminalPanel title="submission.log" className="max-w-md">
-          <p className="text-neon-100/80">
-            {result === "too-late"
-              ? "Correct sentence — but another team already claimed victory first. GG agents."
-              : "Your submission has been recorded."}
-          </p>
-        </TerminalPanel>
-      </main>
-    );
   }
 
   return (

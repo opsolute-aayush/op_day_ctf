@@ -7,9 +7,11 @@ import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
+import TeamAvatar from "@/components/TeamAvatar";
 
 interface JoinableTeam {
   id: string;
+  teamNumber: number;
   name: string;
   color: string;
   members: string[];
@@ -20,6 +22,7 @@ export default function RegisterPage() {
   const [teams, setTeams] = useState<JoinableTeam[] | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [memberName, setMemberName] = useState("");
+  const [teamNameDraft, setTeamNameDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -43,6 +46,13 @@ export default function RegisterPage() {
     };
   }, []);
 
+  const selectedTeam = teams?.find((t) => t.id === selectedTeamId) ?? null;
+
+  function selectTeam(team: JoinableTeam) {
+    setSelectedTeamId(team.id);
+    setTeamNameDraft(team.name);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -61,7 +71,11 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/join-team", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId: selectedTeamId, memberName: memberName.trim() }),
+        body: JSON.stringify({
+          teamId: selectedTeamId,
+          memberName: memberName.trim(),
+          teamName: teamNameDraft.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -84,7 +98,8 @@ export default function RegisterPage() {
           <Terminal className="mx-auto h-8 w-8 text-neon-500" />
           <GlitchTitle text="Join The Hunt" className="text-2xl" as="h1" />
           <p className="text-sm text-neon-100/60">
-            Teams are set up by the Game Master — pick yours and add your name.
+            The Game Master sets up how many teams exist — pick yours, add your name, and
+            optionally give your squad its own name.
           </p>
         </div>
 
@@ -108,15 +123,16 @@ export default function RegisterPage() {
                       <button
                         key={team.id}
                         type="button"
-                        onClick={() => setSelectedTeamId(team.id)}
-                        className={`flex w-full items-center justify-between rounded-md border px-3 py-2.5 text-left transition-colors ${
+                        onClick={() => selectTeam(team)}
+                        className={`flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors ${
                           selected ? "border-current bg-white/5" : "border-panel-border hover:border-neon-100/30"
                         }`}
                         style={selected ? { color: team.color, borderColor: team.color } : undefined}
                       >
-                        <span>
-                          <span className="font-semibold">{team.name}</span>
-                          <span className="ml-2 text-xs text-neon-100/40">
+                        <TeamAvatar teamNumber={team.teamNumber} color={team.color} size="sm" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-semibold">{team.name}</span>
+                          <span className="block truncate text-xs text-neon-100/40">
                             {team.members.length > 0 ? team.members.join(", ") : "no members yet"}
                           </span>
                         </span>
@@ -126,6 +142,16 @@ export default function RegisterPage() {
                   })}
                 </div>
               </div>
+
+              {selectedTeam && (
+                <InputField
+                  label="Squad Name (yours to customize)"
+                  value={teamNameDraft}
+                  onChange={(e) => setTeamNameDraft(e.target.value)}
+                  maxLength={60}
+                  autoComplete="off"
+                />
+              )}
 
               <InputField
                 label="Your Name"

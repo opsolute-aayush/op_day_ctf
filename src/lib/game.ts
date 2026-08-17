@@ -66,10 +66,16 @@ export async function buildTeamStatus(teamId: string) {
       : null;
 
   return {
-    team: { id: team.id, name: team.name, color: team.color, members: JSON.parse(team.members) as string[] },
+    team: {
+      id: team.id,
+      teamNumber: team.teamNumber,
+      name: team.name,
+      color: team.color,
+      members: JSON.parse(team.members) as string[],
+    },
     gameActive: config.isActive,
     gameFinished: config.isFinished,
-    isWinner: config.winningTeamId === team.id,
+    isFirstToFinish: config.winningTeamId === team.id,
     totalLevels,
     currentLevel: progress.currentLevel,
     unlockedLevels,

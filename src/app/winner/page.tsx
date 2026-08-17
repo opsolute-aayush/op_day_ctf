@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
-import { Trophy } from "lucide-react";
+import { Trophy, PartyPopper } from "lucide-react";
 import { useTeamStatus } from "@/hooks/useTeamStatus";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
+import TeamAvatar from "@/components/TeamAvatar";
+import { playWinningSound } from "@/lib/sfx";
 
 function formatDuration(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -26,7 +28,7 @@ export default function WinnerPage() {
   }, [unauthorized, router]);
 
   useEffect(() => {
-    if (status && !status.isWinner) router.replace("/play");
+    if (status && !status.completed) router.replace("/play");
   }, [status, router]);
 
   useEffect(() => {
@@ -38,11 +40,13 @@ export default function WinnerPage() {
   }, [status]);
 
   useEffect(() => {
-    if (!status?.isWinner || fired.current) return;
+    if (!status?.completed || fired.current) return;
     fired.current = true;
+    playWinningSound();
 
     const colors = [status.team.color, "#39FF14", "#00F0FF"];
-    const duration = 4000;
+    const isFirst = status.isFirstToFinish;
+    const duration = isFirst ? 4000 : 1500;
     const end = Date.now() + duration;
 
     (function frame() {
@@ -51,7 +55,7 @@ export default function WinnerPage() {
       if (Date.now() < end) requestAnimationFrame(frame);
     })();
 
-    confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors });
+    confetti({ particleCount: isFirst ? 150 : 80, spread: 100, origin: { y: 0.5 }, colors });
   }, [status]);
 
   if (loading || !status) {
@@ -62,28 +66,42 @@ export default function WinnerPage() {
     );
   }
 
+  const isFirst = status.isFirstToFinish;
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-4 py-12 text-center">
       <div className="w-full max-w-md space-y-6">
-        <Trophy className="mx-auto h-16 w-16 text-amber-400 text-glow" />
-        <GlitchTitle text="VICTORY" className="text-4xl sm:text-5xl" />
-        <p className="text-lg" style={{ color: status.team.color }}>
-          {status.team.name}
-        </p>
+        {isFirst ? (
+          <Trophy className="mx-auto h-16 w-16 text-amber-400 text-glow" />
+        ) : (
+          <PartyPopper className="mx-auto h-16 w-16 text-neon-500 text-glow" />
+        )}
+        <GlitchTitle text={isFirst ? "VICTORY" : "HUNT COMPLETE"} className="text-3xl sm:text-4xl" />
 
-        <TerminalPanel title="victory.log">
+        <div className="flex items-center justify-center gap-3">
+          <TeamAvatar teamNumber={status.team.teamNumber} color={status.team.color} size="lg" />
+          <p className="text-lg" style={{ color: status.team.color }}>
+            {status.team.name}
+          </p>
+        </div>
+
+        <TerminalPanel title="mission.log">
           <p className="text-neon-100/80">
-            First team to fully assemble and transmit the correct sentence.
+            {isFirst
+              ? "First team to fully assemble and transmit the correct sentence. Nobody beat that time."
+              : "Sentence assembled and transmitted correctly — the hunt is solved. Another team beat you to first place, but great run."}
           </p>
           {duration && (
             <p className="mt-3 text-sm text-neon-100/50">
-              Total time: <span className="text-neon-500">{duration}</span>
+              Your time: <span className="text-neon-500">{duration}</span>
             </p>
           )}
         </TerminalPanel>
 
         <p className="text-xs uppercase tracking-widest text-neon-100/30">
-          OP Day CTF — leaderboard is now locked.
+          {status.gameFinished
+            ? "The Game Master has ended the hunt."
+            : "The hunt is still live for other teams."}
         </p>
       </div>
     </main>

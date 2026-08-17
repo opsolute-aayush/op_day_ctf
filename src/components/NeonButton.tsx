@@ -1,8 +1,9 @@
-import { ButtonHTMLAttributes, forwardRef } from "react";
+import { forwardRef } from "react";
+import { motion, type HTMLMotionProps } from "framer-motion";
 
 type Variant = "primary" | "ghost" | "danger" | "cyan";
 
-interface NeonButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface NeonButtonProps extends Omit<HTMLMotionProps<"button">, "ref"> {
   variant?: Variant;
 }
 
@@ -19,16 +20,19 @@ const variantClasses: Record<Variant, string> = {
 const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(
   ({ variant = "primary", className = "", children, disabled, ...props }, ref) => {
     return (
-      <button
+      <motion.button
         ref={ref}
         disabled={disabled}
+        whileHover={disabled ? undefined : { scale: 1.03 }}
+        whileTap={disabled ? undefined : { scale: 0.96 }}
+        transition={{ type: "spring", stiffness: 500, damping: 25 }}
         className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-semibold uppercase tracking-wider
-          transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-void
+          transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-void
           disabled:cursor-not-allowed disabled:opacity-40 ${variantClasses[variant]} ${className}`}
         {...props}
       >
         {children}
-      </button>
+      </motion.button>
     );
   }
 );

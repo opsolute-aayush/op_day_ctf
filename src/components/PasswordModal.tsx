@@ -6,7 +6,7 @@ import { X, Lock, Unlock, ShieldAlert, ShieldCheck } from "lucide-react";
 import NeonButton from "@/components/NeonButton";
 import CipherInput from "@/components/CipherInput";
 import MatrixRain from "@/components/MatrixRain";
-import { playRandomWrongPasswordSound } from "@/lib/sfx";
+import { playRandomWrongPasswordSound, playRightPasswordSound } from "@/lib/sfx";
 
 interface PasswordModalProps {
   levelNumber: number;
@@ -42,6 +42,7 @@ export default function PasswordModal({ levelNumber, onClose, onUnlocked }: Pass
         return;
       }
       setStatus("granted");
+      playRightPasswordSound();
       setTimeout(onUnlocked, 700);
     } catch {
       setError("Network error — try again.");

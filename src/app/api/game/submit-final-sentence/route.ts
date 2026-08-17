@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const config = await getGameConfig();
   if (config.isFinished) {
     return NextResponse.json(
-      { error: "The hunt has already been won by another team." },
+      { error: "The Game Master has ended the hunt — no more submissions are being accepted." },
       { status: 403 }
     );
   }
@@ -50,6 +50,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
 
+  if (progress.completed) {
+    return NextResponse.json({ error: "Your team has already finished the hunt." }, { status: 400 });
+  }
+
   const totalLevels = await getTotalLevels(teamAuth.teamId);
   if (progress.currentLevel < totalLevels) {
     return NextResponse.json({ error: "You haven't unlocked the final level yet." }, { status: 400 });
@@ -62,20 +66,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not quite — recheck the order of your words." }, { status: 401 });
   }
 
-  // Atomically claim the win so two teams submitting near-simultaneously can't both "win".
+  // Track (but don't act on) who finished first — bragging rights only. The
+  // game itself keeps running for everyone else until the Game Master
+  // explicitly ends it; one team finishing never locks anyone else out.
   const claim = await prisma.gameConfig.updateMany({
-    where: { id: 1, isFinished: false },
-    data: { isFinished: true, isActive: false, winningTeamId: teamAuth.teamId },
+    where: { id: 1, winningTeamId: null },
+    data: { winningTeamId: teamAuth.teamId },
   });
-  const wonRace = claim.count > 0;
+  const isFirstToFinish = claim.count > 0;
 
   await prisma.teamProgress.update({
     where: { teamId: teamAuth.teamId },
     data: { completed: true, completedAt: new Date() },
   });
 
-  await logActivity(teamAuth.teamId, wonRace ? "WIN" : "CORRECT_BUT_TOO_LATE", {});
+  await logActivity(teamAuth.teamId, isFirstToFinish ? "WIN" : "TEAM_FINISHED", {});
 
   const status = await buildTeamStatus(teamAuth.teamId);
-  return NextResponse.json({ status, wonRace });
+  return NextResponse.json({ status, isFirstToFinish });
 }

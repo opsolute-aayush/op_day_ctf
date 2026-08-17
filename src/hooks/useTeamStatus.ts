@@ -10,10 +10,10 @@ export interface UnlockedClue {
 }
 
 export interface TeamStatus {
-  team: { id: string; name: string; color: string; members: string[] };
+  team: { id: string; teamNumber: number; name: string; color: string; members: string[] };
   gameActive: boolean;
   gameFinished: boolean;
-  isWinner: boolean;
+  isFirstToFinish: boolean;
   totalLevels: number;
   currentLevel: number;
   unlockedLevels: number[];

@@ -1,4 +1,7 @@
+"use client";
+
 import { ReactNode } from "react";
+import { motion } from "framer-motion";
 
 interface TerminalPanelProps {
   children: ReactNode;
@@ -8,7 +11,12 @@ interface TerminalPanelProps {
 
 export default function TerminalPanel({ children, title, className = "" }: TerminalPanelProps) {
   return (
-    <div className={`terminal-panel rounded-lg overflow-hidden ${className}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className={`terminal-panel rounded-lg overflow-hidden ${className}`}
+    >
       {title && (
         <div className="flex items-center gap-2 border-b border-panel-border bg-void-2/80 px-4 py-2">
           <span className="h-2.5 w-2.5 rounded-full bg-danger-400/70" />
@@ -18,6 +26,6 @@ export default function TerminalPanel({ children, title, className = "" }: Termi
         </div>
       )}
       <div className="p-5">{children}</div>
-    </div>
+    </motion.div>
   );
 }

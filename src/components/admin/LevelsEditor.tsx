@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Save, Lock, Users, UserPlus } from "lucide-react";
+import { Plus, Trash2, Save, Lock, ListChecks } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
+import TeamAvatar from "@/components/TeamAvatar";
 
 interface TeamOption {
   id: string;
+  teamNumber: number;
   name: string;
   color: string;
 }
-
-const TEAM_COLORS = ["#39FF14", "#00F0FF", "#FF2ECC", "#FFD400", "#FF6A00", "#B026FF", "#FF3B3B", "#3B82F6"];
 
 interface Level {
   levelNumber: number;
@@ -37,9 +37,6 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
-
-  const [newName, setNewName] = useState("");
-  const [newColor, setNewColor] = useState(TEAM_COLORS[0]);
   const [creatingTeam, setCreatingTeam] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -57,25 +54,16 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
     };
   }, [nonce]);
 
-  async function createTeam() {
-    if (newName.trim().length < 2) {
-      setCreateError("Team name must be at least 2 characters.");
-      return;
-    }
+  async function addTeam() {
     setCreatingTeam(true);
     setCreateError(null);
-    const res = await fetch("/api/admin/teams", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim(), color: newColor }),
-    });
+    const res = await fetch("/api/admin/teams", { method: "POST" });
     const data = await res.json().catch(() => ({}));
     setCreatingTeam(false);
     if (!res.ok) {
       setCreateError(data.error ?? "Failed to create team.");
       return;
     }
-    setNewName("");
     setSelectedTeamId(data.team.id);
     setNonce((n) => n + 1);
     onChanged();
@@ -83,67 +71,50 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
 
   return (
     <div className="space-y-4">
-      <TerminalPanel title="create-team.sh" className="border-cyan-400/30">
-        <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-cyan-400/80 mb-3">
-          <UserPlus className="h-4 w-4" /> Only the Game Master creates teams — players can only join one that
-          already exists here, so the count always matches your physical groups.
-        </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-48 flex-1">
-            <InputField
-              label="New Team Name"
-              placeholder="e.g. Code Breakers"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              maxLength={60}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs uppercase tracking-widest text-neon-400/80">Color</span>
-            <div className="flex flex-wrap gap-1.5">
-              {TEAM_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setNewColor(c)}
-                  aria-label={`Choose ${c}`}
-                  className="h-6 w-6 rounded-full border-2 transition-transform"
-                  style={{
-                    backgroundColor: c,
-                    borderColor: newColor === c ? "#fff" : "transparent",
-                    transform: newColor === c ? "scale(1.15)" : "scale(1)",
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-          <NeonButton variant="cyan" onClick={createTeam} disabled={creatingTeam}>
-            <Plus className="h-4 w-4" /> {creatingTeam ? "Creating…" : "Create Team"}
-          </NeonButton>
-        </div>
-        {createError && <p className="mt-2 text-sm text-danger-400">{createError}</p>}
+      <TerminalPanel title="how-this-works.txt" className="border-cyan-400/20">
+        <ol className="space-y-1 text-sm text-neon-100/70">
+          <li>
+            <span className="text-cyan-400">1.</span> Click <span className="text-cyan-400">Add Team</span> once
+            per physical group — no typing needed, each gets a number automatically.
+          </li>
+          <li>
+            <span className="text-cyan-400">2.</span> Pick a team below and fill in its passwords, clues, words,
+            and final sentence.
+          </li>
+          <li>
+            <span className="text-cyan-400">3.</span> Head to <span className="text-cyan-400">Game Control</span>{" "}
+            to start the hunt once every team is configured.
+          </li>
+        </ol>
       </TerminalPanel>
 
-      <TerminalPanel title="select-team.sh">
-        <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-neon-400/70 mb-3">
-          <Users className="h-4 w-4" /> Each team has its own independent passwords, clues, words &amp; final sentence
+      <TerminalPanel title="teams.list">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs uppercase tracking-widest text-neon-400/70">
+            {teams.length} team{teams.length === 1 ? "" : "s"} — players can only join these, never create their own
+          </p>
+          <NeonButton variant="cyan" onClick={addTeam} disabled={creatingTeam}>
+            <Plus className="h-4 w-4" /> {creatingTeam ? "Adding…" : "Add Team"}
+          </NeonButton>
         </div>
+        {createError && <p className="mb-2 text-sm text-danger-400">{createError}</p>}
         <div className="flex flex-wrap gap-2">
           {teams.map((team) => (
             <button
               key={team.id}
               onClick={() => setSelectedTeamId(team.id)}
-              className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+              className={`flex items-center gap-2 rounded-full border py-1 pl-1.5 pr-3 text-sm transition-colors ${
                 selectedTeamId === team.id
                   ? "border-current bg-white/5"
                   : "border-panel-border text-neon-100/50 hover:text-neon-100/80"
               }`}
               style={selectedTeamId === team.id ? { color: team.color, borderColor: team.color } : undefined}
             >
+              <TeamAvatar teamNumber={team.teamNumber} color={team.color} size="sm" />
               {team.name}
             </button>
           ))}
-          {teams.length === 0 && <p className="text-sm text-neon-100/30">No teams created yet — add one above.</p>}
+          {teams.length === 0 && <p className="text-sm text-neon-100/30">No teams yet — click Add Team above.</p>}
         </div>
       </TerminalPanel>
 
@@ -153,6 +124,7 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
 }
 
 function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: () => void }) {
+  const [team, setTeam] = useState<TeamOption | null>(null);
   const [sentence, setSentence] = useState("");
   const [sentenceSaving, setSentenceSaving] = useState(false);
   const [sentenceMessage, setSentenceMessage] = useState<string | null>(null);
@@ -182,7 +154,10 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
       if (cancelled) return;
       if (teamRes.ok) {
         const teamData = await teamRes.json();
-        if (!cancelled) setSentence(teamData.team.winningSentence);
+        if (!cancelled) {
+          setSentence(teamData.team.winningSentence);
+          setTeam(teamData.team);
+        }
       }
       if (levelsRes.ok) {
         const levelsData = await levelsRes.json();
@@ -282,6 +257,18 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
 
   return (
     <div className="space-y-4">
+      {team && (
+        <div className="flex items-center gap-3 px-1">
+          <TeamAvatar teamNumber={team.teamNumber} color={team.color} />
+          <div>
+            <p className="text-xs uppercase tracking-widest text-neon-100/40">Editing Puzzle For</p>
+            <p className="flex items-center gap-1.5 font-display text-lg uppercase tracking-widest" style={{ color: team.color }}>
+              <ListChecks className="h-4 w-4" /> {team.name}
+            </p>
+          </div>
+        </div>
+      )}
+
       <TerminalPanel title="winning-sentence.cfg" className="border-cyan-400/30">
         <p className="mb-2 text-xs text-neon-100/50">
           This team&apos;s own final sentence — unique per team, editable any time.

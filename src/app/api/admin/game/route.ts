@@ -17,7 +17,7 @@ export async function GET() {
   });
 }
 
-const actionSchema = z.object({ action: z.enum(["start", "pause", "reset"]) });
+const actionSchema = z.object({ action: z.enum(["start", "pause", "end", "reset"]) });
 
 export async function POST(req: NextRequest) {
   const unauthorized = await requireAdmin();
@@ -29,12 +29,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
-  await getGameConfig();
+  const current = await getGameConfig();
 
   if (parsed.data.action === "start") {
     const config = await prisma.gameConfig.update({
       where: { id: 1 },
-      data: { isActive: true, startedAt: new Date() },
+      // Only stamp startedAt the first time — resuming from a pause keeps
+      // the original clock running for accurate "time to finish" tracking.
+      data: { isActive: true, startedAt: current.startedAt ?? new Date() },
     });
     await logActivity(null, "GAME_STARTED", {});
     return NextResponse.json({ isActive: config.isActive, isFinished: config.isFinished });
@@ -43,6 +45,17 @@ export async function POST(req: NextRequest) {
   if (parsed.data.action === "pause") {
     const config = await prisma.gameConfig.update({ where: { id: 1 }, data: { isActive: false } });
     await logActivity(null, "GAME_PAUSED", {});
+    return NextResponse.json({ isActive: config.isActive, isFinished: config.isFinished });
+  }
+
+  if (parsed.data.action === "end") {
+    // The only thing that actually locks the hunt for everyone — a team
+    // finishing its own sentence never does this on its own.
+    const config = await prisma.gameConfig.update({
+      where: { id: 1 },
+      data: { isActive: false, isFinished: true },
+    });
+    await logActivity(null, "GAME_ENDED", {});
     return NextResponse.json({ isActive: config.isActive, isFinished: config.isFinished });
   }
 

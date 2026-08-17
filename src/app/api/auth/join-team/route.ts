@@ -11,6 +11,7 @@ import { parseStringArray } from "@/lib/json";
 const schema = z.object({
   teamId: z.string().min(1),
   memberName: z.string().trim().min(1, "Enter your name").max(40),
+  teamName: z.string().trim().min(1).max(60).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -34,8 +35,13 @@ export async function POST(req: NextRequest) {
   const memberName = parsed.data.memberName;
   if (!members.some((m) => m.toLowerCase() === memberName.toLowerCase())) {
     members.push(memberName);
-    await prisma.team.update({ where: { id: team.id }, data: { members: JSON.stringify(members) } });
   }
+
+  const data: { members: string; name?: string } = { members: JSON.stringify(members) };
+  if (parsed.data.teamName && parsed.data.teamName !== team.name) {
+    data.name = parsed.data.teamName;
+  }
+  await prisma.team.update({ where: { id: team.id }, data });
 
   await logActivity(team.id, "MEMBER_JOINED", { memberName });
 

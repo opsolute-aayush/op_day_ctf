@@ -12,14 +12,26 @@ interface LevelCardProps {
   wordReward?: string;
   hint?: string | null;
   onClick?: () => void;
+  index?: number;
 }
 
-export default function LevelCard({ levelNumber, state, locationClue, wordReward, hint, onClick }: LevelCardProps) {
+export default function LevelCard({
+  levelNumber,
+  state,
+  locationClue,
+  wordReward,
+  hint,
+  onClick,
+  index = 0,
+}: LevelCardProps) {
   const clickable = state === "active";
 
   return (
     <motion.div
       layout
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.06, ease: "easeOut" }}
       whileHover={clickable ? { scale: 1.015 } : undefined}
       whileTap={clickable ? { scale: 0.985 } : undefined}
       onClick={clickable ? onClick : undefined}

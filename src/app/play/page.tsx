@@ -1,27 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, Trophy, Flag } from "lucide-react";
+import { LogOut, Trophy, Flag, Pencil, Check, X } from "lucide-react";
 import { useTeamStatus } from "@/hooks/useTeamStatus";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import LevelCard, { LevelCardState } from "@/components/LevelCard";
 import PasswordModal from "@/components/PasswordModal";
+import TeamAvatar from "@/components/TeamAvatar";
+import { playHelpSound } from "@/lib/sfx";
 
 export default function PlayPage() {
   const router = useRouter();
   const { status, loading, unauthorized, refresh } = useTeamStatus(3000);
   const [activeModalLevel, setActiveModalLevel] = useState<number | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const lastHintRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (unauthorized) router.replace("/register");
   }, [unauthorized, router]);
 
   useEffect(() => {
-    if (status?.completed && status.isWinner) router.replace("/winner");
+    if (status?.completed) router.replace("/winner");
   }, [status, router]);
+
+  useEffect(() => {
+    if (status?.activeHint && status.activeHint !== lastHintRef.current) {
+      playHelpSound();
+    }
+    lastHintRef.current = status?.activeHint ?? null;
+  }, [status?.activeHint]);
 
   if (loading) {
     return (
@@ -41,24 +54,77 @@ export default function PlayPage() {
     router.replace("/register");
   }
 
+  function startRename() {
+    setNameDraft(status!.team.name);
+    setRenameError(null);
+    setRenaming(true);
+  }
+
+  async function saveRename() {
+    if (nameDraft.trim().length < 1) {
+      setRenameError("Enter a name.");
+      return;
+    }
+    const res = await fetch("/api/team/name", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: nameDraft.trim() }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setRenameError(data.error ?? "Couldn't rename.");
+      return;
+    }
+    setRenaming(false);
+    refresh();
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-widest text-neon-100/50">Agent Squad</p>
-          <h1 className="flex items-center gap-2 font-display text-xl uppercase tracking-widest" style={{ color: status.team.color }}>
-            {status.team.name}
-          </h1>
+      <header className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <TeamAvatar teamNumber={status.team.teamNumber} color={status.team.color} />
+          <div className="min-w-0">
+            <p className="text-xs uppercase tracking-widest text-neon-100/50">Squad #{status.team.teamNumber}</p>
+            {renaming ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  autoFocus
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  maxLength={60}
+                  className="w-36 rounded border border-neon-500/50 bg-void-2 px-2 py-1 font-display text-sm uppercase tracking-widest text-neon-100 outline-none focus:border-neon-500"
+                />
+                <button onClick={saveRename} className="text-neon-500 hover:text-neon-400" aria-label="Save name">
+                  <Check className="h-4 w-4" />
+                </button>
+                <button onClick={() => setRenaming(false)} className="text-neon-100/40 hover:text-danger-400" aria-label="Cancel">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <h1
+                className="flex items-center gap-2 truncate font-display text-xl uppercase tracking-widest"
+                style={{ color: status.team.color }}
+              >
+                <span className="truncate">{status.team.name}</span>
+                <button onClick={startRename} className="text-neon-100/30 hover:text-neon-400" aria-label="Rename squad">
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </h1>
+            )}
+            {renameError && <p className="text-xs text-danger-400">{renameError}</p>}
+          </div>
         </div>
-        <button onClick={logout} className="flex items-center gap-1.5 text-xs text-neon-100/40 hover:text-danger-400">
+        <button onClick={logout} className="flex shrink-0 items-center gap-1.5 text-xs text-neon-100/40 hover:text-danger-400">
           <LogOut className="h-4 w-4" /> Sign out
         </button>
       </header>
 
-      {status.gameFinished && !status.isWinner && (
+      {status.gameFinished && (
         <TerminalPanel className="border-amber-400/40">
           <p className="flex items-center gap-2 text-amber-400">
-            <Trophy className="h-5 w-5" /> The hunt is over — another team already claimed victory. Nice run, agents.
+            <Trophy className="h-5 w-5" /> The Game Master has ended the hunt. Thanks for playing, agents.
           </p>
         </TerminalPanel>
       )}
@@ -77,7 +143,7 @@ export default function PlayPage() {
         </TerminalPanel>
       ) : (
         <div className="space-y-3">
-          {Array.from({ length: passwordLevelsCount }, (_, i) => i + 1).map((levelNumber) => {
+          {Array.from({ length: passwordLevelsCount }, (_, i) => i + 1).map((levelNumber, index) => {
             const unlocked = status.unlockedLevels.includes(levelNumber);
             const clue = status.unlockedClues.find((c) => c.levelNumber === levelNumber);
             let state: LevelCardState = "locked";
@@ -87,6 +153,7 @@ export default function PlayPage() {
             return (
               <LevelCard
                 key={levelNumber}
+                index={index}
                 levelNumber={levelNumber}
                 state={state}
                 locationClue={clue?.locationClue}
@@ -112,9 +179,7 @@ export default function PlayPage() {
             </div>
             <p className="mt-2 text-sm text-neon-100/80">
               {status.finalUnlocked
-                ? status.completed
-                  ? "Sentence submitted. Awaiting result."
-                  : "Assemble your collected words into the winning sentence →"
+                ? "Assemble your collected words into the winning sentence →"
                 : "Unlock every level above to reveal the final assembly console."}
             </p>
           </div>

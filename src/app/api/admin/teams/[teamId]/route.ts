@@ -17,6 +17,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ teamId: st
   return NextResponse.json({
     team: {
       id: team.id,
+      teamNumber: team.teamNumber,
       name: team.name,
       color: team.color,
       members: JSON.parse(team.members) as string[],
