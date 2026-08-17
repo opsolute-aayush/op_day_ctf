@@ -83,9 +83,16 @@ export async function POST(req: NextRequest) {
   }
 
   verifiedWordLevels.push(levelNumber);
+  // This is the only thing that actually advances currentLevel — a correct
+  // password unlocks the clue, but the team stays "on" this level until the
+  // word is confirmed, so they can never skip ahead to the next level's
+  // password without having verified this one's word first.
   await prisma.teamProgress.update({
     where: { teamId: teamAuth.teamId },
-    data: { verifiedWordLevels: JSON.stringify(verifiedWordLevels) },
+    data: {
+      verifiedWordLevels: JSON.stringify(verifiedWordLevels),
+      currentLevel: Math.max(progress.currentLevel, levelNumber + 1),
+    },
   });
 
   await logActivity(teamAuth.teamId, "WORD_VERIFIED", { levelNumber, word: levelConfig.wordReward });

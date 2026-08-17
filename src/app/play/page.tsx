@@ -11,7 +11,14 @@ import LevelCard, { LevelCardState, WordVerifyResult } from "@/components/LevelC
 import PasswordModal from "@/components/PasswordModal";
 import TeamAvatar from "@/components/TeamAvatar";
 import TeamStatsPanel from "@/components/TeamStatsPanel";
-import { playHelpSound, playRightPasswordSound, playRandomWrongPasswordSound } from "@/lib/sfx";
+import {
+  playHelpSound,
+  playRightPasswordSound,
+  playRandomWrongPasswordSound,
+  startIntroMusic,
+  stopIntroMusic,
+} from "@/lib/sfx";
+import { playVideoClip } from "@/lib/videofx";
 
 export default function PlayPage() {
   const router = useRouter();
@@ -36,9 +43,26 @@ export default function PlayPage() {
   useEffect(() => {
     if (status?.activeHint && status.activeHint !== lastHintRef.current) {
       playHelpSound();
+      playVideoClip("help");
     }
     lastHintRef.current = status?.activeHint ?? null;
   }, [status?.activeHint]);
+
+  const isWaitingForStart = Boolean(
+    status &&
+      !status.gameActive &&
+      status.currentLevel === 1 &&
+      status.unlockedLevels.length <= 1 &&
+      !status.gameFinished
+  );
+
+  // Intro music loops for a team parked on the standby screen, and stops the
+  // instant the Game Master starts the hunt (or this page unmounts).
+  useEffect(() => {
+    if (isWaitingForStart) startIntroMusic();
+    else stopIntroMusic();
+    return () => stopIntroMusic();
+  }, [isWaitingForStart]);
 
   if (loading) {
     return (
@@ -51,7 +75,6 @@ export default function PlayPage() {
   if (!status) return null;
 
   const passwordLevelsCount = status.totalLevels - 1;
-  const isWaitingForStart = !status.gameActive && status.currentLevel === 1 && status.unlockedLevels.length <= 1 && !status.gameFinished;
 
   async function leaveTeam() {
     if (!confirmLeave) {
@@ -113,9 +136,11 @@ export default function PlayPage() {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       playRandomWrongPasswordSound();
+      playVideoClip("wrong_pass");
       return { ok: false, error: data.error ?? "Wrong word." };
     }
     playRightPasswordSound();
+    playVideoClip("right_pass");
     refresh();
     return { ok: true };
   }

@@ -77,17 +77,14 @@ export async function POST(req: NextRequest) {
   const unlockedLevels = parseIntArray(progress.unlockedLevels);
   if (!unlockedLevels.includes(targetLevel)) unlockedLevels.push(targetLevel);
 
-  const nextLevel = targetLevel + 1;
-
-  // Unlocking reveals the location clue only — the word itself still has to
-  // be typed in and confirmed via /api/game/verify-word once the team
-  // actually finds it, so a correct password alone can't leak the word.
+  // Unlocking reveals the location clue only and does NOT advance
+  // currentLevel — the team stays "on" this level (now in word-verification
+  // mode) until they type in and confirm the word via
+  // /api/game/verify-word, which is the only thing that advances to the
+  // next level. A correct password alone can never skip word verification.
   await prisma.teamProgress.update({
     where: { teamId: teamAuth.teamId },
-    data: {
-      currentLevel: nextLevel,
-      unlockedLevels: JSON.stringify(unlockedLevels),
-    },
+    data: { unlockedLevels: JSON.stringify(unlockedLevels) },
   });
 
   await logActivity(teamAuth.teamId, "LEVEL_UNLOCKED", { levelNumber: targetLevel });

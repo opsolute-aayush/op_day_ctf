@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Share_Tech_Mono } from "next/font/google";
 import RouteTransition from "@/components/RouteTransition";
+import VideoOverlay from "@/components/VideoOverlay";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="relative z-10 flex min-h-full flex-1 flex-col">
           <RouteTransition>{children}</RouteTransition>
         </div>
+        <VideoOverlay />
       </body>
     </html>
   );

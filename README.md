@@ -245,6 +245,26 @@ until a level's word is actually confirmed — the word text itself is never
 sent to the client before that point, so there's no way to read it off the
 network tab either.
 
+**Word verification is also what gates progression, not the password.** A
+correct password (`POST /api/game/unlock-level`) only ever reveals that
+level's location clue — it deliberately does **not** advance
+`TeamProgress.currentLevel`. Only a confirmed word
+(`POST /api/game/verify-word`) advances it. Since every password check is
+validated against `levelConfig` for `currentLevel` specifically, a team
+can never fast-forward through passwords alone: entering the *next*
+level's password while still parked on the current one just fails as an
+"incorrect password" for the level they're actually still on. The only way
+to unlock level *N+1*'s password prompt is to have both solved level *N*'s
+password **and** typed in and confirmed its physical word.
+
+If you're upgrading a live event from an older build where this gate didn't
+exist, some teams may have already progressed past a level without ever
+confirming its word — their final sentence would then be missing words that
+should already be theirs. Run `npx tsx prisma/backfill-verified-words.ts`
+once after upgrading; it retroactively marks any level below a team's
+current level as word-verified (never removes anything, so it's safe to run
+repeatedly or even if nothing needs fixing).
+
 ## Sound effects
 
 `public/sounds/` is split by moment, and **files are auto-discovered — just
@@ -254,6 +274,9 @@ drop one in, no code change, no filename to type anywhere**:
 - `right_pass/` — plays on a correct password / level unlock
 - `help/` — plays when the Game Master releases a hint for a stuck team
 - `winning/` — plays when a team finishes the whole hunt
+- `intro/` — background music, loops on a team's standby screen while
+  waiting for the Game Master to start the hunt
+- `outro/` — plays once, ~7 seconds after a team finishes the whole hunt
 
 `GET /api/sounds/<category>` (`src/app/api/sounds/[category]/route.ts`)
 lists whatever `.mp3`/`.wav`/`.ogg`/`.m4a` files actually exist in that
@@ -261,11 +284,38 @@ folder at request time; `src/lib/sfx.ts` fetches and caches that list on
 first use, then plays a random one (never the same one twice in a row).
 Filenames can have spaces/punctuation — they're URL-encoded automatically.
 A category with **no** files falls back to a small synthesized chime
-instead (`winning/` currently ships empty and uses one), so the feature
-works with zero assets out of the box. Wired up in
+instead (`winning/` currently ships empty and uses one) for the four
+one-shot stingers, so the feature works with zero assets out of the box.
+`intro`/`outro` are full music tracks, so there's no meaningful synthesized
+substitute — they simply stay silent until a file is dropped in. Wired up in
 `src/components/PasswordModal.tsx` (wrong/right), `src/app/play/page.tsx`
-(help, on hint reveal), and `src/app/winner/page.tsx` (winning). To add a
-sound: just drop the file in the right folder — that's it.
+(help on hint reveal, intro while waiting to start), and
+`src/app/winner/page.tsx` (winning, outro after a 7s delay). To add a sound:
+just drop the file in the right folder — that's it.
+
+## Video clips
+
+`public/videos/` mirrors the sound-effects folder structure exactly, and
+plays alongside the matching sound whenever that moment fires:
+
+- `wrong_pass/`, `right_pass/`, `help/`, `winning/` — same triggers as the
+  sound categories above.
+
+`GET /api/videos/<category>` (`src/app/api/videos/[category]/route.ts`)
+lists whatever `.mp4`/`.webm`/`.mov`/`.m4v` files exist in that folder;
+`src/lib/videofx.ts` picks a random one and broadcasts it via a window
+event. `src/components/VideoOverlay.tsx`, mounted once in the root layout,
+is the only thing that actually renders it, so `playVideoClip()` can be
+called from anywhere. A category with no clips is a silent no-op — there's
+no synthesized fallback for video.
+
+Non-`winning` clips show up as a small "signal_intercept" pop-up in the
+bottom-right corner. **`winning/` clips are expected to be shot on a green
+screen** — `VideoOverlay` renders them through `ChromaKeyVideo`, which draws
+every frame to a hidden canvas and keys out green-dominant pixels live
+(with a soft spill-suppression pass on the fringe instead of a hard cutoff),
+so the subject floats over the victory screen instead of showing up as an
+ugly green rectangle.
 
 ## Security notes (what's enforced server-side, not just in the UI)
 
@@ -455,10 +505,12 @@ run.sh                     Single-command local entry point (install/setup/seed/
 prisma/
   schema.prisma          Team / GameConfig / LevelConfig / TeamProgress / ActivityLog
   seed.ts                 Sample 5-team, 4-level demo puzzle
+  backfill-verified-words.ts  One-time repair for teams that progressed before the word-verification gate existed
 src/
   proxy.ts                Route guarding (redirect unauthenticated browsers)
   lib/                     jwt.ts, auth.ts (cookies), game.ts (progress logic),
-                           rateLimit.ts, normalize.ts, json.ts, adminGuard.ts, sfx.ts
+                           rateLimit.ts, normalize.ts, json.ts, adminGuard.ts,
+                           sfx.ts (sound effects + intro/outro music), videofx.ts (video clips)
   app/
     page.tsx               Landing
     register/               Join an existing team (no team creation here)
@@ -467,7 +519,7 @@ src/
     winner/                 Results screen (first-place or "hunt complete") + confetti
     admin/                  Game Master dashboard (login-gated)
     api/                    All routes — see inline comments for behavior
-  components/               UI primitives + game components (TeamAvatar.tsx, TeamStatsPanel.tsx)
+  components/               UI primitives + game components (TeamAvatar.tsx, TeamStatsPanel.tsx, VideoOverlay.tsx)
   components/admin/         Leaderboard, ActivityFeed, LevelsEditor, GameControls
   hooks/useTeamStatus.ts    Polling hook for a team's live progress
 ```

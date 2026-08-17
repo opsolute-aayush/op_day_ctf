@@ -8,7 +8,8 @@ import { useTeamStatus } from "@/hooks/useTeamStatus";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import TeamAvatar from "@/components/TeamAvatar";
-import { playWinningSound } from "@/lib/sfx";
+import { playWinningSound, playOutroMusic } from "@/lib/sfx";
+import { playVideoClip } from "@/lib/videofx";
 
 function formatDuration(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -43,6 +44,10 @@ export default function WinnerPage() {
     if (!status?.completed || fired.current) return;
     fired.current = true;
     playWinningSound();
+    playVideoClip("winning");
+    // Outro music plays a beat after the celebration lands, once the
+    // fanfare/confetti has had a moment to breathe — not stacked on top of it.
+    const outroTimer = setTimeout(() => playOutroMusic(), 7000);
 
     const colors = [status.team.color, "#39FF14", "#00F0FF"];
     const isFirst = status.isFirstToFinish;
@@ -56,6 +61,8 @@ export default function WinnerPage() {
     })();
 
     confetti({ particleCount: isFirst ? 150 : 80, spread: 100, origin: { y: 0.5 }, colors });
+
+    return () => clearTimeout(outroTimer);
   }, [status]);
 
   if (loading || !status) {

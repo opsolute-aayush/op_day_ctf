@@ -7,13 +7,17 @@
 // public/sounds/right_pass/  — a level unlocking correctly
 // public/sounds/help/        — the Game Master releasing a hint
 // public/sounds/winning/     — a team finishing the whole hunt
+// public/sounds/intro/       — background music while a team waits for the hunt to start
+// public/sounds/outro/       — plays once a team has fully completed the hunt
 //
 // Discovery happens via GET /api/sounds/<category>, which lists whatever
 // audio files actually exist in that folder (src/app/api/sounds/[category]).
-// A category with no files falls back to a small synthesized chime, so the
-// feature works with zero assets.
+// A category with no files falls back to a small synthesized chime for the
+// one-shot stingers, so the feature works with zero assets. intro/outro are
+// full music tracks — there's no meaningful synthesized substitute for those,
+// so they simply stay silent until a file is dropped in.
 
-type Category = "wrong_pass" | "right_pass" | "help" | "winning";
+type Category = "wrong_pass" | "right_pass" | "help" | "winning" | "intro" | "outro";
 
 const fileListCache = new Map<Category, string[]>();
 const fileListInFlight = new Map<Category, Promise<string[]>>();
@@ -47,6 +51,8 @@ const lastPlayed: Record<Category, string | null> = {
   right_pass: null,
   help: null,
   winning: null,
+  intro: null,
+  outro: null,
 };
 
 function playFile(category: Category, filename: string, volume: number) {
@@ -157,5 +163,45 @@ export function playHelpSound(volume = 0.5) {
       ],
       volume
     );
+  });
+}
+
+let introAudio: HTMLAudioElement | null = null;
+
+/**
+ * Loops background music while a team waits on the Game Master to start the
+ * hunt. Idempotent — safe to call on every status poll without restarting
+ * the track, since it no-ops while a track is already playing.
+ */
+export async function startIntroMusic(volume = 0.35) {
+  if (introAudio) return;
+  const files = await getFileList("intro");
+  if (files.length === 0) return;
+  const filename = files[Math.floor(Math.random() * files.length)];
+  try {
+    const audio = new Audio(`/sounds/intro/${encodeURIComponent(filename)}`);
+    audio.loop = true;
+    audio.volume = volume;
+    introAudio = audio;
+    void audio.play().catch(() => {
+      // Autoplay blocked before any user gesture landed — safe to ignore.
+      introAudio = null;
+    });
+  } catch {
+    introAudio = null;
+  }
+}
+
+export function stopIntroMusic() {
+  if (!introAudio) return;
+  introAudio.pause();
+  introAudio.currentTime = 0;
+  introAudio = null;
+}
+
+/** Fire-and-forget, plays once — call ~7s after a team fully completes the hunt. */
+export function playOutroMusic(volume = 0.5) {
+  void playRandomFromCategory("outro", volume, () => {
+    // No outro track dropped in yet — nothing meaningful to synthesize.
   });
 }

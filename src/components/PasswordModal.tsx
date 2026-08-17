@@ -7,6 +7,7 @@ import NeonButton from "@/components/NeonButton";
 import CipherInput from "@/components/CipherInput";
 import MatrixRain from "@/components/MatrixRain";
 import { playRandomWrongPasswordSound, playRightPasswordSound } from "@/lib/sfx";
+import { playVideoClip } from "@/lib/videofx";
 
 interface PasswordModalProps {
   levelNumber: number;
@@ -37,12 +38,16 @@ export default function PasswordModal({ levelNumber, onClose, onUnlocked }: Pass
       if (!res.ok) {
         setError(data.error ?? "Incorrect password.");
         setStatus("denied");
-        if (res.status === 401) playRandomWrongPasswordSound();
+        if (res.status === 401) {
+          playRandomWrongPasswordSound();
+          playVideoClip("wrong_pass");
+        }
         setTimeout(() => setStatus((s) => (s === "denied" ? "idle" : s)), 550);
         return;
       }
       setStatus("granted");
       playRightPasswordSound();
+      playVideoClip("right_pass");
       setTimeout(onUnlocked, 700);
     } catch {
       setError("Network error — try again.");

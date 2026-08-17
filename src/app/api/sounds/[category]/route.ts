@@ -6,7 +6,9 @@ import path from "path";
 // public/sounds/<category> — drop a file in, it plays, no code change and
 // no filename to type anywhere. Category is whitelisted so this can't be
 // used to list arbitrary directories on the server.
-const CATEGORIES = ["wrong_pass", "right_pass", "help", "winning"] as const;
+// intro/outro are background music tracks (see src/lib/sfx.ts) rather than
+// one-shot stingers, but are discovered the exact same way.
+const CATEGORIES = ["wrong_pass", "right_pass", "help", "winning", "intro", "outro"] as const;
 type Category = (typeof CATEGORIES)[number];
 
 const AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a"];
