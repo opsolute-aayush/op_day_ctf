@@ -98,7 +98,13 @@ export default function AdminPage() {
       </header>
 
       <nav className="flex gap-2 border-b border-panel-border pb-2">
-        {(["overview", "levels", "control"] as Tab[]).map((t) => (
+        {(
+          [
+            ["overview", "Overview"],
+            ["levels", "Team Puzzles"],
+            ["control", "Game Control"],
+          ] as [Tab, string][]
+        ).map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -106,7 +112,7 @@ export default function AdminPage() {
               tab === t ? "bg-neon-500/10 text-neon-400" : "text-neon-100/40 hover:text-neon-100/70"
             }`}
           >
-            {t}
+            {label}
           </button>
         ))}
       </nav>

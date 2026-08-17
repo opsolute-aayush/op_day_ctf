@@ -1,23 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Play, Pause, RotateCcw, Save } from "lucide-react";
+import { Play, Pause, RotateCcw } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 
 interface GameConfigResponse {
   isActive: boolean;
   isFinished: boolean;
-  winningSentence: string;
-  totalLevels: number;
 }
 
 export default function GameControls({ onChanged }: { onChanged: () => void }) {
   const [config, setConfig] = useState<GameConfigResponse | null>(null);
-  const [sentenceDraft, setSentenceDraft] = useState("");
-  const [seeded, setSeeded] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [nonce, setNonce] = useState(0);
 
@@ -34,13 +28,6 @@ export default function GameControls({ onChanged }: { onChanged: () => void }) {
     };
   }, [nonce]);
 
-  // Seed the sentence textarea once from the server, so later reloads (after
-  // start/pause/reset) never clobber whatever the admin is currently typing.
-  if (config && !seeded) {
-    setSeeded(true);
-    setSentenceDraft(config.winningSentence);
-  }
-
   async function runAction(action: "start" | "pause" | "reset") {
     if (action === "reset" && !confirmReset) {
       setConfirmReset(true);
@@ -55,24 +42,6 @@ export default function GameControls({ onChanged }: { onChanged: () => void }) {
     });
     setNonce((n) => n + 1);
     onChanged();
-  }
-
-  async function saveSentence() {
-    setSaving(true);
-    setMessage(null);
-    const res = await fetch("/api/admin/game", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ winningSentence: sentenceDraft }),
-    });
-    setSaving(false);
-    if (res.ok) {
-      setMessage("Winning sentence updated.");
-      onChanged();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setMessage(data.error ?? "Failed to update.");
-    }
   }
 
   if (!config) return null;
@@ -104,26 +73,17 @@ export default function GameControls({ onChanged }: { onChanged: () => void }) {
           </NeonButton>
         </div>
         <p className="mt-2 text-xs text-neon-100/40">
-          Reset wipes all team progress back to Level 1 — teams stay registered. This can&apos;t be undone.
+          Reset wipes all team progress back to Level 1 — teams stay registered, and each team&apos;s
+          passwords/clues/words/sentence (set in the Levels tab) are untouched.
         </p>
       </TerminalPanel>
 
-      <TerminalPanel title="winning-sentence.cfg">
-        <p className="mb-2 text-xs text-neon-100/50">
-          Editable any time — even mid-game. Teams only see this once they submit at the final level.
+      <TerminalPanel title="readme.txt" className="border-cyan-400/20">
+        <p className="text-sm text-neon-100/60">
+          Each team has its own independent puzzle — passwords, location clues, word rewards, and
+          final sentence are all configured per-team in the <span className="text-cyan-400">Levels</span> tab.
+          This tab only controls the game clock (start / pause / reset) for everyone at once.
         </p>
-        <textarea
-          value={sentenceDraft}
-          onChange={(e) => setSentenceDraft(e.target.value)}
-          rows={3}
-          className="w-full resize-none rounded-md border border-panel-border bg-void-2 px-3 py-2.5 text-neon-100 outline-none focus:border-neon-500 focus:ring-1 focus:ring-neon-500"
-        />
-        <div className="mt-3 flex items-center gap-3">
-          <NeonButton onClick={saveSentence} disabled={saving || !sentenceDraft.trim()}>
-            <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save Sentence"}
-          </NeonButton>
-          {message && <span className="text-xs text-neon-400">{message}</span>}
-        </div>
       </TerminalPanel>
     </div>
   );

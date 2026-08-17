@@ -5,13 +5,13 @@ export async function getGameConfig() {
   const config = await prisma.gameConfig.upsert({
     where: { id: 1 },
     update: {},
-    create: { id: 1, winningSentence: "" },
+    create: { id: 1 },
   });
   return config;
 }
 
-export async function getTotalLevels(): Promise<number> {
-  const count = await prisma.levelConfig.count();
+export async function getTotalLevels(teamId: string): Promise<number> {
+  const count = await prisma.levelConfig.count({ where: { teamId } });
   return count + 1; // + implicit final sentence-assembly level
 }
 
@@ -32,13 +32,15 @@ export async function logActivity(
 /**
  * Builds the client-safe view of a team's progress: only clues/words for
  * levels the team has actually unlocked are ever included in the payload.
+ * Every team has its own independent set of levels and its own final
+ * sentence, so all lookups here are scoped to this team only.
  */
 export async function buildTeamStatus(teamId: string) {
   const [team, progress, totalLevels, levelConfigs, config] = await Promise.all([
     prisma.team.findUnique({ where: { id: teamId } }),
     prisma.teamProgress.findUnique({ where: { teamId } }),
-    getTotalLevels(),
-    prisma.levelConfig.findMany({ orderBy: { levelNumber: "asc" } }),
+    getTotalLevels(teamId),
+    prisma.levelConfig.findMany({ where: { teamId }, orderBy: { levelNumber: "asc" } }),
     getGameConfig(),
   ]);
 

@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Your team has already finished the hunt." }, { status: 400 });
   }
 
-  const totalLevels = await getTotalLevels();
+  const totalLevels = await getTotalLevels(teamAuth.teamId);
   const targetLevel = progress.currentLevel;
 
   if (targetLevel >= totalLevels) {
@@ -59,7 +59,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const levelConfig = await prisma.levelConfig.findUnique({ where: { levelNumber: targetLevel } });
+  const levelConfig = await prisma.levelConfig.findUnique({
+    where: { teamId_levelNumber: { teamId: teamAuth.teamId, levelNumber: targetLevel } },
+  });
   if (!levelConfig) {
     return NextResponse.json({ error: "This level isn't configured yet. Ask the Game Master." }, { status: 500 });
   }

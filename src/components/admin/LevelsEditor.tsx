@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Save, Lock } from "lucide-react";
+import { Plus, Trash2, Save, Lock, Users } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
+
+interface TeamOption {
+  id: string;
+  name: string;
+  color: string;
+}
 
 interface Level {
   levelNumber: number;
@@ -26,6 +32,58 @@ function toDraft(level: Level): LevelDraft {
 }
 
 export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
+  const [teams, setTeams] = useState<TeamOption[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch("/api/admin/teams", { cache: "no-store" });
+      if (!res.ok || cancelled) return;
+      const data = await res.json();
+      setTeams(data.teams);
+      setSelectedTeamId((prev) => prev ?? data.teams[0]?.id ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="space-y-4">
+      <TerminalPanel title="select-team.sh">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-neon-400/70 mb-3">
+          <Users className="h-4 w-4" /> Each team has its own independent passwords, clues, words &amp; final sentence
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {teams.map((team) => (
+            <button
+              key={team.id}
+              onClick={() => setSelectedTeamId(team.id)}
+              className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                selectedTeamId === team.id
+                  ? "border-current bg-white/5"
+                  : "border-panel-border text-neon-100/50 hover:text-neon-100/80"
+              }`}
+              style={selectedTeamId === team.id ? { color: team.color, borderColor: team.color } : undefined}
+            >
+              {team.name}
+            </button>
+          ))}
+          {teams.length === 0 && <p className="text-sm text-neon-100/30">No teams registered yet.</p>}
+        </div>
+      </TerminalPanel>
+
+      {selectedTeamId && <TeamPuzzleEditor key={selectedTeamId} teamId={selectedTeamId} onChanged={onChanged} />}
+    </div>
+  );
+}
+
+function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: () => void }) {
+  const [sentence, setSentence] = useState("");
+  const [sentenceSaving, setSentenceSaving] = useState(false);
+  const [sentenceMessage, setSentenceMessage] = useState<string | null>(null);
+
   const [levels, setLevels] = useState<Level[]>([]);
   const [drafts, setDrafts] = useState<Record<number, LevelDraft>>({});
   const [savingLevel, setSavingLevel] = useState<number | null>(null);
@@ -33,8 +91,8 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
-    const res = await fetch("/api/admin/levels", { cache: "no-store" });
+  async function loadLevels() {
+    const res = await fetch(`/api/admin/teams/${teamId}/levels`, { cache: "no-store" });
     if (!res.ok) return;
     const data = await res.json();
     setLevels(data.levels);
@@ -44,19 +102,48 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await fetch("/api/admin/levels", { cache: "no-store" });
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      setLevels(data.levels);
-      setDrafts(Object.fromEntries(data.levels.map((l: Level) => [l.levelNumber, toDraft(l)])));
+      const [teamRes, levelsRes] = await Promise.all([
+        fetch(`/api/admin/teams/${teamId}`, { cache: "no-store" }),
+        fetch(`/api/admin/teams/${teamId}/levels`, { cache: "no-store" }),
+      ]);
+      if (cancelled) return;
+      if (teamRes.ok) {
+        const teamData = await teamRes.json();
+        if (!cancelled) setSentence(teamData.team.winningSentence);
+      }
+      if (levelsRes.ok) {
+        const levelsData = await levelsRes.json();
+        if (!cancelled) {
+          setLevels(levelsData.levels);
+          setDrafts(Object.fromEntries(levelsData.levels.map((l: Level) => [l.levelNumber, toDraft(l)])));
+        }
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [teamId]);
 
   function updateDraft(levelNumber: number, patch: Partial<LevelDraft>) {
     setDrafts((prev) => ({ ...prev, [levelNumber]: { ...prev[levelNumber], ...patch } }));
+  }
+
+  async function saveSentence() {
+    setSentenceSaving(true);
+    setSentenceMessage(null);
+    const res = await fetch(`/api/admin/teams/${teamId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ winningSentence: sentence }),
+    });
+    setSentenceSaving(false);
+    if (res.ok) {
+      setSentenceMessage("Saved.");
+      onChanged();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setSentenceMessage(data.error ?? "Failed to save.");
+    }
   }
 
   async function saveLevel(levelNumber: number) {
@@ -70,7 +157,7 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
     };
     if (draft.password.trim()) body.password = draft.password;
 
-    const res = await fetch(`/api/admin/levels/${levelNumber}`, {
+    const res = await fetch(`/api/admin/teams/${teamId}/levels/${levelNumber}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -86,9 +173,9 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
   }
 
   async function deleteLevel(levelNumber: number) {
-    if (!confirm(`Delete Level ${levelNumber}? Levels above it will renumber down.`)) return;
-    await fetch(`/api/admin/levels/${levelNumber}`, { method: "DELETE" });
-    await load();
+    if (!confirm(`Delete Level ${levelNumber} for this team? Levels above it will renumber down.`)) return;
+    await fetch(`/api/admin/teams/${teamId}/levels/${levelNumber}`, { method: "DELETE" });
+    await loadLevels();
     onChanged();
   }
 
@@ -99,7 +186,7 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
     }
     setCreating(true);
     setError(null);
-    const res = await fetch("/api/admin/levels", {
+    const res = await fetch(`/api/admin/teams/${teamId}/levels`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -116,12 +203,30 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
       return;
     }
     setNewLevel({ locationClue: "", wordReward: "", hint: "", password: "" });
-    await load();
+    await loadLevels();
     onChanged();
   }
 
   return (
     <div className="space-y-4">
+      <TerminalPanel title="winning-sentence.cfg" className="border-cyan-400/30">
+        <p className="mb-2 text-xs text-neon-100/50">
+          This team&apos;s own final sentence — unique per team, editable any time.
+        </p>
+        <textarea
+          value={sentence}
+          onChange={(e) => setSentence(e.target.value)}
+          rows={3}
+          className="w-full resize-none rounded-md border border-panel-border bg-void-2 px-3 py-2.5 text-neon-100 outline-none focus:border-neon-500 focus:ring-1 focus:ring-neon-500"
+        />
+        <div className="mt-3 flex items-center gap-3">
+          <NeonButton variant="cyan" onClick={saveSentence} disabled={sentenceSaving || !sentence.trim()}>
+            <Save className="h-4 w-4" /> {sentenceSaving ? "Saving…" : "Save Sentence"}
+          </NeonButton>
+          {sentenceMessage && <span className="text-xs text-neon-400">{sentenceMessage}</span>}
+        </div>
+      </TerminalPanel>
+
       {error && (
         <p className="rounded-md border border-danger-400/40 bg-danger-400/10 px-3 py-2 text-sm text-danger-400">
           {error}

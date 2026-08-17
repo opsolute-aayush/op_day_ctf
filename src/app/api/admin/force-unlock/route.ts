@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
 
-  const totalLevels = await getTotalLevels();
+  const totalLevels = await getTotalLevels(parsed.data.teamId);
   const targetLevel = progress.currentLevel;
 
   if (parsed.data.mode === "hint") {
@@ -42,7 +42,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Team already has every level unlocked." }, { status: 400 });
   }
 
-  const levelConfig = await prisma.levelConfig.findUnique({ where: { levelNumber: targetLevel } });
+  const levelConfig = await prisma.levelConfig.findUnique({
+    where: { teamId_levelNumber: { teamId: parsed.data.teamId, levelNumber: targetLevel } },
+  });
   if (!levelConfig) {
     return NextResponse.json({ error: "That level isn't configured yet." }, { status: 400 });
   }

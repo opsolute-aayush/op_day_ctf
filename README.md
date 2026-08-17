@@ -21,21 +21,34 @@ run on a laptop on the office wifi with zero external services.
 
 ## Game model
 
-- **Level 0** is the physical whiteboard cipher — it lives on paper, not in
-  this app. Decoding it gives teams the Level 1 password.
-- **Levels 1..N-1** each have: a password (bcrypt-hashed), a location clue
-  (revealed only after that level is unlocked), a word reward, and an
-  optional hint (only shown if the Game Master manually releases it).
-- **Level N** (the final level) is implicit — it's just
-  `count(LevelConfig) + 1`. There's no config row for it: it's the
-  sentence-assembly screen, unlocked once every password level is cleared.
-- The **winning sentence** lives on `GameConfig` and is editable by the admin
-  at any time — before, during, or after the game — via the dashboard's
-  Control tab.
+**Every team has its own independent puzzle.** Passwords, location clues,
+word rewards, and the final winning sentence all belong to a specific team —
+not to the game as a whole. Team A's Level 2 password does nothing for Team
+B, and each team assembles a completely different final sentence. This is
+what stops teams from just shouting answers at each other or copying a
+password they overheard at a shared physical location.
 
-Nothing about level structure is hardcoded to 5 levels: add or remove levels
-from the admin dashboard and the rest of the app (progression, the final
-assembly screen, the leaderboard) adapts automatically.
+- **Level 0** is the physical whiteboard cipher — it lives on paper, not in
+  this app, and can be the same starting clue for everyone or per-team (your
+  call). Decoding it gives a team its own Level 1 password.
+- **Levels 1..N-1** each belong to one team and have: a password
+  (bcrypt-hashed), a location clue (revealed only after that team unlocks
+  it), a word reward, and an optional hint (only shown if the Game Master
+  manually releases it for that team).
+- **Level N** (the final level) is implicit per team — it's just
+  `count(that team's LevelConfig rows) + 1`. There's no config row for it:
+  it's the sentence-assembly screen, unlocked once that team clears every
+  one of its own password levels.
+- Each **team's winning sentence** lives on the `Team` row itself and is
+  editable by the admin at any time — before, during, or after the game —
+  from the **Team Puzzles** tab.
+- Teams don't need the same number of levels. Add/remove levels per team
+  from the admin dashboard and everything (progression, the final assembly
+  screen, the leaderboard) adapts automatically.
+- The **race to win** is still global: whichever team is first to correctly
+  submit *their own* sentence wins and locks the whole game — a second,
+  later-but-still-correct submission from another team is told "solved it,
+  but too late" instead of also winning.
 
 ## Getting started
 
@@ -94,29 +107,37 @@ openssl rand -hex 8         # → ADMIN_KEY (this is what the Game Master types 
 
 ## Running the event
 
-1. **Configure your own puzzle** before doors open: log into `/admin` with
-   `ADMIN_KEY`, go to the **Levels** tab, and edit each level's password,
-   location clue, word reward, and optional hint. Add/remove levels with the
-   **Add Level** / **Delete** controls — numbering stays contiguous
-   automatically. Set the **winning sentence** in the **Control** tab.
-2. Print/write your Level 1 password's cipher onto the physical whiteboard
-   (or a QR code) — this is Level 0 and lives entirely outside the app.
-3. Hide your physical word cards + next-level cipher at each location.
-4. Have teams open the app on their phones and register at `/register`
-   (team name, members, color). They'll land on a "waiting for Game Master"
-   screen.
-5. Hit **Start** in the admin **Control** tab. Teams can now decode the
-   whiteboard and start entering passwords at `/play`.
+1. **Have teams register first** at `/register` (team name, members, color)
+   — this is required before you can configure their puzzle, since each
+   team's levels are tied to their team ID once it exists. They'll land on a
+   "waiting for Game Master" screen after registering.
+2. **Configure each team's own puzzle**: log into `/admin` with `ADMIN_KEY`,
+   go to the **Team Puzzles** tab, pick a team from the selector, and set
+   their passwords, location clues, word rewards, optional hints, and their
+   own final winning sentence. Add/remove levels with **Add Level** /
+   **Delete** — numbering stays contiguous automatically, per team. Repeat
+   for every registered team (they can all be totally different puzzles, or
+   variations on a theme — up to you).
+3. Print/write each team's Level 1 password's cipher onto the physical
+   whiteboard (or hand out per-team QR codes/cards) — this is Level 0 and
+   lives entirely outside the app.
+4. Hide your physical word cards + next-level cipher at each location —
+   remember each team may be heading to different locations for the same
+   "level number" if you gave them different clues.
+5. Hit **Start** in the admin **Game Control** tab. This starts the clock
+   for every team at once. Teams can now decode their whiteboard clue and
+   start entering passwords at `/play`.
 6. Watch progress live on the admin **Overview** tab (leaderboard + activity
    feed, both refresh every few seconds). If a team is stuck, use the
    unlock (⚡) or hint (💡) icons next to their row to nudge them without
    giving away the whole puzzle.
-7. First team to correctly assemble and submit the sentence at `/final` wins
-   — the game auto-locks (`isFinished`) the instant that happens, so a
-   second correct submission a moment later is told "solved it — but too
-   late" instead of also winning.
-8. **Reset** (Control tab) wipes all progress back to Level 1 for a re-run —
-   teams stay registered so they don't need to sign up again.
+7. First team to correctly assemble and submit *their own* sentence at
+   `/final` wins — the game auto-locks (`isFinished`) for everyone the
+   instant that happens.
+8. **Reset** (Game Control tab) wipes all progress back to Level 1 for a
+   re-run — teams stay registered and every team's puzzle/sentence
+   (configured in step 2) is untouched, so you can replay without
+   reconfiguring anything.
 
 ## Sound effects
 
@@ -139,10 +160,15 @@ files and update the list in `sfx.ts` to change the roster.
 - `unlockedClues` in `/api/team/status` only ever includes levels the team
   has actually unlocked — a level's location clue and word reward are never
   sent to the client before that level's password is verified.
+- Every level lookup (`unlock-level`, `force-unlock`) is scoped by both
+  `teamId` *and* `levelNumber` — a team's password only ever matches its own
+  levels, never another team's, even if they happen to be on the same level
+  number.
 - Passwords are bcrypt-hashed at rest; the admin API never returns password
   hashes, only a `hasPassword` boolean.
-- The winning sentence is never sent to any team-facing endpoint — only
-  compared server-side in `/api/game/submit-final-sentence`.
+- Each team's winning sentence is never sent to any team-facing endpoint —
+  only compared server-side, against that team's own `Team.winningSentence`,
+  in `/api/game/submit-final-sentence`.
 - Password/sentence comparisons are case-insensitive and whitespace/
   punctuation-normalized (`src/lib/normalize.ts`) so teams aren't tripped up
   by formatting, but the comparison itself always happens on the server.
@@ -211,19 +237,21 @@ src/
   hooks/useTeamStatus.ts    Polling hook for a team's live progress
 ```
 
-## Sample puzzle (from `npm run db:seed`)
+## Sample puzzles (from `npm run db:seed`)
 
-| Level | Password | Word reward |
-|---|---|---|
-| 1 | `ALPHA` | THE SECRET |
-| 2 | `BEANSTALK` | KEY LIES |
-| 3 | `CIRCUIT` | BEHIND THE |
-| 4 | `FIREWALL` | OLD SERVER |
+Five sample teams are seeded, each with its own independent 4-level puzzle
+and its own final sentence — run `npm run db:seed` and the console prints
+every team's plaintext level passwords (for the physical cards) plus their
+sentence. Example (yours will differ per team):
 
-Winning sentence: **THE SECRET KEY LIES BEHIND THE OLD SERVER RACK**
+| Team | Level 1 | Level 2 | Level 3 | Level 4 | Winning sentence |
+|---|---|---|---|---|---|
+| Code Breakers | `ALPHA` | `BEANSTALK` | `CIRCUIT` | `FIREWALL` | THE SECRET KEY LIES BEHIND THE OLD SERVER RACK |
+| Byte Bandits | `BRAVO` | `PIXELATE` | `LATTICE` | `SKYLINE` | FOLLOW THE BLUE WIRE TO THE ROOFTOP GENERATOR |
+| Null Pointers | `CHARLIE` | `SEGFAULT` | `RECURSION` | `ESPRESSO` | THE PASSWORD WAS HIDDEN INSIDE THE COFFEE MACHINE ALL ALONG |
+| Cyber Ninjas | `DELTA` | `KEYSTONE` | `MAINFRAME` | `BLUEPRINT` | TEAMWORK UNLOCKS EVERY DOOR IN THIS ENTIRE BUILDING |
+| Kernel Panic | `ECHO` | `STACKTRACE` | `NULLBYTE` | `CHECKSUM` | PANIC LESS DEBUG MORE AND THE FLAG IS YOURS |
 
-(Note the sample sentence has one extra word, "RACK", beyond the four
-collected fragments — that's intentional flavor from the original brief:
-teams have to notice it's implied/missing and add it themselves. Edit the
-sentence and word rewards from the admin dashboard if you'd rather every
-word be physically collected.)
+Edit any of this — passwords, clues, words, hints, or the sentence — for any
+team at any time from the admin **Team Puzzles** tab. See `prisma/seed.ts`
+for the full source if you want to design your own set from scratch.

@@ -6,44 +6,51 @@
 --
 -- This file is a plain-SQL reference for anyone who wants to read the shape
 -- of the data without installing anything, or who is porting the app onto
--- Postgres/Supabase (see the notes at the bottom — the original spec assumed
--- Postgres; swapping the Prisma datasource back to `postgresql` and dropping
--- the JSON-as-TEXT columns for native `TEXT[]` / `JSONB` is the only change
--- needed).
+-- Postgres/Supabase (see the notes at the bottom).
 --
 -- Dialect below: SQLite (matches what `prisma db push` actually creates).
+--
+-- KEY DESIGN POINT: every team has its own independent puzzle. Levels
+-- (passwords/clues/words) and the final winning sentence both belong to a
+-- specific team, not to the game as a whole — Team A's Level 2 password does
+-- nothing for Team B, and each team assembles its own unique sentence.
 
 CREATE TABLE "GameConfig" (
-    "id"              INTEGER PRIMARY KEY DEFAULT 1,
-    "isActive"        BOOLEAN NOT NULL DEFAULT false,
-    "isFinished"      BOOLEAN NOT NULL DEFAULT false,
-    "winningTeamId"   TEXT,
-    "winningSentence" TEXT NOT NULL DEFAULT '',
-    "startedAt"       DATETIME,
-    "updatedAt"       DATETIME NOT NULL,
+    "id"            INTEGER PRIMARY KEY DEFAULT 1,
+    "isActive"      BOOLEAN NOT NULL DEFAULT false,
+    "isFinished"    BOOLEAN NOT NULL DEFAULT false,
+    "winningTeamId" TEXT,
+    "startedAt"     DATETIME,
+    "updatedAt"     DATETIME NOT NULL,
     FOREIGN KEY ("winningTeamId") REFERENCES "Team" ("id") ON DELETE SET NULL
 );
 
 CREATE TABLE "Team" (
-    "id"        TEXT PRIMARY KEY,               -- uuid
-    "name"      TEXT NOT NULL UNIQUE,
-    "color"     TEXT NOT NULL DEFAULT '#39FF14',
-    "members"   TEXT NOT NULL,                  -- JSON string array, e.g. ["Asha","Rohit"]
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "id"              TEXT PRIMARY KEY,             -- uuid
+    "name"            TEXT NOT NULL UNIQUE,
+    "color"           TEXT NOT NULL DEFAULT '#39FF14',
+    "members"         TEXT NOT NULL,                -- JSON string array, e.g. ["Asha","Rohit"]
+    "winningSentence" TEXT NOT NULL DEFAULT '',      -- THIS team's own final sentence
+    "createdAt"       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Levels 1..N-1 require a password and reveal a location clue + word reward.
 -- The final level (N) is the sentence-assembly stage and has no row here —
--- N is simply (COUNT(*) FROM LevelConfig) + 1.
+-- N is simply (COUNT(*) FROM LevelConfig WHERE teamId = <team>) + 1.
+-- Every row belongs to exactly one team; two teams can reuse the same
+-- levelNumber (e.g. both have a "Level 2") with totally different content.
 CREATE TABLE "LevelConfig" (
     "id"           INTEGER PRIMARY KEY AUTOINCREMENT,
-    "levelNumber"  INTEGER NOT NULL UNIQUE,
+    "teamId"       TEXT NOT NULL,
+    "levelNumber"  INTEGER NOT NULL,
     "password"     TEXT NOT NULL,                -- bcrypt hash, never plaintext
     "locationClue" TEXT NOT NULL,
     "wordReward"   TEXT NOT NULL,
     "hint"         TEXT,
     "createdAt"    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt"    DATETIME NOT NULL
+    "updatedAt"    DATETIME NOT NULL,
+    FOREIGN KEY ("teamId") REFERENCES "Team" ("id") ON DELETE CASCADE,
+    UNIQUE ("teamId", "levelNumber")
 );
 
 CREATE TABLE "TeamProgress" (

@@ -42,17 +42,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "The game is not currently active." }, { status: 403 });
   }
 
-  const progress = await prisma.teamProgress.findUnique({ where: { teamId: teamAuth.teamId } });
-  if (!progress) {
+  const [progress, team] = await Promise.all([
+    prisma.teamProgress.findUnique({ where: { teamId: teamAuth.teamId } }),
+    prisma.team.findUnique({ where: { id: teamAuth.teamId } }),
+  ]);
+  if (!progress || !team) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
 
-  const totalLevels = await getTotalLevels();
+  const totalLevels = await getTotalLevels(teamAuth.teamId);
   if (progress.currentLevel < totalLevels) {
     return NextResponse.json({ error: "You haven't unlocked the final level yet." }, { status: 400 });
   }
 
-  const correct = normalizeSentence(parsed.data.sentence) === normalizeSentence(config.winningSentence);
+  const correct = normalizeSentence(parsed.data.sentence) === normalizeSentence(team.winningSentence);
 
   if (!correct) {
     await logActivity(teamAuth.teamId, "WRONG_FINAL_SENTENCE", { submitted: parsed.data.sentence });

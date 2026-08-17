@@ -5,11 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 import { normalizePassword } from "@/lib/normalize";
 
-export async function GET() {
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ teamId: string }> }) {
   const unauthorized = await requireAdmin();
   if (unauthorized) return unauthorized;
 
-  const levels = await prisma.levelConfig.findMany({ orderBy: { levelNumber: "asc" } });
+  const { teamId } = await ctx.params;
+  const levels = await prisma.levelConfig.findMany({ where: { teamId }, orderBy: { levelNumber: "asc" } });
   return NextResponse.json({
     levels: levels.map((l) => ({
       levelNumber: l.levelNumber,
@@ -29,9 +30,15 @@ const createSchema = z.object({
   hint: z.string().max(2000).optional(),
 });
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ teamId: string }> }) {
   const unauthorized = await requireAdmin();
   if (unauthorized) return unauthorized;
+
+  const { teamId } = await ctx.params;
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!team) {
+    return NextResponse.json({ error: "Team not found" }, { status: 404 });
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
@@ -39,12 +46,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
   }
 
-  const count = await prisma.levelConfig.count();
+  const count = await prisma.levelConfig.count({ where: { teamId } });
   const levelNumber = count + 1;
   const passwordHash = await bcrypt.hash(normalizePassword(parsed.data.password), 10);
 
   const level = await prisma.levelConfig.create({
     data: {
+      teamId,
       levelNumber,
       password: passwordHash,
       locationClue: parsed.data.locationClue,

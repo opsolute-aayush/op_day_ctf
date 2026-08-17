@@ -2,18 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 import { parseIntArray, parseStringArray } from "@/lib/json";
-import { getTotalLevels, getGameConfig } from "@/lib/game";
+import { getGameConfig } from "@/lib/game";
 
 export async function GET() {
   const unauthorized = await requireAdmin();
   if (unauthorized) return unauthorized;
 
-  const [teams, totalLevels, config] = await Promise.all([
+  const [teams, config] = await Promise.all([
     prisma.team.findMany({
-      include: { progress: true },
+      include: { progress: true, _count: { select: { levels: true } } },
       orderBy: { createdAt: "asc" },
     }),
-    getTotalLevels(),
     getGameConfig(),
   ]);
 
@@ -33,6 +32,7 @@ export async function GET() {
     const progress = team.progress;
     const unlockedLevels = progress ? parseIntArray(progress.unlockedLevels) : [0];
     const collectedWords = progress ? parseStringArray(progress.collectedWords) : [];
+    const totalLevels = team._count.levels + 1; // + implicit final sentence-assembly level
     return {
       teamId: team.id,
       teamName: team.name,
@@ -50,9 +50,12 @@ export async function GET() {
     };
   });
 
+  // Sort by progress ratio, since teams can have different numbers of levels.
   leaderboard.sort((a, b) => {
     if (a.isWinner !== b.isWinner) return a.isWinner ? -1 : 1;
-    if (a.currentLevel !== b.currentLevel) return b.currentLevel - a.currentLevel;
+    const ratioA = a.currentLevel / a.totalLevels;
+    const ratioB = b.currentLevel / b.totalLevels;
+    if (ratioA !== ratioB) return ratioB - ratioA;
     return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
   });
 

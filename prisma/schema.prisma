@@ -7,40 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Singleton row (id always 1) holding global game state.
+// Singleton row (id always 1) holding global game state — start/pause/finish
+// and who won. Puzzle content itself (levels, sentence) lives per-team below.
 model GameConfig {
-  id              Int       @id @default(1)
-  isActive        Boolean   @default(false)
-  isFinished      Boolean   @default(false)
-  winningTeamId   String?
-  winningTeam     Team?     @relation("WinningTeam", fields: [winningTeamId], references: [id])
-  winningSentence String    @default("")
-  startedAt       DateTime?
-  updatedAt       DateTime  @updatedAt
+  id            Int       @id @default(1)
+  isActive      Boolean   @default(false)
+  isFinished    Boolean   @default(false)
+  winningTeamId String?
+  winningTeam   Team?     @relation("WinningTeam", fields: [winningTeamId], references: [id])
+  startedAt     DateTime?
+  updatedAt     DateTime  @updatedAt
 }
 
 model Team {
-  id         String        @id @default(uuid())
-  name       String        @unique
-  color      String        @default("#39FF14")
-  members    String // JSON string array
-  createdAt  DateTime      @default(now())
-  progress   TeamProgress?
-  activity   ActivityLog[]
-  wonGame    GameConfig[]  @relation("WinningTeam")
+  id              String        @id @default(uuid())
+  name            String        @unique
+  color           String        @default("#39FF14")
+  members         String // JSON string array
+  winningSentence String        @default("") // this team's own final sentence — unique per team
+  createdAt       DateTime      @default(now())
+  progress        TeamProgress?
+  levels          LevelConfig[]
+  activity        ActivityLog[]
+  wonGame         GameConfig[]  @relation("WinningTeam")
 }
 
 // Levels 1..N-1 require a password + reveal a location clue + award a word.
 // The implicit final level (N) is the sentence-assembly stage and has no row here.
+// Every row belongs to exactly one team — each team has its own independent
+// set of passwords/clues/words and its own final sentence (on Team above).
 model LevelConfig {
   id           Int      @id @default(autoincrement())
-  levelNumber  Int      @unique
+  teamId       String
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  levelNumber  Int
   password     String // bcrypt hash
   locationClue String
   wordReward   String
   hint         String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@unique([teamId, levelNumber])
 }
 
 model TeamProgress {

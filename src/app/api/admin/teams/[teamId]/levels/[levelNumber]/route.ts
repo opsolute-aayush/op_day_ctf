@@ -12,11 +12,11 @@ const updateSchema = z.object({
   hint: z.string().max(2000).nullable().optional(),
 });
 
-export async function PUT(req: NextRequest, ctx: { params: Promise<{ levelNumber: string }> }) {
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ teamId: string; levelNumber: string }> }) {
   const unauthorized = await requireAdmin();
   if (unauthorized) return unauthorized;
 
-  const { levelNumber: levelNumberParam } = await ctx.params;
+  const { teamId, levelNumber: levelNumberParam } = await ctx.params;
   const levelNumber = Number(levelNumberParam);
   if (!Number.isInteger(levelNumber)) {
     return NextResponse.json({ error: "Invalid level number" }, { status: 400 });
@@ -28,7 +28,9 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ levelNumber
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
   }
 
-  const existing = await prisma.levelConfig.findUnique({ where: { levelNumber } });
+  const existing = await prisma.levelConfig.findUnique({
+    where: { teamId_levelNumber: { teamId, levelNumber } },
+  });
   if (!existing) {
     return NextResponse.json({ error: "Level not found" }, { status: 404 });
   }
@@ -41,7 +43,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ levelNumber
     data.password = await bcrypt.hash(normalizePassword(parsed.data.password), 10);
   }
 
-  const level = await prisma.levelConfig.update({ where: { levelNumber }, data });
+  const level = await prisma.levelConfig.update({ where: { id: existing.id }, data });
 
   return NextResponse.json({
     level: {
@@ -54,26 +56,29 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ levelNumber
   });
 }
 
-export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ levelNumber: string }> }) {
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ teamId: string; levelNumber: string }> }) {
   const unauthorized = await requireAdmin();
   if (unauthorized) return unauthorized;
 
-  const { levelNumber: levelNumberParam } = await ctx.params;
+  const { teamId, levelNumber: levelNumberParam } = await ctx.params;
   const levelNumber = Number(levelNumberParam);
   if (!Number.isInteger(levelNumber)) {
     return NextResponse.json({ error: "Invalid level number" }, { status: 400 });
   }
 
-  const existing = await prisma.levelConfig.findUnique({ where: { levelNumber } });
+  const existing = await prisma.levelConfig.findUnique({
+    where: { teamId_levelNumber: { teamId, levelNumber } },
+  });
   if (!existing) {
     return NextResponse.json({ error: "Level not found" }, { status: 404 });
   }
 
-  // Renumber every level above this one down by one, so numbering stays contiguous (1..N).
+  // Renumber every level above this one (for this team only) down by one, so
+  // numbering stays contiguous (1..N) within that team's own puzzle.
   await prisma.$transaction(async (tx) => {
-    await tx.levelConfig.delete({ where: { levelNumber } });
+    await tx.levelConfig.delete({ where: { id: existing.id } });
     const higher = await tx.levelConfig.findMany({
-      where: { levelNumber: { gt: levelNumber } },
+      where: { teamId, levelNumber: { gt: levelNumber } },
       orderBy: { levelNumber: "asc" },
     });
     for (const lvl of higher) {
