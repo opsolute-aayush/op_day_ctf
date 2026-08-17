@@ -14,12 +14,19 @@ run on a laptop on the office wifi with zero external services.
 |---|---|---|
 | Framework | Next.js 16 (App Router) | One deploy for both the UI and the API routes — no separate backend to stand up for a one-day event. |
 | Database | SQLite via Prisma | Zero setup — no Postgres/Supabase account needed. `schema.sql` documents the exact shape and how to port to Postgres later if you outgrow it. |
-| Auth | JWT in httpOnly cookies | Teams get a session token on registration; no passwords, no accounts to manage. Admin gets a separate JWT after entering the master key. |
+| Auth | JWT in httpOnly cookies | Players get a session token when they join a team; no passwords, no accounts to manage. Admin gets a separate JWT after entering the master key. |
 | "Realtime" | Polling (2–5s) | Simpler and more robust than WebSockets/SSE for a few dozen phones on venue wifi — no reconnect logic, works behind any proxy. Good enough for a scoreboard that updates every few seconds. See [Scaling notes](#scaling-notes) if you want true push updates later. |
 | Styling | Tailwind CSS v4 + Framer Motion | Cyberpunk/hacker terminal aesthetic: scanlines, glitch text, neon glow, monospace fonts. |
 | Rate limiting | In-memory sliding window | No Redis needed for a single-process deployment. See [Scaling notes](#scaling-notes). |
 
 ## Game model
+
+**Only the Game Master creates teams.** Players joining at `/register` pick
+from the list of teams the admin already set up and add their own name —
+there is no "create a team" option anywhere in the player-facing app. This
+keeps the digital team count locked to whatever the admin decided matches
+the physical groups at the event, and multiple people can join the same
+team from their own phones and all drive the same shared progress.
 
 **Every team has its own independent puzzle.** Passwords, location clues,
 word rewards, and the final winning sentence all belong to a specific team —
@@ -107,37 +114,46 @@ openssl rand -hex 8         # → ADMIN_KEY (this is what the Game Master types 
 
 ## Running the event
 
-1. **Have teams register first** at `/register` (team name, members, color)
-   — this is required before you can configure their puzzle, since each
-   team's levels are tied to their team ID once it exists. They'll land on a
-   "waiting for Game Master" screen after registering.
-2. **Configure each team's own puzzle**: log into `/admin` with `ADMIN_KEY`,
-   go to the **Team Puzzles** tab, pick a team from the selector, and set
-   their passwords, location clues, word rewards, optional hints, and their
-   own final winning sentence. Add/remove levels with **Add Level** /
-   **Delete** — numbering stays contiguous automatically, per team. Repeat
-   for every registered team (they can all be totally different puzzles, or
-   variations on a theme — up to you).
+**Only the Game Master creates teams.** Players can never mint a new team
+from the app — they can only join one that already exists — so the number
+of digital teams always matches however many physical groups you actually
+have at the event. No duplicate/joke/extra teams from open self-service
+sign-up.
+
+1. **Create each team** ahead of time: log into `/admin` with `ADMIN_KEY`,
+   go to the **Team Puzzles** tab, and use **Create Team** (name + color) —
+   once per physical group. This is required before you can configure a
+   team's puzzle, since levels are tied to a team's ID once it exists.
+2. **Configure each team's own puzzle**: still in **Team Puzzles**, pick a
+   team from the selector and set its passwords, location clues, word
+   rewards, optional hints, and its own final winning sentence. Add/remove
+   levels with **Add Level** / **Delete** — numbering stays contiguous
+   automatically, per team. Repeat for every team you created (they can all
+   be totally different puzzles, or variations on a theme — up to you).
 3. Print/write each team's Level 1 password's cipher onto the physical
    whiteboard (or hand out per-team QR codes/cards) — this is Level 0 and
    lives entirely outside the app.
 4. Hide your physical word cards + next-level cipher at each location —
    remember each team may be heading to different locations for the same
    "level number" if you gave them different clues.
-5. Hit **Start** in the admin **Game Control** tab. This starts the clock
+5. **Have players join** at `/register`: they see the list of teams you
+   created, pick theirs, and add their own name — no team creation option is
+   shown to them. Multiple people can join the same team from their own
+   phones and they'll all see and drive the same shared progress live.
+   They'll land on a "waiting for Game Master" screen until you start.
+6. Hit **Start** in the admin **Game Control** tab. This starts the clock
    for every team at once. Teams can now decode their whiteboard clue and
    start entering passwords at `/play`.
-6. Watch progress live on the admin **Overview** tab (leaderboard + activity
+7. Watch progress live on the admin **Overview** tab (leaderboard + activity
    feed, both refresh every few seconds). If a team is stuck, use the
    unlock (⚡) or hint (💡) icons next to their row to nudge them without
    giving away the whole puzzle.
-7. First team to correctly assemble and submit *their own* sentence at
+8. First team to correctly assemble and submit *their own* sentence at
    `/final` wins — the game auto-locks (`isFinished`) for everyone the
    instant that happens.
-8. **Reset** (Game Control tab) wipes all progress back to Level 1 for a
-   re-run — teams stay registered and every team's puzzle/sentence
-   (configured in step 2) is untouched, so you can replay without
-   reconfiguring anything.
+9. **Reset** (Game Control tab) wipes all progress back to Level 1 for a
+   re-run — teams and their puzzle/sentence (configured in step 2) are
+   untouched, so you can replay without recreating anything.
 
 ## Sound effects
 
@@ -150,6 +166,11 @@ files and update the list in `sfx.ts` to change the roster.
 
 ## Security notes (what's enforced server-side, not just in the UI)
 
+- Team creation is admin-only: `POST /api/admin/teams` requires the admin
+  JWT cookie (`requireAdmin`). The only public, unauthenticated write to a
+  `Team` row is `POST /api/auth/join-team`, and it can only append a member
+  name to a team that already exists — there's no code path for a player to
+  create a new team, by design.
 - Route guarding in `src/proxy.ts` (Next 16 renamed `middleware.js` to
   `proxy.js`) redirects unauthenticated browsers away from `/play`, `/final`,
   `/winner` — but that's just UX. The actual enforcement is in every API
@@ -297,7 +318,7 @@ src/
                            rateLimit.ts, normalize.ts, json.ts, adminGuard.ts
   app/
     page.tsx               Landing
-    register/               Team sign-up
+    register/               Join an existing team (no team creation here)
     play/                   Level hub
     final/                  Sentence assembly
     winner/                 Victory screen + confetti

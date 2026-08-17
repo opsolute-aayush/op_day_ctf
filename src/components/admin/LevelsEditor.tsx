@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Save, Lock, Users } from "lucide-react";
+import { Plus, Trash2, Save, Lock, Users, UserPlus } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
@@ -11,6 +11,8 @@ interface TeamOption {
   name: string;
   color: string;
 }
+
+const TEAM_COLORS = ["#39FF14", "#00F0FF", "#FF2ECC", "#FFD400", "#FF6A00", "#B026FF", "#FF3B3B", "#3B82F6"];
 
 interface Level {
   levelNumber: number;
@@ -34,6 +36,12 @@ function toDraft(level: Level): LevelDraft {
 export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [nonce, setNonce] = useState(0);
+
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState(TEAM_COLORS[0]);
+  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,10 +55,75 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [nonce]);
+
+  async function createTeam() {
+    if (newName.trim().length < 2) {
+      setCreateError("Team name must be at least 2 characters.");
+      return;
+    }
+    setCreatingTeam(true);
+    setCreateError(null);
+    const res = await fetch("/api/admin/teams", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName.trim(), color: newColor }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setCreatingTeam(false);
+    if (!res.ok) {
+      setCreateError(data.error ?? "Failed to create team.");
+      return;
+    }
+    setNewName("");
+    setSelectedTeamId(data.team.id);
+    setNonce((n) => n + 1);
+    onChanged();
+  }
 
   return (
     <div className="space-y-4">
+      <TerminalPanel title="create-team.sh" className="border-cyan-400/30">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-cyan-400/80 mb-3">
+          <UserPlus className="h-4 w-4" /> Only the Game Master creates teams — players can only join one that
+          already exists here, so the count always matches your physical groups.
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-48 flex-1">
+            <InputField
+              label="New Team Name"
+              placeholder="e.g. Code Breakers"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              maxLength={60}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs uppercase tracking-widest text-neon-400/80">Color</span>
+            <div className="flex flex-wrap gap-1.5">
+              {TEAM_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setNewColor(c)}
+                  aria-label={`Choose ${c}`}
+                  className="h-6 w-6 rounded-full border-2 transition-transform"
+                  style={{
+                    backgroundColor: c,
+                    borderColor: newColor === c ? "#fff" : "transparent",
+                    transform: newColor === c ? "scale(1.15)" : "scale(1)",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+          <NeonButton variant="cyan" onClick={createTeam} disabled={creatingTeam}>
+            <Plus className="h-4 w-4" /> {creatingTeam ? "Creating…" : "Create Team"}
+          </NeonButton>
+        </div>
+        {createError && <p className="mt-2 text-sm text-danger-400">{createError}</p>}
+      </TerminalPanel>
+
       <TerminalPanel title="select-team.sh">
         <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-neon-400/70 mb-3">
           <Users className="h-4 w-4" /> Each team has its own independent passwords, clues, words &amp; final sentence
@@ -70,7 +143,7 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
               {team.name}
             </button>
           ))}
-          {teams.length === 0 && <p className="text-sm text-neon-100/30">No teams registered yet.</p>}
+          {teams.length === 0 && <p className="text-sm text-neon-100/30">No teams created yet — add one above.</p>}
         </div>
       </TerminalPanel>
 

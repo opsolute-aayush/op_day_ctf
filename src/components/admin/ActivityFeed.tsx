@@ -7,23 +7,42 @@ interface ActivityItem {
   id: string;
   teamName: string;
   eventType: string;
+  details: Record<string, unknown> | null;
   createdAt: string;
 }
 
-const LABELS: Record<string, string> = {
-  TEAM_REGISTERED: "registered for the hunt",
-  LEVEL_UNLOCKED: "unlocked a level",
-  WRONG_PASSWORD: "entered a wrong password",
-  WRONG_FINAL_SENTENCE: "submitted an incorrect final sentence",
-  WIN: "WON THE HUNT",
-  CORRECT_BUT_TOO_LATE: "solved it — but too late",
-  FORCE_UNLOCK: "was force-unlocked by the Game Master",
-  HINT_RELEASED: "received a hint from the Game Master",
-  GAME_STARTED: "— Game Master started the game",
-  GAME_PAUSED: "— Game Master paused the game",
-  GAME_RESET: "— Game Master reset the game",
-  SENTENCE_UPDATED: "— Game Master updated the winning sentence",
-};
+function describe(item: ActivityItem): string {
+  switch (item.eventType) {
+    case "TEAM_CREATED":
+      return "was created by the Game Master";
+    case "MEMBER_JOINED":
+      return `— ${String(item.details?.memberName ?? "someone")} joined`;
+    case "LEVEL_UNLOCKED":
+      return "unlocked a level";
+    case "WRONG_PASSWORD":
+      return "entered a wrong password";
+    case "WRONG_FINAL_SENTENCE":
+      return "submitted an incorrect final sentence";
+    case "WIN":
+      return "WON THE HUNT";
+    case "CORRECT_BUT_TOO_LATE":
+      return "solved it — but too late";
+    case "FORCE_UNLOCK":
+      return "was force-unlocked by the Game Master";
+    case "HINT_RELEASED":
+      return "received a hint from the Game Master";
+    case "GAME_STARTED":
+      return "— Game Master started the game";
+    case "GAME_PAUSED":
+      return "— Game Master paused the game";
+    case "GAME_RESET":
+      return "— Game Master reset the game";
+    case "SENTENCE_UPDATED":
+      return "— Game Master updated the winning sentence";
+    default:
+      return item.eventType.toLowerCase();
+  }
+}
 
 export default function ActivityFeed({ refreshKey }: { refreshKey: number }) {
   const [items, setItems] = useState<ActivityItem[]>([]);
@@ -46,8 +65,7 @@ export default function ActivityFeed({ refreshKey }: { refreshKey: number }) {
         {items.map((item) => (
           <p key={item.id} className="text-neon-100/70">
             <span className="text-neon-100/30">{new Date(item.createdAt).toLocaleTimeString()}</span>{" "}
-            <span className="text-neon-500">{item.teamName}</span>{" "}
-            {LABELS[item.eventType] ?? item.eventType.toLowerCase()}
+            <span className="text-neon-500">{item.teamName}</span> {describe(item)}
           </p>
         ))}
         {items.length === 0 && <p className="text-neon-100/30">No activity yet.</p>}
