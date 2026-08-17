@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Singleton row (id always 1) holding global game state.
+model GameConfig {
+  id              Int       @id @default(1)
+  isActive        Boolean   @default(false)
+  isFinished      Boolean   @default(false)
+  winningTeamId   String?
+  winningTeam     Team?     @relation("WinningTeam", fields: [winningTeamId], references: [id])
+  winningSentence String    @default("")
+  startedAt       DateTime?
+  updatedAt       DateTime  @updatedAt
+}
+
+model Team {
+  id         String        @id @default(uuid())
+  name       String        @unique
+  color      String        @default("#39FF14")
+  members    String // JSON string array
+  createdAt  DateTime      @default(now())
+  progress   TeamProgress?
+  activity   ActivityLog[]
+  wonGame    GameConfig[]  @relation("WinningTeam")
+}
+
+// Levels 1..N-1 require a password + reveal a location clue + award a word.
+// The implicit final level (N) is the sentence-assembly stage and has no row here.
+model LevelConfig {
+  id           Int      @id @default(autoincrement())
+  levelNumber  Int      @unique
+  password     String // bcrypt hash
+  locationClue String
+  wordReward   String
+  hint         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model TeamProgress {
+  id                String    @id @default(uuid())
+  teamId            String    @unique
+  team              Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  currentLevel      Int       @default(1)
+  unlockedLevels    String    @default("[0]") // JSON int array
+  collectedWords    String    @default("[]") // JSON string array, in level order
+  hintReleasedLevel Int? // level number the Game Master has released a hint for
+  completed         Boolean   @default(false)
+  completedAt       DateTime?
+  updatedAt         DateTime  @updatedAt
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  teamId    String?
+  team      Team?    @relation(fields: [teamId], references: [id])
+  eventType String // LEVEL_UNLOCKED | WRONG_PASSWORD | WIN | GAME_STARTED | GAME_PAUSED | GAME_RESET | FORCE_UNLOCK | TEAM_REGISTERED
+  details   String? // JSON string
+  createdAt DateTime @default(now())
+}

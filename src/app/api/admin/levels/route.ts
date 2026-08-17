@@ -1,0 +1,65 @@
+import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/adminGuard";
+import { normalizePassword } from "@/lib/normalize";
+
+export async function GET() {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
+  const levels = await prisma.levelConfig.findMany({ orderBy: { levelNumber: "asc" } });
+  return NextResponse.json({
+    levels: levels.map((l) => ({
+      levelNumber: l.levelNumber,
+      locationClue: l.locationClue,
+      wordReward: l.wordReward,
+      hint: l.hint,
+      hasPassword: Boolean(l.password),
+      updatedAt: l.updatedAt,
+    })),
+  });
+}
+
+const createSchema = z.object({
+  password: z.string().min(1).max(200),
+  locationClue: z.string().min(1).max(2000),
+  wordReward: z.string().min(1).max(200),
+  hint: z.string().max(2000).optional(),
+});
+
+export async function POST(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
+  const body = await req.json().catch(() => null);
+  const parsed = createSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
+  }
+
+  const count = await prisma.levelConfig.count();
+  const levelNumber = count + 1;
+  const passwordHash = await bcrypt.hash(normalizePassword(parsed.data.password), 10);
+
+  const level = await prisma.levelConfig.create({
+    data: {
+      levelNumber,
+      password: passwordHash,
+      locationClue: parsed.data.locationClue,
+      wordReward: parsed.data.wordReward,
+      hint: parsed.data.hint,
+    },
+  });
+
+  return NextResponse.json({
+    level: {
+      levelNumber: level.levelNumber,
+      locationClue: level.locationClue,
+      wordReward: level.wordReward,
+      hint: level.hint,
+      hasPassword: true,
+    },
+  });
+}
