@@ -8,5 +8,5 @@ prisma/*.db
 prisma/*.db-journal
 npm-debug.log*
 *.md
-run.sh
+scripts/run.sh
 .DS_Store

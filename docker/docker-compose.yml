@@ -1,0 +1,55 @@
+# Run from the repo root (not from inside docker/):
+#   npm run compose:up
+# That's `docker compose -f docker/docker-compose.yml --project-directory . up -d --build`
+# — the --project-directory keeps .env and the build context at the repo
+# root even though this file lives in docker/.
+#
+# Then open http://localhost/admin (or http://HOST_IP/admin, or
+# http://aegios.co.in/admin if you set up the dns profile below) and click
+# "Create New Session".
+#
+# Making a custom domain resolve on the venue wifi: Docker can't rewrite
+# DNS on other people's phones by itself.
+#   a) Point each device's wifi DNS setting at HOST_IP — `npm run
+#      compose:dns` starts a dnsmasq sidecar answering aegios.co.in with
+#      HOST_IP (set it in .env first). Needs router-level DHCP DNS control.
+#   b) No router access? Add "<HOST_IP> aegios.co.in" to each device's hosts
+#      file, or just skip the domain and share http://HOST_IP directly.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:3000"
+    environment:
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in .env — generate with: openssl rand -base64 48}"
+      SEED_ON_BOOT: "${SEED_ON_BOOT:-true}"
+    volumes:
+      - opday_data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Answers DNS queries for aegios.co.in with HOST_IP. Opt-in: npm run compose:dns
+  dns:
+    profiles: ["dns"]
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM alpine:3.20
+        RUN apk add --no-cache dnsmasq
+        ENTRYPOINT ["sh", "-c", "if [ -z \"$$HOST_IP\" ]; then echo 'ERROR: HOST_IP is not set — add it to .env (this machine'\"'\"'s LAN IP)' >&2; exit 1; fi; printf 'address=/aegios.co.in/%s\\naddress=/www.aegios.co.in/%s\\n' \"$$HOST_IP\" \"$$HOST_IP\" > /etc/dnsmasq.conf && exec dnsmasq -k --log-queries"]
+    restart: unless-stopped
+    environment:
+      HOST_IP: "${HOST_IP:-}"
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+
+volumes:
+  opday_data:
