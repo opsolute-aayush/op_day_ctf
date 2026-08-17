@@ -3,6 +3,7 @@ import { JetBrains_Mono, Share_Tech_Mono } from "next/font/google";
 import RouteTransition from "@/components/RouteTransition";
 import VideoOverlay from "@/components/VideoOverlay";
 import ClickSound from "@/components/ClickSound";
+import AmbientGlitch from "@/components/AmbientGlitch";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-void text-neon-100 font-mono antialiased relative overflow-x-hidden">
         <div className="scanlines" aria-hidden="true" />
         <div className="grid-bg" aria-hidden="true" />
+        <AmbientGlitch />
         <div className="relative z-10 flex min-h-full flex-1 flex-col">
           <RouteTransition>{children}</RouteTransition>
         </div>

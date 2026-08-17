@@ -105,6 +105,47 @@ body {
   }
 }
 
+/* Ambient debris (AmbientGlitch.tsx) — held invisible almost the whole
+   loop, hard-cut in for a beat, hard-cut back out. steps() keeps it a
+   flicker, not a fade, so it reads as a glitch instead of a pulse. */
+@keyframes ambient-glitch-flicker {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  38% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.5;
+  }
+  43% {
+    opacity: 0.1;
+  }
+  45% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0;
+  }
+  92% {
+    opacity: 0;
+  }
+  94% {
+    opacity: 0.35;
+  }
+  97% {
+    opacity: 0;
+  }
+}
+.ambient-glitch-node {
+  position: absolute;
+  animation-name: ambient-glitch-flicker;
+  animation-timing-function: steps(1, jump-end);
+  animation-iteration-count: infinite;
+  text-shadow: 0 0 6px currentColor;
+}
+
 .terminal-panel {
   background: linear-gradient(180deg, var(--panel), var(--void-2));
   border: 1px solid var(--panel-border);
