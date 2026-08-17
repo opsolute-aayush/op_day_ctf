@@ -13,6 +13,7 @@ export interface TeamTokenPayload {
   teamId: string;
   teamName: string;
   sessionId: string;
+  memberName: string;
 }
 
 export interface AdminSession {

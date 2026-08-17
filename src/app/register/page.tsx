@@ -12,12 +12,17 @@ import TeamAvatar from "@/components/TeamAvatar";
 import MatrixRain from "@/components/MatrixRain";
 import ColorPicker from "@/components/ColorPicker";
 
+interface JoinableMember {
+  name: string;
+  active: boolean;
+}
+
 interface JoinableTeam {
   id: string;
   teamNumber: number;
   name: string;
   color: string;
-  members: string[];
+  members: JoinableMember[];
 }
 
 export default function RegisterPage() {
@@ -251,9 +256,26 @@ export default function RegisterPage() {
                             <span className="block w-full truncate text-sm font-semibold" style={selected ? { color: team.color } : undefined}>
                               {team.name}
                             </span>
-                            <span className="block truncate text-[11px] text-neon-100/40">
-                              {team.members.length > 0 ? `${team.members.length} agent${team.members.length === 1 ? "" : "s"}` : "no agents yet"}
-                            </span>
+                            {team.members.length === 0 ? (
+                              <span className="block truncate text-[11px] text-neon-100/40">no agents yet</span>
+                            ) : (
+                              <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 px-1">
+                                {team.members.slice(0, 4).map((m) => (
+                                  <span key={m.name} className="inline-flex max-w-full items-center gap-1 text-[10px] text-neon-100/60">
+                                    <span
+                                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                                        m.active ? "bg-neon-500 shadow-[0_0_4px_1px_rgba(57,255,20,0.8)] animate-pulse" : "bg-neon-100/20"
+                                      }`}
+                                      title={m.active ? "Active now" : "Not active"}
+                                    />
+                                    <span className="truncate">{m.name}</span>
+                                  </span>
+                                ))}
+                                {team.members.length > 4 && (
+                                  <span className="text-[10px] text-neon-100/30">+{team.members.length - 4}</span>
+                                )}
+                              </div>
+                            )}
                             {selected && (
                               <span className="mt-0.5 flex items-center gap-1 text-[10px] uppercase tracking-widest" style={{ color: team.color }}>
                                 <Check className="h-3 w-3" /> linked
@@ -297,7 +319,7 @@ export default function RegisterPage() {
 
                         <InputField
                           label="Your Name"
-                          placeholder="e.g. Priya"
+                          placeholder="e.g. Adolf"
                           value={memberName}
                           onChange={(e) => setMemberName(e.target.value)}
                           maxLength={40}

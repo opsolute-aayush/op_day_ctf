@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionByCode } from "@/lib/game";
+import { parseMembers, isMemberActive } from "@/lib/json";
 
-// Public team list for the join screen, scoped by session code. No puzzle
-// content or progress data — just enough to recognize your own team.
+// Public, minimal team list for the join screen — just enough for a player
+// to recognize and pick their own team. No puzzle content, no progress
+// data. Scoped by the 6-digit session code every player enters before
+// seeing any team list, since any number of independent sessions can be
+// running at once.
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code")?.trim() ?? "";
   if (!/^\d{6}$/.test(code)) {
@@ -21,13 +25,14 @@ export async function GET(req: NextRequest) {
     select: { id: true, teamNumber: true, name: true, color: true, members: true },
   });
 
+  const now = Date.now();
   return NextResponse.json({
     teams: teams.map((t) => ({
       id: t.id,
       teamNumber: t.teamNumber,
       name: t.name,
       color: t.color,
-      members: JSON.parse(t.members) as string[],
+      members: parseMembers(t.members).map((m) => ({ name: m.name, active: isMemberActive(m.lastSeenAt, now) })),
     })),
   });
 }

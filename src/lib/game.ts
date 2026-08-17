@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { parseIntArray } from "@/lib/json";
+import { parseIntArray, parseMembers } from "@/lib/json";
 
 export async function getSessionById(sessionId: string) {
   return prisma.gameSession.findUnique({ where: { id: sessionId } });
@@ -7,6 +7,23 @@ export async function getSessionById(sessionId: string) {
 
 export async function getSessionByCode(code: string) {
   return prisma.gameSession.findUnique({ where: { code } });
+}
+
+// Refreshes one member's lastSeenAt — called on every /api/team/status poll
+// (3-5s intervals from /play, /final, /winner), which doubles as a presence
+// heartbeat with no extra network traffic. A no-op if the member isn't found
+// (e.g. rosters were cleared by an admin End Game/Reset since this browser
+// last joined).
+export async function touchMemberPresence(teamId: string, memberName: string): Promise<void> {
+  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { members: true } });
+  if (!team) return;
+
+  const members = parseMembers(team.members);
+  const match = members.find((m) => m.name === memberName);
+  if (!match) return;
+
+  match.lastSeenAt = new Date().toISOString();
+  await prisma.team.update({ where: { id: teamId }, data: { members: JSON.stringify(members) } });
 }
 
 export async function getTotalLevels(teamId: string): Promise<number> {
@@ -83,7 +100,7 @@ export async function buildTeamStatus(teamId: string) {
       teamNumber: team.teamNumber,
       name: team.name,
       color: team.color,
-      members: JSON.parse(team.members) as string[],
+      members: parseMembers(team.members).map((m) => m.name),
     },
     gameActive: session.isActive,
     gameFinished: session.isFinished,

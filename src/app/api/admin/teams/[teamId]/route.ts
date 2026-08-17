@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 import { logActivity } from "@/lib/game";
+import { parseMembers } from "@/lib/json";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ teamId: string }> }) {
   const admin = await requireAdmin();
@@ -20,7 +21,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ teamId: st
       teamNumber: team.teamNumber,
       name: team.name,
       color: team.color,
-      members: JSON.parse(team.members) as string[],
+      members: parseMembers(team.members).map((m) => m.name),
       winningSentence: team.winningSentence,
     },
   });

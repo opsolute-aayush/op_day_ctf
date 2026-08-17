@@ -3,11 +3,15 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { signTeamToken, setTeamCookie } from "@/lib/auth";
 import { logActivity, buildTeamStatus, getSessionByCode } from "@/lib/game";
-import { parseStringArray } from "@/lib/json";
+import { parseMembers } from "@/lib/json";
 
-// Players join an existing team (see /api/admin/teams); `code` is
-// re-validated against the team's own session so a guessed/reused teamId
-// from another session can't be joined.
+// Teams are pre-created by the Game Master (see /api/admin/teams) so the
+// team count always matches the physical groups at the event — players can
+// only join an existing team, never mint a new one from the app. `code` is
+// required and re-validated server-side against the team's own session —
+// even though teamId alone would resolve a team, requiring the code too
+// stops a client from joining a team it only reached by guessing/reusing an
+// ID from a different session.
 const schema = z.object({
   code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit session code"),
   teamId: z.string().min(1),
@@ -40,10 +44,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "That team doesn't exist. Ask the Game Master." }, { status: 404 });
   }
 
-  const members = parseStringArray(team.members);
-  const memberName = parsed.data.memberName;
-  if (!members.some((m) => m.toLowerCase() === memberName.toLowerCase())) {
-    members.push(memberName);
+  const members = parseMembers(team.members);
+  const now = new Date().toISOString();
+  const existing = members.find((m) => m.name.toLowerCase() === parsed.data.memberName.toLowerCase());
+  // Rejoining reuses the stored name's original casing and just refreshes
+  // presence; a genuinely new name gets its own entry.
+  const canonicalName = existing?.name ?? parsed.data.memberName;
+  if (existing) {
+    existing.lastSeenAt = now;
+  } else {
+    members.push({ name: canonicalName, lastSeenAt: now });
   }
 
   const data: { members: string; name?: string; color?: string } = { members: JSON.stringify(members) };
@@ -55,9 +65,9 @@ export async function POST(req: NextRequest) {
   }
   await prisma.team.update({ where: { id: team.id }, data });
 
-  await logActivity(session.id, team.id, "MEMBER_JOINED", { memberName });
+  await logActivity(session.id, team.id, "MEMBER_JOINED", { memberName: canonicalName });
 
-  const token = signTeamToken({ teamId: team.id, teamName: team.name, sessionId: session.id });
+  const token = signTeamToken({ teamId: team.id, teamName: team.name, sessionId: session.id, memberName: canonicalName });
   await setTeamCookie(token);
 
   const status = await buildTeamStatus(team.id);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
-import { parseIntArray, parseStringArray } from "@/lib/json";
+import { parseIntArray, parseStringArray, parseMembers } from "@/lib/json";
 import { getSessionById } from "@/lib/game";
 
 export async function GET() {
@@ -45,7 +45,7 @@ export async function GET() {
       teamNumber: team.teamNumber,
       teamName: team.name,
       color: team.color,
-      members: JSON.parse(team.members) as string[],
+      members: parseMembers(team.members).map((m) => m.name),
       currentLevel: progress?.currentLevel ?? 1,
       totalLevels,
       unlockedLevels,
