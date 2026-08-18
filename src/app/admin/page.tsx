@@ -11,7 +11,10 @@ import ConnectedPlayers from "@/components/admin/ConnectedPlayers";
 import ActivityFeed from "@/components/admin/ActivityFeed";
 import LevelsEditor from "@/components/admin/LevelsEditor";
 import GameControls from "@/components/admin/GameControls";
-import SabotageManager from "@/components/admin/SabotageManager";
+import SabotageConfig from "@/components/admin/SabotageConfig";
+import SabotageLog from "@/components/admin/SabotageLog";
+import SwapConfig from "@/components/admin/SwapConfig";
+import SwapLog from "@/components/admin/SwapLog";
 import AudioVideoSettings from "@/components/AudioVideoSettings";
 import { startSettingsMusic, stopSettingsMusic } from "@/lib/sfx";
 
@@ -248,14 +251,25 @@ export default function AdminPage() {
               </div>
               <div className="space-y-6">
                 <ConnectedPlayers refreshKey={refreshKey} />
-                <SabotageManager onChanged={() => setRefreshKey((k) => k + 1)} />
+                <SabotageLog onChanged={() => setRefreshKey((k) => k + 1)} />
+                <SwapLog onChanged={() => setRefreshKey((k) => k + 1)} />
               </div>
             </div>
           )}
 
           {tab === "levels" && <LevelsEditor onChanged={() => setRefreshKey((k) => k + 1)} />}
 
-          {tab === "control" && <GameControls onChanged={() => setRefreshKey((k) => k + 1)} />}
+          {tab === "control" && (
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_380px] xl:items-start">
+              <div className="space-y-6">
+                <GameControls onChanged={() => setRefreshKey((k) => k + 1)} />
+              </div>
+              <div className="space-y-6">
+                <SabotageConfig onChanged={() => setRefreshKey((k) => k + 1)} />
+                <SwapConfig onChanged={() => setRefreshKey((k) => k + 1)} />
+              </div>
+            </div>
+          )}
 
           {tab === "sound" && (
             <TerminalPanel title="audio-video.cfg" className="max-w-lg">

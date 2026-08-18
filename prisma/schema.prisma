@@ -22,11 +22,13 @@ model GameSession {
   startedAt              DateTime?
   sabotageCreditsPerTeam Int           @default(2) // admin-configurable — how many sabotages each team may launch this game
   sabotageCooldownSeconds Int          @default(0) // admin-configurable — seconds a team must wait between its own sabotage launches; 0 disables the cooldown
+  swapCode               String? // admin-authored plaintext a team must find-and-enter to redeem the hidden swap card; null disables the feature. The admin hides/obscures this physically however they like — the platform never transforms or encodes it.
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
   teams                  Team[]        @relation("SessionTeams")
   activity               ActivityLog[]
   sabotages              Sabotage[]
+  progressSwaps          ProgressSwap[]
 }
 
 model Team {
@@ -45,6 +47,8 @@ model Team {
   wonGame         GameSession[] @relation("WinningTeam")
   sabotagesSent   Sabotage[]    @relation("SabotageSource")
   sabotagesFaced  Sabotage[]    @relation("SabotageTarget")
+  swapsInitiated  ProgressSwap[] @relation("SwapInitiator")
+  swapsReceived   ProgressSwap[] @relation("SwapPartner")
 
   @@unique([sessionId, teamNumber])
 }
@@ -103,6 +107,31 @@ model Sabotage {
   createdAt    DateTime    @default(now())
 
   @@index([targetTeamId])
+  @@index([sessionId])
+}
+
+// A one-shot, session-wide "trade boards" — whichever team redeems the
+// hidden swap code first picks a partner team, and the two teams' entire
+// boards trade places: hunt progress (currentLevel/unlockedLevels/
+// verifiedWordLevels/hintReleasedLevel/completed), each LevelConfig's
+// password/clue/word/hint content, and the final winningSentence. Team
+// identity (name/color/roster/teamNumber) never moves, so nobody needs to
+// re-join or re-login — a team's own device just starts seeing the other
+// team's puzzle and progress on its next poll. Only one non-reverted row may
+// exist per session at a time; see lib/swap.ts.
+model ProgressSwap {
+  id                String      @id @default(uuid())
+  sessionId         String
+  session           GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  initiatorTeamId   String
+  initiatorTeam     Team        @relation("SwapInitiator", fields: [initiatorTeamId], references: [id], onDelete: Cascade)
+  partnerTeamId     String
+  partnerTeam       Team        @relation("SwapPartner", fields: [partnerTeamId], references: [id], onDelete: Cascade)
+  initiatorSnapshot String // JSON — initiator's pre-swap progress fields, for admin revert
+  partnerSnapshot   String // JSON — partner's pre-swap progress fields, for admin revert
+  createdAt         DateTime    @default(now())
+  revertedAt        DateTime?
+
   @@index([sessionId])
 }
 

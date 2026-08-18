@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { parseIntArray, parseMembers, isMemberActive } from "@/lib/json";
 import { withKeyLock } from "@/lib/mutex";
 import { getActiveSabotage } from "@/lib/sabotage";
+import { getSwapStatusFlags } from "@/lib/swap";
 
 export async function getSessionById(sessionId: string) {
   return prisma.gameSession.findUnique({ where: { id: sessionId } });
@@ -94,12 +95,13 @@ export async function buildTeamStatus(teamId: string) {
   const team = await prisma.team.findUnique({ where: { id: teamId } });
   if (!team) return null;
 
-  const [progress, totalLevels, levelConfigs, session, activeSabotage] = await Promise.all([
+  const [progress, totalLevels, levelConfigs, session, activeSabotage, swapFlags] = await Promise.all([
     prisma.teamProgress.findUnique({ where: { teamId } }),
     getTotalLevels(teamId),
     prisma.levelConfig.findMany({ where: { teamId }, orderBy: { levelNumber: "asc" } }),
     prisma.gameSession.findUnique({ where: { id: team.sessionId } }),
     getActiveSabotage(teamId),
+    getSwapStatusFlags(team.sessionId),
   ]);
 
   if (!progress || !session) return null;
@@ -169,6 +171,8 @@ export async function buildTeamStatus(teamId: string) {
     sabotageCreditsRemaining: progress.sabotageCreditsRemaining,
     sabotageCooldownRemainingMs,
     activeSabotage,
+    swapCardEnabled: swapFlags.swapCardEnabled,
+    swapCardUsed: swapFlags.swapCardUsed,
     completed: progress.completed,
     completedAt: progress.completedAt,
     gameStartedAt: session.startedAt,

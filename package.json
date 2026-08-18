@@ -9,17 +9,13 @@
     "start": "next start",
     "lint": "eslint",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:reset": "prisma db push --force-reset && npm run db:seed",
+    "db:reset": "prisma db push --force-reset",
     "docker:build": "docker build -f docker/Dockerfile -t opday-ctf .",
     "docker:run": "docker run -p 3000:3000 -e JWT_SECRET=\"$(openssl rand -base64 48)\" -v opday_data:/app/data opday-ctf",
-    "compose:up": "docker compose -f docker/docker-compose.yml --project-directory . up -d --build",
-    "compose:dns": "docker compose -f docker/docker-compose.yml --project-directory . --profile dns up -d --build",
+    "compose:up": "bash scripts/compose-up.sh",
+    "compose:dns": "bash scripts/compose-up.sh dns",
     "compose:down": "docker compose -f docker/docker-compose.yml --project-directory . down"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

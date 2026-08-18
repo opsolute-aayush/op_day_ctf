@@ -8,7 +8,7 @@ A hybrid physical/digital scavenger hunt. Teams decode a physical cipher, hunt f
 npm run start:event
 ```
 
-Installs dependencies, creates the database, seeds a demo game, and opens the app in your browser. Safe to re-run any time.
+Installs dependencies, creates the database, and opens the app in your browser. Safe to re-run any time.
 
 ## How it works
 
@@ -26,11 +26,12 @@ Installs dependencies, creates the database, seeds a demo game, and opens the ap
 npm install
 cp .env.example .env        # set JWT_SECRET
 npm run db:push
-npm run db:seed              # optional — loads a demo session
 npm run dev                  # → http://localhost:3000
 ```
 
 ### 2. Docker (single container)
+
+Build and run on the same machine:
 
 ```bash
 docker build -f docker/Dockerfile -t opday-ctf .
@@ -42,14 +43,39 @@ docker run -d -p 3000:3000 \
 
 Open `http://localhost:3000/admin` → **Create New Session**.
 
-### 3. Docker Compose (recommended for a live event)
+**Running it on a different machine/VM without cloning the repo:** build once, push to a registry, then just pull and run.
 
 ```bash
-cp .env.example .env         # set JWT_SECRET
+# once, on a machine with this repo
+docker build -f docker/Dockerfile -t youruser/opday-ctf .
+docker push youruser/opday-ctf
+
+# on the other machine/VM — no repo needed
+echo "JWT_SECRET=$(openssl rand -base64 48)" > .env
+docker pull youruser/opday-ctf
+docker run -d -p 80:3000 --env-file .env -v opday_data:/app/data youruser/opday-ctf
+```
+
+The `--env-file .env` keeps the same `JWT_SECRET` across restarts — regenerating it every run logs everyone out.
+
+### 3. Docker Compose (recommended — works the same on a laptop or a VM)
+
+```bash
+git clone <this repo> && cd opday-ctf
 npm run compose:up
 ```
 
-Open `http://localhost/admin` (port 80). To make a custom domain (e.g. `aegios.co.in`) resolve on the venue wifi, set `HOST_IP` in `.env` and run `npm run compose:dns` too — see `docker/docker-compose.yml` for details.
+That's the whole setup. This one command creates `.env`, generates a `JWT_SECRET`, detects this machine's IP, builds the image, and starts it on port 80 — every time, on any machine. Open the URL it prints, e.g. `http://<IP>/admin`, and create a session.
+
+**On a cloud VM**, also do this:
+
+- Open port 80 in the VM's firewall / security group.
+- Share the VM's **public** IP with players — not the private one the script detects (that's only for the venue-wifi case below).
+
+**Custom domain (`aegios.co.in`):**
+
+- One shared venue wifi → `npm run compose:dns`, or add `<IP> aegios.co.in` to each device's hosts file.
+- Real internet domain → point its DNS **A record** at the VM's public IP (Docker can't do this step for you).
 
 ### 4. A cloud host without Docker (Render, Fly.io, a VPS)
 
@@ -68,8 +94,7 @@ Set `JWT_SECRET` in the platform's env vars and mount a persistent disk (the SQL
 | `DATABASE_URL` | yes | SQLite file path, e.g. `file:./dev.db` |
 | `JWT_SECRET` | yes | Signs session tokens. Rotating it logs everyone out. |
 | `NODE_ENV` | prod only | Set `production` behind HTTPS so cookies are marked `Secure`. |
-| `HOST_IP` | no | LAN IP for the optional Docker Compose `dns` profile. |
-| `SEED_ON_BOOT` | no | Set `false` to skip auto-seeding a demo session in Docker. |
+| `HOST_IP` | no | LAN IP for the optional Docker Compose `dns` profile — auto-detected and written by `npm run compose:up`/`compose:dns`, only set it by hand to override. |
 
 There's no admin password to configure — each session generates its own when created, changeable any time from the dashboard's Security tab.
 
@@ -80,8 +105,7 @@ There's no admin password to configure — each session generates its own when c
 | `npm run dev` | Local dev server |
 | `npm run build` / `npm start` | Production build + serve |
 | `npm run db:push` | Sync the schema to the SQLite file |
-| `npm run db:seed` | Create a demo session with 5 sample teams |
-| `npm run db:reset` | Wipe and reseed from scratch |
+| `npm run db:reset` | Wipe the database and re-sync the schema |
 | `npm run db:studio` | Browse/edit the DB visually |
 | `npm run docker:build` / `docker:run` | Build/run the single-container image |
 | `npm run compose:up` / `compose:dns` / `compose:down` | Docker Compose, with or without the LAN-domain profile |
@@ -106,8 +130,8 @@ There's no admin password to configure — each session generates its own when c
 
 ```
 docker/          Dockerfile, docker-compose.yml
-scripts/         run.sh, docker-entrypoint.sh
-prisma/          schema.prisma, seed.ts
+scripts/         run.sh, docker-entrypoint.sh, compose-up.sh
+prisma/          schema.prisma
 src/
   app/           Pages: /, /register, /play, /final, /winner, /admin, /settings
   app/api/       API routes

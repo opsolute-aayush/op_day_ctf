@@ -15,6 +15,7 @@ import TeamAvatar from "@/components/TeamAvatar";
 import TeamStatsPanel from "@/components/TeamStatsPanel";
 import ActiveSessionPanel from "@/components/ActiveSessionPanel";
 import PlayerStatsPanel from "@/components/PlayerStatsPanel";
+import GameRules from "@/components/GameRules";
 import SabotageModal from "@/components/SabotageModal";
 import ColorPicker from "@/components/ColorPicker";
 import { getPlayerName } from "@/lib/playerIdentity";
@@ -167,9 +168,12 @@ export default function PlayPage() {
           helpCreditsRemaining={status.helpCreditsRemaining}
           sabotageCreditsRemaining={status.sabotageCreditsRemaining}
           sabotageCooldownRemainingMs={status.sabotageCooldownRemainingMs}
+          swapCardEnabled={status.swapCardEnabled}
+          swapCardUsed={status.swapCardUsed}
           ownTeamId={status.team.id}
           gameActive={status.gameActive}
           onSabotageLaunched={refresh}
+          onSwapCompleted={refresh}
         />
       </aside>
 
@@ -263,17 +267,20 @@ export default function PlayPage() {
           with the rest of the app instead of popping in instantly. */}
       <div key={standbyGlitch.key} className={standbyGlitch.className}>
       {isWaitingForStart ? (
-        <TerminalPanel title="standby.exe">
-          <div className="space-y-3 py-6 text-center">
-            <GlitchTitle text="STANDBY" className="text-2xl" as="h2" />
-            <p className="caret-blink text-sm text-neon-100/70">
-              Waiting for Game Master to start OP Day CTF
-            </p>
-            <p className="text-xs text-neon-100/40">
-              Decode the physical whiteboard cipher once the countdown ends — it holds your Level 1 password.
-            </p>
-          </div>
-        </TerminalPanel>
+        <div className="space-y-6">
+          <TerminalPanel title="standby.exe">
+            <div className="space-y-3 py-6 text-center">
+              <GlitchTitle text="STANDBY" className="text-2xl" as="h2" />
+              <p className="caret-blink text-sm text-neon-100/70">
+                Waiting for Game Master to start OP Day CTF
+              </p>
+              <p className="text-xs text-neon-100/40">
+                Decode the physical whiteboard cipher once the countdown ends — it holds your Level 1 password.
+              </p>
+            </div>
+          </TerminalPanel>
+          <GameRules />
+        </div>
       ) : (
         <div className="space-y-3">
           {hintError && (

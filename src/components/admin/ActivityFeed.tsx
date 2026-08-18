@@ -49,6 +49,12 @@ function describe(item: ActivityItem): string {
       return "— Game Master reset the game";
     case "SENTENCE_UPDATED":
       return "— Game Master updated the winning sentence";
+    case "SWAP_CODE_SET":
+      return "— Game Master set a new swap card code";
+    case "SWAP_EXECUTED":
+      return "redeemed the swap card and traded progress with another squad";
+    case "SWAP_REVERTED":
+      return "had a progress swap reverted by the Game Master";
     default:
       return item.eventType.toLowerCase();
   }

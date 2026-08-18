@@ -3,12 +3,16 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 import { getSessionById, logActivity } from "@/lib/game";
+import { revertAllActiveSwaps } from "@/lib/swap";
 
 export async function GET() {
   const admin = await requireAdmin();
   if (admin instanceof NextResponse) return admin;
 
-  const session = await getSessionById(admin.sessionId);
+  const [session, activeSwap] = await Promise.all([
+    getSessionById(admin.sessionId),
+    prisma.progressSwap.findFirst({ where: { sessionId: admin.sessionId, revertedAt: null }, select: { id: true } }),
+  ]);
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
@@ -20,6 +24,8 @@ export async function GET() {
     startedAt: session.startedAt,
     sabotageCreditsPerTeam: session.sabotageCreditsPerTeam,
     sabotageCooldownSeconds: session.sabotageCooldownSeconds,
+    swapCode: session.swapCode,
+    swapUsed: Boolean(activeSwap),
   });
 }
 
@@ -118,6 +124,9 @@ export async function POST(req: NextRequest) {
   }
 
   // reset: wipes progress/win state/rosters, keeps teams and their puzzles.
+  // Any swap in effect is restored first so "puzzles untouched by reset"
+  // holds even if a swap had mixed two teams' passwords/clues/words together.
+  await revertAllActiveSwaps(sessionId);
   const teamIds = (await prisma.team.findMany({ where: { sessionId }, select: { id: true } })).map((t) => t.id);
   await prisma.$transaction([
     prisma.teamProgress.updateMany({
@@ -137,6 +146,7 @@ export async function POST(req: NextRequest) {
     }),
     prisma.team.updateMany({ where: { sessionId }, data: { members: "[]" } }),
     prisma.sabotage.deleteMany({ where: { sessionId } }),
+    prisma.progressSwap.deleteMany({ where: { sessionId } }),
     prisma.gameSession.update({
       where: { id: sessionId },
       data: { isActive: false, isFinished: false, winningTeamId: null, startedAt: null },
