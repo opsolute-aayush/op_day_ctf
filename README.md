@@ -58,6 +58,8 @@ docker run -d -p 80:3000 --env-file .env -v opday_data:/app/data youruser/opday-
 
 The `--env-file .env` keeps the same `JWT_SECRET` across restarts — regenerating it every run logs everyone out.
 
+Want a real domain, HTTPS, and auto-updates instead of plain HTTP? See **Deploying on a VM** below.
+
 ### 3. Docker Compose (recommended — works the same on a laptop or a VM)
 
 ```bash
@@ -87,6 +89,75 @@ npm start
 
 Set `JWT_SECRET` in the platform's env vars and mount a persistent disk (the SQLite file must survive restarts).
 
+## Deploying on a VM (production, HTTPS, auto-updating)
+
+The full production setup for a real domain: nginx terminates HTTPS for `aegios.co.in`, Let's Encrypt provides the cert and renews itself, and Watchtower auto-updates the app whenever you push a new image. No repo clone on the VM — just the `docker/` folder — and nothing to run there again after the first setup.
+
+**Before starting:**
+- `aegios.co.in`'s DNS A record already points at the VM's public IP.
+- Ports 80 and 443 are open (Security Group, on AWS).
+
+**1. Install Docker + the Compose plugin** (Amazon Linux 2023, amd64):
+
+```bash
+sudo dnf install -y docker
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER   # log out and back in after this
+mkdir -p ~/.docker/cli-plugins
+curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+  -o ~/.docker/cli-plugins/docker-compose
+chmod +x ~/.docker/cli-plugins/docker-compose
+```
+
+**2. Copy just the `docker/` folder onto the VM** — scp/rsync from your repo, no clone needed:
+
+```bash
+scp -r docker/ your-vm:~/opday-ctf/
+```
+
+**3. Create `docker/.env`** on the VM:
+
+```bash
+cd ~/opday-ctf/docker
+cat > .env <<EOF
+JWT_SECRET=$(openssl rand -base64 48)
+LETSENCRYPT_EMAIL=you@example.com
+DOCKER_IMAGE=aayushop/opday-ctf
+DOCKER_TAG=latest
+EOF
+```
+
+**4. Bootstrap the Let's Encrypt certificate — once:**
+
+```bash
+./certbot-init.sh
+```
+
+**5. Bring the stack up:**
+
+```bash
+docker compose -p opday-ctf -f docker-compose.prod.yml up -d
+```
+
+Open `https://aegios.co.in/admin` → **Create New Session**.
+
+**Deploying a change from then on is just this — nothing to run on the VM:**
+
+```bash
+docker build --platform linux/amd64 -f docker/Dockerfile -t aayushop/opday-ctf . && docker push aayushop/opday-ctf
+```
+
+Watchtower notices the new image within 5 minutes and pulls + restarts the app on its own.
+
+**What's running:**
+
+| Service | Job |
+|---|---|
+| `app` | The game itself — only reachable through `nginx`, never exposed directly |
+| `nginx` | Terminates HTTPS, redirects port 80 → 443, reloads every 12h for renewed certs |
+| `certbot` | Renews the Let's Encrypt cert automatically every 12h |
+| `watchtower` | Checks Docker Hub every 5 min; pulls + restarts `app` alone when a new image lands |
+
 ## Environment variables
 
 | Variable | Required | Purpose |
@@ -95,6 +166,8 @@ Set `JWT_SECRET` in the platform's env vars and mount a persistent disk (the SQL
 | `JWT_SECRET` | yes | Signs session tokens. Rotating it logs everyone out. |
 | `NODE_ENV` | prod only | Set `production` behind HTTPS so cookies are marked `Secure`. |
 | `HOST_IP` | no | LAN IP for the optional Docker Compose `dns` profile — auto-detected and written by `npm run compose:up`/`compose:dns`, only set it by hand to override. |
+| `DOCKER_IMAGE` / `DOCKER_TAG` | `docker-compose.prod.yml` only | Which pushed image to pull, e.g. `aayushop/opday-ctf` / `latest`. |
+| `LETSENCRYPT_EMAIL` | `docker-compose.prod.yml` only | Email Let's Encrypt sends renewal/expiry notices to. |
 
 There's no admin password to configure — each session generates its own when created, changeable any time from the dashboard's Security tab.
 
@@ -129,7 +202,8 @@ There's no admin password to configure — each session generates its own when c
 ## Project structure
 
 ```
-docker/          Dockerfile, docker-compose.yml
+docker/          Dockerfile, docker-compose.yml, docker-compose.prod.yml,
+                 certbot-init.sh, nginx/app.conf
 scripts/         run.sh, docker-entrypoint.sh, compose-up.sh
 prisma/          schema.prisma
 src/

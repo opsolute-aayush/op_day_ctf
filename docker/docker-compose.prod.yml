@@ -1,0 +1,62 @@
+services:
+  app:
+    container_name: opday-ctf-app
+    image: "${DOCKER_IMAGE:-aayushop/opday-ctf}:${DOCKER_TAG:-latest}"
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in .env — generate with: openssl rand -base64 48}"
+    volumes:
+      - opday_data:/app/data
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # nickfedor/watchtower, not the archived containrrr/watchtower — that
+  # one's Docker client is too old to talk to a modern daemon.
+  watchtower:
+    container_name: opday-ctf-watchtower
+    image: nickfedor/watchtower
+    platform: linux/amd64
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 --cleanup opday-ctf-app
+
+  nginx:
+    container_name: opday-ctf-nginx
+    image: nginx:1.27-alpine
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/app.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    command: >
+      sh -c "while :; do sleep 12h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+
+  certbot:
+    container_name: opday-ctf-certbot
+    image: certbot/certbot
+    platform: linux/amd64
+    restart: unless-stopped
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done"
+
+volumes:
+  opday_data:
+  certbot_conf:
+  certbot_www:
