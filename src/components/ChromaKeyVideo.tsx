@@ -92,7 +92,13 @@ export default function ChromaKeyVideo({ src, onEnded, className = "" }: ChromaK
 
   return (
     <div className={className}>
-      <video ref={videoRef} src={src} playsInline className="hidden" onEnded={onEnded} onError={onEnded} />
+      {/* muted: unmuted autoplay is blocked by browser policy often enough
+          (inconsistently, depending on gesture/engagement history) that the
+          play() rejection's .catch below would silently clear the clip
+          right after it appears — muted autoplay has no such restriction.
+          These clips are a visual gag composited via canvas; the game's own
+          sfx system already covers audio feedback. */}
+      <video ref={videoRef} src={src} playsInline muted className="hidden" onEnded={onEnded} onError={onEnded} />
       <canvas ref={canvasRef} className="h-full w-full object-contain drop-shadow-[0_6px_20px_rgba(0,0,0,0.45)]" />
     </div>
   );

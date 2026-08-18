@@ -12,8 +12,10 @@ import ActivityFeed from "@/components/admin/ActivityFeed";
 import LevelsEditor from "@/components/admin/LevelsEditor";
 import GameControls from "@/components/admin/GameControls";
 import SabotageManager from "@/components/admin/SabotageManager";
+import AudioVideoSettings from "@/components/AudioVideoSettings";
+import { startSettingsMusic, stopSettingsMusic } from "@/lib/sfx";
 
-type Tab = "overview" | "levels" | "control" | "sabotage" | "security";
+type Tab = "overview" | "levels" | "control" | "sound" | "security";
 type AuthMode = "choose" | "create" | "login";
 
 export default function AdminPage() {
@@ -22,6 +24,14 @@ export default function AdminPage() {
   const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Loops for as long as the authenticated dashboard is open, same channel
+  // as the player Settings page — stops the moment the admin signs out.
+  useEffect(() => {
+    if (!isAdmin) return;
+    startSettingsMusic();
+    return () => stopSettingsMusic();
+  }, [isAdmin]);
 
   const [authMode, setAuthMode] = useState<AuthMode>("choose");
   const [code, setCode] = useState("");
@@ -110,6 +120,7 @@ export default function AdminPage() {
           <ShieldCheck className="mx-auto h-10 w-10 text-neon-500" />
           <GlitchTitle text="Game Master" className="text-2xl" as="h1" />
 
+          <div key={createdCreds ? "created" : authMode} className="glitch-reveal">
           {createdCreds ? (
             <SessionCreatedPanel creds={createdCreds} onContinue={enterDashboard} />
           ) : authMode === "choose" ? (
@@ -173,6 +184,7 @@ export default function AdminPage() {
               </div>
             </TerminalPanel>
           )}
+          </div>
         </div>
       </main>
     );
@@ -204,13 +216,14 @@ export default function AdminPage() {
             ["overview", "Overview"],
             ["levels", "Team Puzzles"],
             ["control", "Game Control"],
-            ["sabotage", "Sabotage"],
+            ["sound", "Sound"],
             ["security", "Security"],
           ] as [Tab, string][]
         ).map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}
+            data-sfx-nav
             className={`relative flex flex-1 items-center justify-center px-2 py-2 text-xs uppercase tracking-widest transition-colors ${
               tab === t ? "text-neon-400" : "text-neon-100/40 hover:text-neon-100/70"
             }`}
@@ -244,7 +257,11 @@ export default function AdminPage() {
 
           {tab === "control" && <GameControls onChanged={() => setRefreshKey((k) => k + 1)} />}
 
-          {tab === "sabotage" && <SabotageManager onChanged={() => setRefreshKey((k) => k + 1)} />}
+          {tab === "sound" && (
+            <TerminalPanel title="audio-video.cfg" className="max-w-lg">
+              <AudioVideoSettings />
+            </TerminalPanel>
+          )}
 
           {tab === "security" && <SecuritySettings sessionCode={sessionCode} />}
         </div>

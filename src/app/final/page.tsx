@@ -99,6 +99,10 @@ export default function FinalPage() {
             </button>
           </div>
 
+          {/* Same glitch-reveal keyframe used for admin tabs, /play's
+              standby↔levels swap, and register's step change — kept
+              consistent across the app instead of popping in instantly. */}
+          <div key={useManual ? "manual" : "drag"} className="glitch-reveal">
           {useManual ? (
             <textarea
               value={manualText}
@@ -110,6 +114,7 @@ export default function FinalPage() {
           ) : (
             <SentenceBuilder words={order} onChange={setOrder} />
           )}
+          </div>
 
           <div className="rounded-md border border-panel-border bg-void px-3 py-2.5 text-sm text-neon-500">
             “{preview || "…"}”

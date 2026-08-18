@@ -41,7 +41,7 @@ export default function ActiveSessionPanel({ selfName }: { selfName?: string }) 
         <p className="text-sm text-neon-100/30">No one else is online right now.</p>
       )}
       {players !== null && players.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
           {players.map((p) => {
             const isYou = selfName !== undefined && p.name === selfName;
             return (

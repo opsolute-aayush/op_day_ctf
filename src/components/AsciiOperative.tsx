@@ -1,70 +1,161 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import TerminalPanel from "@/components/TerminalPanel";
+import { getAssignedArtFile, setAssignedArtFile } from "@/lib/artIdentity";
 
-// A standing humanoid silhouette rendered from a fixed character set —
-// built from simple filled rectangular regions (not hand-typed strings) so
-// the geometry stays easy to reason about and adjust. Gaps between the
-// torso and each arm, and between the two legs, are deliberately 2-3 cols
-// wide — anything narrower gets swallowed by the glyphs and reads as one
-// solid blob instead of a person.
-const WIDTH = 25;
-const HEIGHT = 31;
+// Drop image files into public/arts/settings/ — no code changes needed,
+// GET /api/arts/settings picks them up automatically (same convention as
+// public/sounds/<category> and public/videos/<category>).
+const CATEGORY = "settings";
+const COLS = 42;
+// Monospace glyphs are taller than they are wide, so fewer rows than cols
+// are needed to preserve the source image's aspect ratio.
+const CHAR_ASPECT = 0.55;
+// Sparse -> dense, using the exact character set requested plus a few
+// Chinese characters at the dense end for the brightest pixels.
+const DENSITY = [" ", ":", ";", "!", "?", "/", "1", "0", "#", "@", "人", "機", "電"];
+// What a cell can flicker into mid-glitch — swapped back to the real
+// (brightness-derived) character a moment later.
+const GLITCH_ALPHABET = ["1", "0", "@", "!", "?", "/", ";", ":", "人", "機", "電"];
 
-const HEAD: [number, number, number, number] = [0, 6, 9, 15];
-const BODY_REGIONS: Array<[number, number, number, number]> = [
-  [7, 7, 11, 13], // neck
-  [8, 8, 10, 14], // shoulder transition
-  [9, 17, 3, 5], // left arm
-  [9, 17, 19, 21], // right arm
-  [9, 14, 8, 16], // upper torso (shoulder width)
-  [15, 19, 9, 15], // lower torso (tapered waist)
-  [20, 20, 9, 15], // hip line
-  [21, 29, 8, 10], // left leg
-  [21, 29, 14, 16], // right leg
-  [30, 30, 7, 11], // left foot
-  [30, 30, 13, 17], // right foot
-];
+function imageToGrid(img: HTMLImageElement, cols: number): string[][] {
+  const rows = Math.max(1, Math.round(cols * (img.naturalHeight / img.naturalWidth) * CHAR_ASPECT));
+  const canvas = document.createElement("canvas");
+  canvas.width = cols;
+  canvas.height = rows;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return [];
+  // Letting the browser scale the whole image down to a cols×rows canvas
+  // in one drawImage call does the downsampling/averaging for us — each
+  // resulting pixel is effectively one character cell's brightness.
+  ctx.drawImage(img, 0, 0, cols, rows);
+  const { data } = ctx.getImageData(0, 0, cols, rows);
 
-// Lighter ASCII glyphs make up most of the body so limb edges stay
-// readable; the Chinese characters are concentrated in the head/face area
-// as a deliberate accent instead of thickening every line of the silhouette.
-const BODY_GLYPHS = ["0", "1", "#", "@", "!", "?", "/", ";", ":"];
-const HEAD_GLYPHS = ["人", "機", "電", "@", "0", "1"];
-
-function regionAt(row: number, col: number): "head" | "body" | null {
-  const [hr0, hr1, hc0, hc1] = HEAD;
-  if (row >= hr0 && row <= hr1 && col >= hc0 && col <= hc1) return "head";
-  if (BODY_REGIONS.some(([r0, r1, c0, c1]) => row >= r0 && row <= r1 && col >= c0 && col <= c1)) return "body";
-  return null;
-}
-
-function buildRows(): string[] {
-  const rows: string[] = [];
-  for (let row = 0; row < HEIGHT; row++) {
-    let line = "";
-    for (let col = 0; col < WIDTH; col++) {
-      const region = regionAt(row, col);
-      if (region === "head") {
-        line += HEAD_GLYPHS[(row + col * 2) % HEAD_GLYPHS.length];
-      } else if (region === "body") {
-        line += BODY_GLYPHS[(row + col * 2) % BODY_GLYPHS.length];
-      } else {
-        line += " ";
-      }
+  const grid: string[][] = [];
+  for (let y = 0; y < rows; y++) {
+    const line: string[] = [];
+    for (let x = 0; x < cols; x++) {
+      const i = (y * cols + x) * 4;
+      const brightness = (data[i] + data[i + 1] + data[i + 2]) / (3 * 255);
+      const idx = Math.min(DENSITY.length - 1, Math.floor(brightness * DENSITY.length));
+      line.push(DENSITY[idx]);
     }
-    rows.push(line);
+    grid.push(line);
   }
-  return rows;
+  return grid;
 }
 
-const ROWS = buildRows();
-
-/** A standing operative silhouette, textured from the app's glyph set instead of a real image. */
+/** A static character-art render of one image assigned to this device, with cells inside its silhouette periodically glitching. */
 export default function AsciiOperative() {
+  const [grid, setGrid] = useState<string[][]>([]);
+  const spanRefs = useRef<(HTMLSpanElement | null)[][]>([]);
+  const [status, setStatus] = useState<"loading" | "empty" | "ready">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const res = await fetch(`/api/arts/${CATEGORY}`, { cache: "no-store" }).catch(() => null);
+      const data: { files?: string[] } = res?.ok ? await res.json() : { files: [] };
+      const files = data.files ?? [];
+      if (cancelled) return;
+      if (files.length === 0) {
+        setStatus("empty");
+        return;
+      }
+
+      // Keep the same assigned image across visits if it still exists;
+      // otherwise (first visit, or it was removed) assign a fresh random one.
+      const saved = getAssignedArtFile();
+      const file = saved && files.includes(saved) ? saved : files[Math.floor(Math.random() * files.length)];
+      if (file !== saved) setAssignedArtFile(file);
+
+      const img = new window.Image();
+      img.onload = () => {
+        if (cancelled) return;
+        setGrid(imageToGrid(img, COLS));
+        setStatus("ready");
+      };
+      img.onerror = () => {
+        if (!cancelled) setStatus("empty");
+      };
+      img.src = `/arts/${CATEGORY}/${encodeURIComponent(file)}`;
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Periodically flickers a handful of cells (or a whole row/column) inside
+  // the art's own silhouette to a random glitch character, then reverts —
+  // driven via direct span refs, not React state, so it never re-renders
+  // the whole grid just to swap a few characters.
+  useEffect(() => {
+    if (grid.length === 0) return;
+
+    const interval = setInterval(() => {
+      const targets: Array<[number, number]> = [];
+      if (Math.random() < 0.4) {
+        const horizontal = Math.random() < 0.5;
+        if (horizontal) {
+          const r = Math.floor(Math.random() * grid.length);
+          for (let c = 0; c < grid[r].length; c++) if (grid[r][c] !== " ") targets.push([r, c]);
+        } else {
+          const c = Math.floor(Math.random() * grid[0].length);
+          for (let r = 0; r < grid.length; r++) if (grid[r][c] !== " ") targets.push([r, c]);
+        }
+      } else {
+        const count = 6 + Math.floor(Math.random() * 10);
+        for (let i = 0; i < count; i++) {
+          const r = Math.floor(Math.random() * grid.length);
+          const c = Math.floor(Math.random() * grid[r].length);
+          if (grid[r][c] !== " ") targets.push([r, c]);
+        }
+      }
+
+      for (const [r, c] of targets) {
+        const el = spanRefs.current[r]?.[c];
+        if (!el) continue;
+        el.textContent = GLITCH_ALPHABET[Math.floor(Math.random() * GLITCH_ALPHABET.length)];
+        el.classList.add("char-glitch-flash");
+        setTimeout(() => {
+          el.textContent = grid[r][c];
+          el.classList.remove("char-glitch-flash");
+        }, 150 + Math.random() * 220);
+      }
+    }, 350);
+
+    return () => clearInterval(interval);
+  }, [grid]);
+
   return (
     <TerminalPanel title="operative.render">
-      <pre className="text-glow select-none text-center font-mono text-[10px] leading-[1.15] text-neon-500 sm:text-xs">
-        {ROWS.join("\n")}
-      </pre>
+      {status === "ready" ? (
+        <pre className="text-glow select-none text-center font-mono text-[8px] leading-[1.05] text-neon-500 sm:text-[9px]">
+          {grid.map((row, r) => (
+            <span key={r} className="block">
+              {row.map((ch, c) => (
+                <span
+                  key={c}
+                  ref={(el) => {
+                    if (!spanRefs.current[r]) spanRefs.current[r] = [];
+                    spanRefs.current[r][c] = el;
+                  }}
+                >
+                  {ch}
+                </span>
+              ))}
+            </span>
+          ))}
+        </pre>
+      ) : (
+        <p className="py-10 text-center text-xs text-neon-100/30">
+          {status === "loading" ? "loading…" : "Drop images into public/arts/settings/ to activate."}
+        </p>
+      )}
       <p className="mt-3 text-center text-[11px] uppercase tracking-widest text-neon-100/30">Agent Unit // Standby</p>
     </TerminalPanel>
   );

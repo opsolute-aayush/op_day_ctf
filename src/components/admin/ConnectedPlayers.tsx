@@ -58,7 +58,7 @@ export default function ConnectedPlayers({ refreshKey }: { refreshKey: number })
       {players.length === 0 ? (
         <p className="py-3 text-center text-sm text-neon-100/30">No one&apos;s connected right now.</p>
       ) : (
-        <div className="space-y-1.5">
+        <div className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
           {players.map((p) => {
             const key = `${p.teamId}-${p.name}`;
             return (

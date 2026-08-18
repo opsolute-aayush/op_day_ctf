@@ -70,55 +70,59 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
   }
 
   return (
-    <div className="space-y-4">
-      <TerminalPanel title="how-this-works.txt" className="border-cyan-400/20">
-        <ol className="space-y-1 text-sm text-neon-100/70">
-          <li>
-            <span className="text-cyan-400">1.</span> Click <span className="text-cyan-400">Add Team</span> once
-            per physical group — no typing needed, each gets a number automatically.
-          </li>
-          <li>
-            <span className="text-cyan-400">2.</span> Pick a team below and fill in its passwords, clues, words,
-            and final sentence.
-          </li>
-          <li>
-            <span className="text-cyan-400">3.</span> Head to <span className="text-cyan-400">Game Control</span>{" "}
-            to start the hunt once every team is configured.
-          </li>
-        </ol>
-      </TerminalPanel>
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_380px] xl:items-start">
+      <div className="space-y-6">
+        <TerminalPanel title="teams.list">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs uppercase tracking-widest text-neon-400/70">
+              {teams.length} team{teams.length === 1 ? "" : "s"} — players can only join these, never create their own
+            </p>
+            <NeonButton variant="cyan" onClick={addTeam} disabled={creatingTeam}>
+              <Plus className="h-4 w-4" /> {creatingTeam ? "Adding…" : "Add Team"}
+            </NeonButton>
+          </div>
+          {createError && <p className="mb-2 text-sm text-danger-400">{createError}</p>}
+          <div className="flex flex-wrap gap-2">
+            {teams.map((team) => (
+              <button
+                key={team.id}
+                onClick={() => setSelectedTeamId(team.id)}
+                className={`flex items-center gap-2 rounded-full border py-1 pl-1.5 pr-3 text-sm transition-colors ${
+                  selectedTeamId === team.id
+                    ? "border-current bg-white/5"
+                    : "border-panel-border text-neon-100/50 hover:text-neon-100/80"
+                }`}
+                style={selectedTeamId === team.id ? { color: team.color, borderColor: team.color } : undefined}
+              >
+                <TeamAvatar teamNumber={team.teamNumber} color={team.color} size="sm" />
+                {team.name}
+              </button>
+            ))}
+            {teams.length === 0 && <p className="text-sm text-neon-100/30">No teams yet — click Add Team above.</p>}
+          </div>
+        </TerminalPanel>
 
-      <TerminalPanel title="teams.list">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs uppercase tracking-widest text-neon-400/70">
-            {teams.length} team{teams.length === 1 ? "" : "s"} — players can only join these, never create their own
-          </p>
-          <NeonButton variant="cyan" onClick={addTeam} disabled={creatingTeam}>
-            <Plus className="h-4 w-4" /> {creatingTeam ? "Adding…" : "Add Team"}
-          </NeonButton>
-        </div>
-        {createError && <p className="mb-2 text-sm text-danger-400">{createError}</p>}
-        <div className="flex flex-wrap gap-2">
-          {teams.map((team) => (
-            <button
-              key={team.id}
-              onClick={() => setSelectedTeamId(team.id)}
-              className={`flex items-center gap-2 rounded-full border py-1 pl-1.5 pr-3 text-sm transition-colors ${
-                selectedTeamId === team.id
-                  ? "border-current bg-white/5"
-                  : "border-panel-border text-neon-100/50 hover:text-neon-100/80"
-              }`}
-              style={selectedTeamId === team.id ? { color: team.color, borderColor: team.color } : undefined}
-            >
-              <TeamAvatar teamNumber={team.teamNumber} color={team.color} size="sm" />
-              {team.name}
-            </button>
-          ))}
-          {teams.length === 0 && <p className="text-sm text-neon-100/30">No teams yet — click Add Team above.</p>}
-        </div>
-      </TerminalPanel>
+        {selectedTeamId && <TeamPuzzleEditor key={selectedTeamId} teamId={selectedTeamId} onChanged={onChanged} />}
+      </div>
 
-      {selectedTeamId && <TeamPuzzleEditor key={selectedTeamId} teamId={selectedTeamId} onChanged={onChanged} />}
+      <div className="space-y-6">
+        <TerminalPanel title="how-this-works.txt" className="border-cyan-400/20">
+          <ol className="space-y-1 text-sm text-neon-100/70">
+            <li>
+              <span className="text-cyan-400">1.</span> Click <span className="text-cyan-400">Add Team</span> once
+              per physical group — no typing needed, each gets a number automatically.
+            </li>
+            <li>
+              <span className="text-cyan-400">2.</span> Pick a team and fill in its passwords, clues, words, and
+              final sentence.
+            </li>
+            <li>
+              <span className="text-cyan-400">3.</span> Head to <span className="text-cyan-400">Game Control</span>{" "}
+              to start the hunt once every team is configured.
+            </li>
+          </ol>
+        </TerminalPanel>
+      </div>
     </div>
   );
 }
@@ -293,6 +297,7 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
         </p>
       )}
 
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {levels.map((level) => {
         const draft = drafts[level.levelNumber];
         if (!draft) return null;
@@ -363,6 +368,7 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
           </NeonButton>
         </div>
       </TerminalPanel>
+      </div>
     </div>
   );
 }

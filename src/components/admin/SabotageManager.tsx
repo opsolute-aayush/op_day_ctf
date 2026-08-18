@@ -139,7 +139,7 @@ export default function SabotageManager({ onChanged }: { onChanged: () => void }
         {active.length === 0 ? (
           <p className="py-3 text-center text-sm text-neon-100/30">No active sabotages right now.</p>
         ) : (
-          <div className="space-y-2.5">
+          <div className="max-h-80 space-y-2.5 overflow-y-auto pr-1">
             {active.map((r) => (
               <div
                 key={r.id}
@@ -174,7 +174,7 @@ export default function SabotageManager({ onChanged }: { onChanged: () => void }
 
       {resolved.length > 0 && (
         <TerminalPanel title="sabotage-history.log">
-          <div className="space-y-2">
+          <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
             {resolved.slice(0, 20).map((r) => (
               <div key={r.id} className="flex flex-wrap items-center gap-2 text-xs text-neon-100/50">
                 <span style={{ color: r.sourceTeam.color }}>{r.sourceTeam.name}</span>

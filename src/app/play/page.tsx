@@ -253,6 +253,11 @@ export default function PlayPage() {
         </TerminalPanel>
       )}
 
+      {/* Same glitch-reveal keyframe the admin dashboard uses when
+          switching tabs — reused here (fresh key remounting the div, not
+          Framer Motion) so the standby↔level-list swap feels consistent
+          with the rest of the app instead of popping in instantly. */}
+      <div key={isWaitingForStart ? "standby" : "levels"} className="glitch-reveal">
       {isWaitingForStart ? (
         <TerminalPanel title="standby.exe">
           <div className="space-y-3 py-6 text-center">
@@ -319,6 +324,7 @@ export default function PlayPage() {
           </div>
         </div>
       )}
+      </div>
 
       {activeModalLevel !== null && (
         <PasswordModal

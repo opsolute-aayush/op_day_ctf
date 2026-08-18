@@ -824,3 +824,14 @@ body {
 .hud-corner {
   animation: hud-corner-pulse 2s ease-in-out infinite;
 }
+
+/* ---- operative.render (AsciiOperative.tsx) ----
+   The art itself stays put (no rotation, no re-picking) — only individual
+   characters inside its silhouette periodically flicker to a different
+   glyph for a moment (toggled directly via ref, see the component), and
+   this class is what makes that instant read as a glitch instead of a
+   plain color change. */
+.char-glitch-flash {
+  color: var(--magenta-400);
+  text-shadow: 0 0 4px var(--cyan-400);
+}

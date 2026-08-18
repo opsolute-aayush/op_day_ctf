@@ -206,6 +206,11 @@ export default function RegisterPage() {
           </p>
         </div>
 
+        {/* Same glitch-reveal keyframe admin's tab switches and /play's
+            standby↔levels swap use — reused here (fresh key remounting the
+            div, not Framer Motion) so this step change feels consistent
+            with the rest of the app. */}
+        <div key={sessionCode ? "teams" : "code"} className="glitch-reveal">
         {!sessionCode ? (
           <TerminalPanel title="join-session.sh">
             <form onSubmit={handleCodeSubmit} className="space-y-4">
@@ -392,6 +397,7 @@ export default function RegisterPage() {
             </div>
           </TerminalPanel>
         )}
+        </div>
       </div>
     </main>
   );
