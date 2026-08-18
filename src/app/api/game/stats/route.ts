@@ -26,6 +26,7 @@ export async function GET() {
   const stats = teams.map((team) => {
     const totalLevels = team._count.levels + 1;
     return {
+      id: team.id,
       teamNumber: team.teamNumber,
       teamName: team.name,
       color: team.color,

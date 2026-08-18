@@ -18,7 +18,37 @@ export async function GET() {
     isFinished: session.isFinished,
     winningTeamId: session.winningTeamId,
     startedAt: session.startedAt,
+    sabotageCreditsPerTeam: session.sabotageCreditsPerTeam,
   });
+}
+
+const sabotageCapSchema = z.object({ sabotageCreditsPerTeam: z.number().int().min(0).max(20) });
+
+// Sets the session-wide sabotage cap and immediately resets every team's
+// remaining count to it — a live dial the admin can turn up/down mid-game,
+// not just a default for new teams.
+export async function PUT(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
+  const { sessionId } = admin;
+
+  const body = await req.json().catch(() => null);
+  const parsed = sabotageCapSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid value" }, { status: 400 });
+  }
+
+  const teamIds = (await prisma.team.findMany({ where: { sessionId }, select: { id: true } })).map((t) => t.id);
+  await prisma.$transaction([
+    prisma.gameSession.update({ where: { id: sessionId }, data: { sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam } }),
+    prisma.teamProgress.updateMany({
+      where: { teamId: { in: teamIds } },
+      data: { sabotageCreditsRemaining: parsed.data.sabotageCreditsPerTeam },
+    }),
+  ]);
+  await logActivity(sessionId, null, "SABOTAGE_CAP_CHANGED", { sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam });
+
+  return NextResponse.json({ sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam });
 }
 
 const actionSchema = z.object({ action: z.enum(["start", "pause", "end", "reset"]) });
@@ -84,9 +114,11 @@ export async function POST(req: NextRequest) {
         completedAt: null,
         hintReleasedLevel: null,
         helpCreditsRemaining: 2,
+        sabotageCreditsRemaining: current.sabotageCreditsPerTeam,
       },
     }),
     prisma.team.updateMany({ where: { sessionId }, data: { members: "[]" } }),
+    prisma.sabotage.deleteMany({ where: { sessionId } }),
     prisma.gameSession.update({
       where: { id: sessionId },
       data: { isActive: false, isFinished: false, winningTeamId: null, startedAt: null },

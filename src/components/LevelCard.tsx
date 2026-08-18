@@ -76,9 +76,21 @@ export default function LevelCard({
     >
       <div className="flex items-center justify-between">
         <span className="text-xs uppercase tracking-widest text-neon-400/70">Level {levelNumber}</span>
-        {state === "locked" && <Lock className="h-4 w-4 text-neon-100/30" />}
-        {state === "active" && <Unlock className="h-4 w-4 text-amber-400 animate-pulse" />}
-        {state === "completed" && <CheckCircle2 className="h-4 w-4 text-neon-500" />}
+        {state === "locked" && (
+          <span className="hazard-stripes hud-cut-sm flex items-center gap-1.5 border border-danger-400/50 bg-danger-400/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-danger-400">
+            <Lock className="h-3 w-3" /> Locked
+          </span>
+        )}
+        {state === "active" && (
+          <span className="hud-cut-sm flex animate-pulse items-center gap-1.5 border border-amber-400/60 bg-amber-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-400">
+            <Unlock className="h-3 w-3" /> Decrypting
+          </span>
+        )}
+        {state === "completed" && (
+          <span className="hud-cut-sm flex items-center gap-1.5 border border-neon-500/60 bg-neon-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-neon-500">
+            <CheckCircle2 className="h-3 w-3" /> Unlocked
+          </span>
+        )}
       </div>
 
       {state === "locked" && (

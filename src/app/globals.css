@@ -41,6 +41,35 @@ body {
   background: var(--void);
 }
 
+/* ---- HUD kit — cyberpunk-reference-inspired shapes reused across the app ----
+   Angular "cut corner" panel shape (buttons, lock badges) instead of a
+   plain rounded rectangle; diagonal hazard stripes for a locked/blocked
+   state; a chunky segmented fill for progress/health-style bars. */
+.hud-cut {
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+.hud-cut-sm {
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+}
+.hazard-stripes {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 59, 59, 0.4) 0px,
+    rgba(255, 59, 59, 0.4) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+.hud-segmented-fill {
+  background-image: repeating-linear-gradient(
+    115deg,
+    currentColor 0px,
+    currentColor 9px,
+    transparent 9px,
+    transparent 13px
+  );
+}
+
 body {
   color: var(--neon-100);
 }
@@ -105,29 +134,155 @@ body {
   }
 }
 
-/* Ambient debris (AmbientGlitch.tsx) — held invisible almost the whole loop,
-   with one slow, smooth fade in/out per cycle. A gentle ease reads as a
-   quiet background presence; the earlier hard steps()-cut version read as
-   a strobe and fought for attention against the actual UI. */
+/* Ambient debris (AmbientGlitch.tsx) — the actual "cyberpunk glitch" look:
+   RGB-split (chromatic-aberration) ghost copies of each node's text, plus
+   hard-cut horizontal block displacement while it's visible, twice per
+   loop. --dur/--delay (set per node inline) keep the base text and its two
+   ghosts perfectly in sync despite differing per-element selectors. steps()
+   throughout is what sells "corrupted signal" over a smooth wobble. */
 @keyframes ambient-glitch-flicker {
   0%,
-  78%,
   100% {
     opacity: 0;
+    transform: translateX(0) skewX(0deg);
+    filter: none;
   }
-  86% {
-    opacity: 0.3;
+  44% {
+    opacity: 0;
   }
-  94% {
+  47% {
+    opacity: 0.6;
+    transform: translateX(-2px) skewX(-3deg);
+    filter: brightness(1.4);
+  }
+  52% {
+    opacity: 0.2;
+    transform: translateX(2px) skewX(2deg);
+  }
+  57% {
+    opacity: 0.55;
+    transform: translateX(-1px) skewX(0deg);
+    filter: brightness(1.15);
+  }
+  63% {
+    opacity: 0;
+    transform: translateX(0) skewX(0deg);
+    filter: none;
+  }
+  88% {
+    opacity: 0;
+  }
+  91% {
+    opacity: 0.45;
+    transform: translateX(1px) skewX(-2deg);
+    filter: brightness(1.3);
+  }
+  96% {
+    opacity: 0;
+    transform: translateX(0) skewX(0deg);
+    filter: none;
+  }
+}
+@keyframes ambient-glitch-ghost-cyan {
+  0%,
+  100% {
+    opacity: 0;
+    clip-path: inset(0 0 0 0);
+    transform: translateX(-2px);
+  }
+  44% {
+    opacity: 0;
+  }
+  47% {
+    opacity: 0.55;
+    clip-path: inset(12% 0 58% 0);
+    transform: translateX(-5px);
+  }
+  52% {
+    clip-path: inset(52% 0 14% 0);
+    transform: translateX(-3px);
+  }
+  57% {
+    opacity: 0.4;
+    clip-path: inset(24% 0 42% 0);
+    transform: translateX(-4px);
+  }
+  63% {
+    opacity: 0;
+  }
+  88% {
+    opacity: 0;
+  }
+  91% {
+    opacity: 0.35;
+    clip-path: inset(30% 0 34% 0);
+    transform: translateX(-3px);
+  }
+  96% {
+    opacity: 0;
+  }
+}
+@keyframes ambient-glitch-ghost-magenta {
+  0%,
+  100% {
+    opacity: 0;
+    clip-path: inset(0 0 0 0);
+    transform: translateX(2px);
+  }
+  44% {
+    opacity: 0;
+  }
+  47% {
+    opacity: 0.55;
+    clip-path: inset(58% 0 12% 0);
+    transform: translateX(5px);
+  }
+  52% {
+    clip-path: inset(14% 0 52% 0);
+    transform: translateX(3px);
+  }
+  57% {
+    opacity: 0.4;
+    clip-path: inset(42% 0 24% 0);
+    transform: translateX(4px);
+  }
+  63% {
+    opacity: 0;
+  }
+  88% {
+    opacity: 0;
+  }
+  91% {
+    opacity: 0.35;
+    clip-path: inset(34% 0 30% 0);
+    transform: translateX(3px);
+  }
+  96% {
     opacity: 0;
   }
 }
 .ambient-glitch-node {
   position: absolute;
-  animation-name: ambient-glitch-flicker;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
+  animation: ambient-glitch-flicker var(--dur, 6s) steps(1, jump-end) infinite;
+  animation-delay: var(--delay, 0s);
   text-shadow: 0 0 4px currentColor;
+}
+.ambient-glitch-node::before,
+.ambient-glitch-node::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ambient-glitch-node::before {
+  color: var(--cyan-400);
+  animation: ambient-glitch-ghost-cyan var(--dur, 6s) steps(1, jump-end) infinite;
+  animation-delay: var(--delay, 0s);
+}
+.ambient-glitch-node::after {
+  color: var(--magenta-400);
+  animation: ambient-glitch-ghost-magenta var(--dur, 6s) steps(1, jump-end) infinite;
+  animation-delay: var(--delay, 0s);
 }
 
 .terminal-panel {
@@ -377,7 +532,7 @@ body {
   }
 }
 .route-boot-overlay {
-  animation: route-boot-overlay 0.5s ease-out forwards;
+  animation: route-boot-overlay 1.1s ease-out forwards;
 }
 
 @keyframes route-boot-sweep {
@@ -389,7 +544,7 @@ body {
   }
 }
 .route-boot-sweep {
-  animation: route-boot-sweep 0.5s linear forwards;
+  animation: route-boot-sweep 1.1s linear forwards;
 }
 
 @keyframes fade-slide-in {
@@ -451,7 +606,7 @@ body {
   }
 }
 .glitch-text-burst {
-  animation: glitch-text-burst 0.55s steps(1, jump-end) both;
+  animation: glitch-text-burst 1.2s steps(1, jump-end) both;
 }
 
 /* RGB-split ghost copies of the loading text, sliced into shifting
@@ -468,11 +623,11 @@ body {
 }
 .glitch-text-burst::before {
   color: var(--magenta-400);
-  animation: glitch-text-slice-1 0.55s steps(1, jump-end) both;
+  animation: glitch-text-slice-1 1.2s steps(1, jump-end) both;
 }
 .glitch-text-burst::after {
   color: var(--cyan-400);
-  animation: glitch-text-slice-2 0.55s steps(1, jump-end) both;
+  animation: glitch-text-slice-2 1.2s steps(1, jump-end) both;
 }
 @keyframes glitch-text-slice-1 {
   0%,
@@ -576,7 +731,7 @@ body {
 }
 .glitch-bar {
   position: absolute;
-  animation: glitch-bar 0.55s steps(1, jump-end) both;
+  animation: glitch-bar 1.2s steps(1, jump-end) both;
 }
 
 @keyframes glitch-noise-block {
@@ -606,7 +761,7 @@ body {
 .glitch-noise-block {
   position: absolute;
   mix-blend-mode: difference;
-  animation: glitch-noise-block 0.55s steps(1, jump-end) both;
+  animation: glitch-noise-block 1.2s steps(1, jump-end) both;
 }
 
 @keyframes glitch-reveal {
@@ -654,7 +809,7 @@ body {
   }
 }
 .glitch-reveal {
-  animation: glitch-reveal 0.48s steps(1, jump-end) both;
+  animation: glitch-reveal 1.1s steps(1, jump-end) both;
 }
 
 @keyframes hud-corner-pulse {

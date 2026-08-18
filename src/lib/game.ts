@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { parseIntArray, parseMembers } from "@/lib/json";
+import { parseIntArray, parseMembers, isMemberActive } from "@/lib/json";
 import { withKeyLock } from "@/lib/mutex";
+import { getActiveSabotage } from "@/lib/sabotage";
 
 export async function getSessionById(sessionId: string) {
   return prisma.gameSession.findUnique({ where: { id: sessionId } });
@@ -8,6 +9,31 @@ export async function getSessionById(sessionId: string) {
 
 export async function getSessionByCode(code: string) {
   return prisma.gameSession.findUnique({ where: { code } });
+}
+
+export interface ConnectedPlayer {
+  name: string;
+  teamId: string;
+  teamNumber: number;
+  teamName: string;
+  color: string;
+}
+
+// Shared by the admin overview panel and the player-facing one on /play —
+// both just show whoever is active right now, scoped to one session.
+export async function getConnectedPlayers(sessionId: string): Promise<ConnectedPlayer[]> {
+  const teams = await prisma.team.findMany({
+    where: { sessionId },
+    orderBy: { teamNumber: "asc" },
+    select: { id: true, teamNumber: true, name: true, color: true, members: true },
+  });
+
+  const now = Date.now();
+  return teams.flatMap((team) =>
+    parseMembers(team.members)
+      .filter((m) => isMemberActive(m.lastSeenAt, now))
+      .map((m) => ({ name: m.name, teamId: team.id, teamNumber: team.teamNumber, teamName: team.name, color: team.color }))
+  );
 }
 
 // Refreshes one member's lastSeenAt — called on every /api/team/status poll
@@ -68,11 +94,12 @@ export async function buildTeamStatus(teamId: string) {
   const team = await prisma.team.findUnique({ where: { id: teamId } });
   if (!team) return null;
 
-  const [progress, totalLevels, levelConfigs, session] = await Promise.all([
+  const [progress, totalLevels, levelConfigs, session, activeSabotage] = await Promise.all([
     prisma.teamProgress.findUnique({ where: { teamId } }),
     getTotalLevels(teamId),
     prisma.levelConfig.findMany({ where: { teamId }, orderBy: { levelNumber: "asc" } }),
     prisma.gameSession.findUnique({ where: { id: team.sessionId } }),
+    getActiveSabotage(teamId),
   ]);
 
   if (!progress || !session) return null;
@@ -130,6 +157,8 @@ export async function buildTeamStatus(teamId: string) {
     activeHint,
     hintAvailable,
     helpCreditsRemaining: progress.helpCreditsRemaining,
+    sabotageCreditsRemaining: progress.sabotageCreditsRemaining,
+    activeSabotage,
     completed: progress.completed,
     completedAt: progress.completedAt,
     gameStartedAt: session.startedAt,

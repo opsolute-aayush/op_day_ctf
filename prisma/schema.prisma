@@ -12,18 +12,20 @@ datasource db {
 // into another. Players join by the 6-digit `code`; the master
 // authenticates against this row's own `adminPasswordHash`.
 model GameSession {
-  id                String        @id @default(uuid())
-  code              String        @unique // 6-digit join code, e.g. "482913"
-  isActive          Boolean       @default(false)
-  isFinished        Boolean       @default(false)
-  winningTeamId     String?
-  winningTeam       Team?         @relation("WinningTeam", fields: [winningTeamId], references: [id])
-  adminPasswordHash String?
-  startedAt         DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  teams             Team[]        @relation("SessionTeams")
-  activity          ActivityLog[]
+  id                     String        @id @default(uuid())
+  code                   String        @unique // 6-digit join code, e.g. "482913"
+  isActive               Boolean       @default(false)
+  isFinished             Boolean       @default(false)
+  winningTeamId          String?
+  winningTeam            Team?         @relation("WinningTeam", fields: [winningTeamId], references: [id])
+  adminPasswordHash      String?
+  startedAt              DateTime?
+  sabotageCreditsPerTeam Int           @default(2) // admin-configurable — how many sabotages each team may launch this game
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  teams                  Team[]        @relation("SessionTeams")
+  activity               ActivityLog[]
+  sabotages              Sabotage[]
 }
 
 model Team {
@@ -40,6 +42,8 @@ model Team {
   levels          LevelConfig[]
   activity        ActivityLog[]
   wonGame         GameSession[] @relation("WinningTeam")
+  sabotagesSent   Sabotage[]    @relation("SabotageSource")
+  sabotagesFaced  Sabotage[]    @relation("SabotageTarget")
 
   @@unique([sessionId, teamNumber])
 }
@@ -71,9 +75,33 @@ model TeamProgress {
   verifiedWordLevels String   @default("[]") // JSON int array — levels whose physical word has been typed in and confirmed
   hintReleasedLevel Int? // level number a hint has been released for (self-service or admin)
   helpCreditsRemaining Int  @default(2) // self-service "Help" button uses left this game
+  sabotageCreditsRemaining Int @default(2) // sabotages this team may still launch against another team
   completed         Boolean   @default(false)
   completedAt       DateTime?
   updatedAt         DateTime  @updatedAt
+}
+
+// A live "decode this to clear it" challenge one team fires at another.
+// While unresolved, the target's password modal (any level) shows the
+// cipherText instead of the normal unlock prompt — see buildTeamStatus's
+// activeSabotage field, which never exposes plainText to the target.
+model Sabotage {
+  id           String      @id @default(uuid())
+  sessionId    String
+  session      GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sourceTeamId String
+  sourceTeam   Team        @relation("SabotageSource", fields: [sourceTeamId], references: [id], onDelete: Cascade)
+  targetTeamId String
+  targetTeam   Team        @relation("SabotageTarget", fields: [targetTeamId], references: [id], onDelete: Cascade)
+  encoding     String // "base64" | "hex"
+  cipherText   String // shown to the target
+  plainText    String // correct decoded answer — admin can see this, target can't until solved
+  resolvedAt   DateTime?
+  bypassed     Boolean     @default(false) // true if an admin force-cleared it rather than the target solving it
+  createdAt    DateTime    @default(now())
+
+  @@index([targetTeamId])
+  @@index([sessionId])
 }
 
 model ActivityLog {

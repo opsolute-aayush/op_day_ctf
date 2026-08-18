@@ -31,8 +31,17 @@ export function playHelpFeedback() {
   playHelpSound();
 }
 
-/** Fires the winning video immediately; caller owns the returned timer (clear it on unmount). */
-export function playWinFeedback(): ReturnType<typeof setTimeout> {
+// Module-level, not a component ref: React 18/19 Strict Mode double-invokes
+// effects in dev (mount → cleanup → mount), and a timer stored in a ref
+// gets cancelled by the simulated cleanup before the real mount can use it —
+// the outro would silently never play. A plain module flag has no lifecycle
+// to race against.
+let outroScheduled = false;
+
+/** Fires the winning video immediately, then the outro track ~7s later (once per page load). */
+export function playWinFeedback(): void {
   playVideoClip("winning");
-  return setTimeout(() => playOutroMusic(), 7000);
+  if (outroScheduled) return;
+  outroScheduled = true;
+  setTimeout(() => playOutroMusic(), 7000);
 }

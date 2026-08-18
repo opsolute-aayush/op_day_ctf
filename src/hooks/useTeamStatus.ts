@@ -11,6 +11,14 @@ export interface UnlockedClue {
   hint?: string;
 }
 
+export interface ActiveSabotage {
+  id: string;
+  cipherText: string;
+  encoding: string;
+  sourceTeamName: string;
+  createdAt: string;
+}
+
 export interface TeamStatus {
   team: { id: string; teamNumber: number; name: string; color: string; members: string[] };
   gameActive: boolean;
@@ -25,6 +33,8 @@ export interface TeamStatus {
   activeHint: string | null;
   hintAvailable: boolean;
   helpCreditsRemaining: number;
+  sabotageCreditsRemaining: number;
+  activeSabotage: ActiveSabotage | null;
   completed: boolean;
   completedAt: string | null;
   gameStartedAt: string | null;

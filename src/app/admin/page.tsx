@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { ShieldCheck, LogOut, KeyRound, PlusCircle, LogIn, Copy, Check, ArrowLeft } from "lucide-react";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
 import Leaderboard from "@/components/admin/Leaderboard";
+import ConnectedPlayers from "@/components/admin/ConnectedPlayers";
 import ActivityFeed from "@/components/admin/ActivityFeed";
 import LevelsEditor from "@/components/admin/LevelsEditor";
 import GameControls from "@/components/admin/GameControls";
+import SabotageManager from "@/components/admin/SabotageManager";
 
-type Tab = "overview" | "levels" | "control" | "security";
+type Tab = "overview" | "levels" | "control" | "sabotage" | "security";
 type AuthMode = "choose" | "create" | "login";
 
 export default function AdminPage() {
@@ -125,12 +126,7 @@ export default function AdminPage() {
           ) : authMode === "create" ? (
             <TerminalPanel title="admin-auth.sh">
               <div className="space-y-4">
-                <button
-                  onClick={() => setAuthMode("choose")}
-                  className="flex items-center gap-1 text-xs text-neon-100/40 hover:text-neon-100/70"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" /> Back
-                </button>
+                <BackButton onClick={() => setAuthMode("choose")} />
                 <p className="text-left text-sm text-neon-100/70">
                   Spins up a brand-new, independent game — its own teams, puzzles, and leaderboard. You&apos;ll get a
                   6-digit code for players to join with, and a password shown once.
@@ -148,12 +144,7 @@ export default function AdminPage() {
           ) : (
             <TerminalPanel title="admin-auth.sh">
               <div className="space-y-4">
-                <button
-                  onClick={() => setAuthMode("choose")}
-                  className="flex items-center gap-1 text-xs text-neon-100/40 hover:text-neon-100/70"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" /> Back
-                </button>
+                <BackButton onClick={() => setAuthMode("choose")} />
                 <form onSubmit={handleLogin} className="space-y-4">
                   <InputField
                     label="Session Code"
@@ -188,7 +179,7 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8">
+    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8">
       <header className="flex items-center justify-between">
         <div>
           <GlitchTitle text="Game Master" className="text-2xl" as="h1" />
@@ -203,39 +194,49 @@ export default function AdminPage() {
         </button>
       </header>
 
-      <nav className="flex gap-2 border-b border-panel-border pb-2">
+      <nav className="hud-corner-frame relative flex items-stretch gap-1 border border-panel-border bg-void-2/40 px-3 py-2">
+        <span className="hud-corner pointer-events-none absolute left-0 top-0 h-3 w-3 border-l-2 border-t-2 border-neon-500/60" />
+        <span className="hud-corner pointer-events-none absolute right-0 top-0 h-3 w-3 border-r-2 border-t-2 border-neon-500/60" />
+        <span className="hud-corner pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b-2 border-l-2 border-neon-500/60" />
+        <span className="hud-corner pointer-events-none absolute bottom-0 right-0 h-3 w-3 border-b-2 border-r-2 border-neon-500/60" />
         {(
           [
             ["overview", "Overview"],
             ["levels", "Team Puzzles"],
             ["control", "Game Control"],
+            ["sabotage", "Sabotage"],
             ["security", "Security"],
           ] as [Tab, string][]
         ).map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`rounded-t-md px-3 py-1.5 text-xs uppercase tracking-widest transition-colors ${
-              tab === t ? "bg-neon-500/10 text-neon-400" : "text-neon-100/40 hover:text-neon-100/70"
+            className={`relative flex flex-1 items-center justify-center px-2 py-2 text-xs uppercase tracking-widest transition-colors ${
+              tab === t ? "text-neon-400" : "text-neon-100/40 hover:text-neon-100/70"
             }`}
           >
             {label}
+            {tab === t && <span className="absolute inset-x-2 -bottom-2 h-0.5 bg-neon-500 shadow-[0_0_8px_1px_rgba(57,255,20,0.7)]" />}
           </button>
         ))}
       </nav>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={tab}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.2 }}
-        >
+      {/* Same glitch-reveal keyframe RouteTransition uses for real page
+          navigations — reused here (via a fresh key remounting the div, not
+          Framer Motion) so tab switches inside the dashboard feel consistent
+          with the rest of the app instead of a plain smooth fade. */}
+      <div key={tab} className="glitch-reveal">
+        <div>
           {tab === "overview" && (
-            <div className="space-y-4">
-              <Leaderboard refreshKey={refreshKey} />
-              <ActivityFeed refreshKey={refreshKey} />
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_380px] xl:items-start">
+              <div className="space-y-6">
+                <Leaderboard refreshKey={refreshKey} />
+                <ActivityFeed refreshKey={refreshKey} />
+              </div>
+              <div className="space-y-6">
+                <ConnectedPlayers refreshKey={refreshKey} />
+                <SabotageManager onChanged={() => setRefreshKey((k) => k + 1)} />
+              </div>
             </div>
           )}
 
@@ -243,10 +244,25 @@ export default function AdminPage() {
 
           {tab === "control" && <GameControls onChanged={() => setRefreshKey((k) => k + 1)} />}
 
+          {tab === "sabotage" && <SabotageManager onChanged={() => setRefreshKey((k) => k + 1)} />}
+
           {tab === "security" && <SecuritySettings sessionCode={sessionCode} />}
-        </motion.div>
-      </AnimatePresence>
+        </div>
+      </div>
     </main>
+  );
+}
+
+// Bracket "key hint" styling (inspired by controller-hint bars like [B] Cancel)
+// adapted to our terminal theme — a bordered glyph chip plus the label.
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="group flex items-center gap-2 text-xs text-neon-100/50 hover:text-neon-100/90">
+      <span className="hud-cut-sm flex h-5 w-5 items-center justify-center border border-panel-border bg-void-2 text-neon-400 group-hover:border-neon-500/60">
+        <ArrowLeft className="h-3 w-3" />
+      </span>
+      <span className="uppercase tracking-widest">Back</span>
+    </button>
   );
 }
 

@@ -28,7 +28,7 @@ const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(
         whileHover={disabled ? undefined : { scale: 1.03 }}
         whileTap={disabled ? undefined : { scale: 0.96 }}
         transition={{ type: "spring", stiffness: 500, damping: 25 }}
-        className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-semibold uppercase tracking-wider
+        className={`hud-cut inline-flex items-center justify-center gap-2 border px-4 py-2.5 text-sm font-semibold uppercase tracking-wider
           transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-void
           disabled:cursor-not-allowed disabled:opacity-40 ${variantClasses[variant]} ${className}`}
         {...props}

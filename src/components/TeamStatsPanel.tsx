@@ -63,10 +63,10 @@ export default function TeamStatsPanel({ highlightTeamNumber }: { highlightTeamN
                     {team.teamName}
                     {isYou && <span className="ml-1 text-[10px] text-neon-100/40">(you)</span>}
                   </p>
-                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-void-2">
+                  <div className="hud-cut-sm mt-1 h-2.5 w-full overflow-hidden border border-panel-border bg-void-2">
                     <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, backgroundColor: team.color }}
+                      className="hud-segmented-fill h-full transition-all"
+                      style={{ width: `${pct}%`, color: team.color }}
                     />
                   </div>
                 </div>

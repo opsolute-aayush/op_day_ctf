@@ -22,7 +22,6 @@ export default function WinnerPage() {
   const { status, loading, unauthorized } = useTeamStatus(5000);
   const [duration, setDuration] = useState<string | null>(null);
   const fired = useRef(false);
-  const outroTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (unauthorized) router.replace("/register");
@@ -43,11 +42,7 @@ export default function WinnerPage() {
   useEffect(() => {
     if (!status?.completed || fired.current) return;
     fired.current = true;
-    // The timer ref is only ever cleared on real unmount (see the effect
-    // below) — this effect itself re-runs on every status poll (new object
-    // every ~5s), and if its own cleanup cleared the timer, the 7s outro
-    // delay inside playWinFeedback would never survive to fire.
-    outroTimerRef.current = playWinFeedback();
+    playWinFeedback();
 
     const colors = [status.team.color, "#39FF14", "#00F0FF"];
     const isFirst = status.isFirstToFinish;
@@ -62,12 +57,6 @@ export default function WinnerPage() {
 
     confetti({ particleCount: isFirst ? 150 : 80, spread: 100, origin: { y: 0.5 }, colors });
   }, [status]);
-
-  useEffect(() => {
-    return () => {
-      if (outroTimerRef.current) clearTimeout(outroTimerRef.current);
-    };
-  }, []);
 
   if (loading || !status) {
     return (

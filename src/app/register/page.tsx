@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Terminal, Users, Check, ChevronRight, KeyRound, ArrowLeft } from "lucide-react";
@@ -11,6 +11,8 @@ import InputField from "@/components/InputField";
 import TeamAvatar from "@/components/TeamAvatar";
 import MatrixRain from "@/components/MatrixRain";
 import ColorPicker from "@/components/ColorPicker";
+import { getPlayerName, setPlayerName, subscribeToPlayerNameStore } from "@/lib/playerIdentity";
+import { getSavedSessionCode, setSavedSessionCode, clearSavedSessionCode } from "@/lib/sessionIdentity";
 
 interface JoinableMember {
   name: string;
@@ -28,8 +30,11 @@ interface JoinableTeam {
 export default function RegisterPage() {
   const router = useRouter();
 
-  // Step 1 — which master's session are we joining? Any number of
-  // independent sessions can exist at once, each with its own 6-digit code.
+  // Step 1 — who are you, and which master's session are you joining? Any
+  // number of independent sessions can exist at once, each with its own
+  // 6-digit code. The name captured here becomes the single source of truth
+  // for this player everywhere else (join, presence, connected-players) —
+  // see lib/playerIdentity.ts — instead of asking again at step 2.
   const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [codeDraft, setCodeDraft] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -38,11 +43,47 @@ export default function RegisterPage() {
   // Step 2 — pick a squad within that session and join it.
   const [teams, setTeams] = useState<JoinableTeam[] | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [memberName, setMemberName] = useState("");
   const [teamNameDraft, setTeamNameDraft] = useState("");
   const [teamColorDraft, setTeamColorDraft] = useState("#39FF14");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Prefills from a prior visit — useSyncExternalStore (not an effect) so
+  // the SSR/first-hydration render (no localStorage) and the real client
+  // value reconcile without a setState-after-mount flash. nameOverride is
+  // only set once the user actually edits the field; until then the value
+  // just follows the persisted name.
+  const persistedName = useSyncExternalStore(subscribeToPlayerNameStore, getPlayerName, () => "");
+  const [nameOverride, setNameOverride] = useState<string | null>(null);
+  const nameDraft = nameOverride ?? persistedName;
+
+  // Resumes straight to the squad list after Leave Team (or any fresh visit
+  // from a device that already joined this session before) instead of
+  // asking for the code again — falls back to step 1 silently if the saved
+  // code no longer resolves (session ended, wrong device, etc.).
+  useEffect(() => {
+    const saved = getSavedSessionCode();
+    if (!saved) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/game/teams?code=${saved}`, { cache: "no-store" });
+        if (cancelled) return;
+        if (!res.ok) {
+          clearSavedSessionCode();
+          return;
+        }
+        const data = await res.json();
+        setTeams(data.teams);
+        setSessionCode(saved);
+      } catch {
+        // Network hiccup — leave step 1 visible, no need to clear the saved code for a transient failure.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!sessionCode) return;
@@ -69,6 +110,10 @@ export default function RegisterPage() {
     e.preventDefault();
     setCodeError(null);
 
+    if (nameDraft.trim().length < 1) {
+      setCodeError("Enter your name.");
+      return;
+    }
     if (!/^\d{6}$/.test(codeDraft)) {
       setCodeError("Enter the 6-digit session code.");
       return;
@@ -82,6 +127,8 @@ export default function RegisterPage() {
         setCodeError(data.error ?? "No session found for that code.");
         return;
       }
+      setPlayerName(nameDraft.trim());
+      setSavedSessionCode(codeDraft);
       setTeams(data.teams);
       setSessionCode(codeDraft);
     } catch {
@@ -92,6 +139,7 @@ export default function RegisterPage() {
   }
 
   function changeSession() {
+    clearSavedSessionCode();
     setSessionCode(null);
     setTeams(null);
     setSelectedTeamId(null);
@@ -117,10 +165,6 @@ export default function RegisterPage() {
       setError("Pick your squad first.");
       return;
     }
-    if (memberName.trim().length < 1) {
-      setError("Enter your name.");
-      return;
-    }
 
     setSubmitting(true);
     try {
@@ -130,7 +174,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           code: sessionCode,
           teamId: selectedTeamId,
-          memberName: memberName.trim(),
+          memberName: nameDraft.trim(),
           teamName: teamNameDraft.trim() || undefined,
           teamColor: teamColorDraft || undefined,
         }),
@@ -167,8 +211,18 @@ export default function RegisterPage() {
             <form onSubmit={handleCodeSubmit} className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-neon-100/70">
                 <KeyRound className="h-4 w-4 shrink-0 text-cyan-400" />
-                Ask your Game Master for the 6-digit session code.
+                Tell us who you are, then ask your Game Master for the 6-digit session code.
               </div>
+              <InputField
+                label="Your Name"
+                placeholder="e.g. Adolf"
+                value={nameDraft}
+                onChange={(e) => setNameOverride(e.target.value)}
+                maxLength={40}
+                autoComplete="off"
+                autoFocus
+                className="text-center font-display text-lg tracking-wide"
+              />
               <InputField
                 label="Session Code"
                 placeholder="482913"
@@ -176,7 +230,6 @@ export default function RegisterPage() {
                 maxLength={6}
                 value={codeDraft}
                 onChange={(e) => setCodeDraft(e.target.value.replace(/\D/g, ""))}
-                autoFocus
                 className="text-center font-display text-xl tracking-[0.3em]"
               />
               {codeError && (
@@ -302,6 +355,11 @@ export default function RegisterPage() {
                           <span style={{ color: selectedTeam.color }}>{selectedTeam.name}</span>
                         </p>
 
+                        <p className="flex items-center gap-1.5 text-xs text-neon-100/50">
+                          Joining as <span className="font-semibold text-neon-100/80">{nameDraft}</span>
+                          <span className="text-neon-100/30">— change this anytime in Settings</span>
+                        </p>
+
                         <InputField
                           label="Squad Name (yours to customize)"
                           value={teamNameDraft}
@@ -316,17 +374,6 @@ export default function RegisterPage() {
                           </label>
                           <ColorPicker value={teamColorDraft} onChange={setTeamColorDraft} />
                         </div>
-
-                        <InputField
-                          label="Your Name"
-                          placeholder="e.g. Adolf"
-                          value={memberName}
-                          onChange={(e) => setMemberName(e.target.value)}
-                          maxLength={40}
-                          autoComplete="off"
-                          autoFocus
-                          required
-                        />
                       </motion.div>
                     )}
                   </AnimatePresence>

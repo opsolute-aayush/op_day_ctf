@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
-import { logActivity } from "@/lib/game";
+import { getSessionById, logActivity } from "@/lib/game";
 
 const PALETTE = ["#39FF14", "#00F0FF", "#FF2ECC", "#FFD400", "#FF6A00", "#B026FF", "#FF3B3B", "#3B82F6"];
 
@@ -24,11 +24,14 @@ export async function POST() {
   const admin = await requireAdmin();
   if (admin instanceof NextResponse) return admin;
 
-  const highest = await prisma.team.findFirst({
-    where: { sessionId: admin.sessionId },
-    orderBy: { teamNumber: "desc" },
-    select: { teamNumber: true },
-  });
+  const [highest, session] = await Promise.all([
+    prisma.team.findFirst({
+      where: { sessionId: admin.sessionId },
+      orderBy: { teamNumber: "desc" },
+      select: { teamNumber: true },
+    }),
+    getSessionById(admin.sessionId),
+  ]);
   const teamNumber = (highest?.teamNumber ?? 0) + 1;
 
   const team = await prisma.team.create({
@@ -38,7 +41,7 @@ export async function POST() {
       name: `Team ${teamNumber}`,
       color: PALETTE[(teamNumber - 1) % PALETTE.length],
       members: "[]",
-      progress: { create: {} },
+      progress: { create: { sabotageCreditsRemaining: session?.sabotageCreditsPerTeam ?? 2 } },
     },
   });
 
