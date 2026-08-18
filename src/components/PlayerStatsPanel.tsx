@@ -18,6 +18,7 @@ interface OtherTeam {
 interface PlayerStatsPanelProps {
   helpCreditsRemaining: number;
   sabotageCreditsRemaining: number;
+  sabotageCooldownRemainingMs: number;
   ownTeamId: string;
   gameActive: boolean;
   onSabotageLaunched: () => void;
@@ -27,6 +28,7 @@ interface PlayerStatsPanelProps {
 export default function PlayerStatsPanel({
   helpCreditsRemaining,
   sabotageCreditsRemaining,
+  sabotageCooldownRemainingMs,
   ownTeamId,
   gameActive,
   onSabotageLaunched,
@@ -36,6 +38,23 @@ export default function PlayerStatsPanel({
   const [launching, setLaunching] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastClip, setLastClip] = useState<VideoClipEventDetail | null>(null);
+  // Ticks down locally between poll refreshes so the countdown reads
+  // smoothly instead of jumping every 3s when useTeamStatus refetches. Uses
+  // React's "adjust state during render" pattern (setState in the body,
+  // guarded by a prev-prop comparison) rather than an effect, so a fresh
+  // server value takes effect on the very render it arrives in.
+  const [prevServerMs, setPrevServerMs] = useState(sabotageCooldownRemainingMs);
+  const [cooldownMs, setCooldownMs] = useState(sabotageCooldownRemainingMs);
+  if (sabotageCooldownRemainingMs !== prevServerMs) {
+    setPrevServerMs(sabotageCooldownRemainingMs);
+    setCooldownMs(sabotageCooldownRemainingMs);
+  }
+
+  useEffect(() => {
+    if (cooldownMs <= 0) return;
+    const timeout = setTimeout(() => setCooldownMs((ms) => Math.max(0, ms - 1000)), 1000);
+    return () => clearTimeout(timeout);
+  }, [cooldownMs]);
 
   // right_pass/help clips show here and only here (VideoOverlay no longer
   // pops them up top-left) — wrong_pass/winning stay on VideoOverlay's own
@@ -104,11 +123,18 @@ export default function PlayerStatsPanel({
           <NeonButton
             variant="danger"
             className="w-full"
-            disabled={sabotageCreditsRemaining <= 0 || !gameActive}
+            disabled={sabotageCreditsRemaining <= 0 || !gameActive || cooldownMs > 0}
             onClick={() => setPickerOpen((v) => !v)}
           >
-            <Skull className="h-4 w-4" /> Sabotage a Squad <ChevronDown className="h-3.5 w-3.5" />
+            <Skull className="h-4 w-4" />
+            {cooldownMs > 0 ? `Recharging ${Math.ceil(cooldownMs / 1000)}s` : "Sabotage a Squad"}
+            <ChevronDown className="h-3.5 w-3.5" />
           </NeonButton>
+          {cooldownMs > 0 && (
+            <p className="text-center text-[11px] uppercase tracking-widest text-danger-400/60">
+              Sabotage systems recharging…
+            </p>
+          )}
 
           <AnimatePresence initial={false}>
             {pickerOpen && (

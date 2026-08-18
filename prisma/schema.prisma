@@ -21,6 +21,7 @@ model GameSession {
   adminPasswordHash      String?
   startedAt              DateTime?
   sabotageCreditsPerTeam Int           @default(2) // admin-configurable — how many sabotages each team may launch this game
+  sabotageCooldownSeconds Int          @default(0) // admin-configurable — seconds a team must wait between its own sabotage launches; 0 disables the cooldown
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
   teams                  Team[]        @relation("SessionTeams")
@@ -76,6 +77,7 @@ model TeamProgress {
   hintReleasedLevel Int? // level number a hint has been released for (self-service or admin)
   helpCreditsRemaining Int  @default(2) // self-service "Help" button uses left this game
   sabotageCreditsRemaining Int @default(2) // sabotages this team may still launch against another team
+  lastSabotageAt    DateTime? // stamped when this team's most recent sabotage launch succeeded — drives the cooldown
   completed         Boolean   @default(false)
   completedAt       DateTime?
   updatedAt         DateTime  @updatedAt

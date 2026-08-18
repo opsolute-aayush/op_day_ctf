@@ -137,6 +137,15 @@ export async function buildTeamStatus(teamId: string) {
   // actually do something.
   const hintAvailable = Boolean(currentLevelConfig?.hint) && !finalUnlocked;
 
+  // Computed server-side (not just "cooldown seconds - client clock guess")
+  // so the countdown the player sees can't drift from clock skew or from
+  // sitting on the page a while before this status was fetched.
+  let sabotageCooldownRemainingMs = 0;
+  if (session.sabotageCooldownSeconds > 0 && progress.lastSabotageAt) {
+    const remaining = progress.lastSabotageAt.getTime() + session.sabotageCooldownSeconds * 1000 - Date.now();
+    sabotageCooldownRemainingMs = Math.max(0, remaining);
+  }
+
   return {
     team: {
       id: team.id,
@@ -158,6 +167,7 @@ export async function buildTeamStatus(teamId: string) {
     hintAvailable,
     helpCreditsRemaining: progress.helpCreditsRemaining,
     sabotageCreditsRemaining: progress.sabotageCreditsRemaining,
+    sabotageCooldownRemainingMs,
     activeSabotage,
     completed: progress.completed,
     completedAt: progress.completedAt,

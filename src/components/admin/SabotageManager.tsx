@@ -26,10 +26,12 @@ export default function SabotageManager({ onChanged }: { onChanged: () => void }
 
   const [cap, setCap] = useState<number | null>(null);
   const [capDraft, setCapDraft] = useState("");
+  const [cooldown, setCooldown] = useState<number | null>(null);
+  const [cooldownDraft, setCooldownDraft] = useState("");
   const [savingCap, setSavingCap] = useState(false);
   const [capSaved, setCapSaved] = useState(false);
-  // Only prefills capDraft from the server once — otherwise the 5s poll
-  // would stomp on whatever the admin is mid-typing in that field.
+  // Only prefills capDraft/cooldownDraft from the server once — otherwise the
+  // 5s poll would stomp on whatever the admin is mid-typing in those fields.
   const capSeeded = useRef(false);
 
   useEffect(() => {
@@ -48,9 +50,11 @@ export default function SabotageManager({ onChanged }: { onChanged: () => void }
         const data = await gameRes.json();
         if (cancelled) return;
         setCap(data.sabotageCreditsPerTeam);
+        setCooldown(data.sabotageCooldownSeconds);
         if (!capSeeded.current) {
           capSeeded.current = true;
           setCapDraft(String(data.sabotageCreditsPerTeam));
+          setCooldownDraft(String(data.sabotageCooldownSeconds));
         }
       }
     }
@@ -84,16 +88,19 @@ export default function SabotageManager({ onChanged }: { onChanged: () => void }
 
   async function saveCap() {
     const value = Number(capDraft);
+    const cooldownValue = Number(cooldownDraft);
     if (!Number.isInteger(value) || value < 0) return;
+    if (!Number.isInteger(cooldownValue) || cooldownValue < 0) return;
     setSavingCap(true);
     try {
       const res = await fetch("/api/admin/game", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sabotageCreditsPerTeam: value }),
+        body: JSON.stringify({ sabotageCreditsPerTeam: value, sabotageCooldownSeconds: cooldownValue }),
       });
       if (res.ok) {
         setCap(value);
+        setCooldown(cooldownValue);
         setCapSaved(true);
         setTimeout(() => setCapSaved(false), 2000);
         onChanged();
@@ -123,13 +130,27 @@ export default function SabotageManager({ onChanged }: { onChanged: () => void }
               className="text-center font-display text-lg"
             />
           </div>
+          <div className="flex-1 min-w-[160px]">
+            <label className="mb-1.5 block text-xs uppercase tracking-widest text-danger-400/80">
+              Cooldown (seconds)
+            </label>
+            <InputField
+              type="number"
+              min={0}
+              max={3600}
+              value={cooldownDraft}
+              onChange={(e) => setCooldownDraft(e.target.value)}
+              className="text-center font-display text-lg"
+            />
+          </div>
           <NeonButton variant="danger" onClick={saveCap} disabled={savingCap}>
             {savingCap ? "Saving…" : capSaved ? <Save className="h-4 w-4" /> : "Apply"}
           </NeonButton>
-          {cap !== null && (
+          {cap !== null && cooldown !== null && (
             <p className="w-full text-xs text-neon-100/40">
-              Current: <span className="text-danger-400">{cap}</span> per squad. Applying resets every squad&apos;s
-              remaining count to this value immediately.
+              Current: <span className="text-danger-400">{cap}</span> per squad,{" "}
+              <span className="text-danger-400">{cooldown}s</span> cooldown between launches. Applying resets every
+              squad&apos;s remaining count to the new cap immediately (existing cooldown timers are unaffected).
             </p>
           )}
         </div>

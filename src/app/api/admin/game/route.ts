@@ -19,14 +19,19 @@ export async function GET() {
     winningTeamId: session.winningTeamId,
     startedAt: session.startedAt,
     sabotageCreditsPerTeam: session.sabotageCreditsPerTeam,
+    sabotageCooldownSeconds: session.sabotageCooldownSeconds,
   });
 }
 
-const sabotageCapSchema = z.object({ sabotageCreditsPerTeam: z.number().int().min(0).max(20) });
+const sabotageCapSchema = z.object({
+  sabotageCreditsPerTeam: z.number().int().min(0).max(20),
+  sabotageCooldownSeconds: z.number().int().min(0).max(3600),
+});
 
-// Sets the session-wide sabotage cap and immediately resets every team's
-// remaining count to it — a live dial the admin can turn up/down mid-game,
-// not just a default for new teams.
+// Sets the session-wide sabotage cap + cooldown and immediately resets every
+// team's remaining count to the new cap — a live dial the admin can turn
+// up/down mid-game, not just a default for new teams. The cooldown itself
+// only affects future launches (existing lastSabotageAt stamps are untouched).
 export async function PUT(req: NextRequest) {
   const admin = await requireAdmin();
   if (admin instanceof NextResponse) return admin;
@@ -40,15 +45,27 @@ export async function PUT(req: NextRequest) {
 
   const teamIds = (await prisma.team.findMany({ where: { sessionId }, select: { id: true } })).map((t) => t.id);
   await prisma.$transaction([
-    prisma.gameSession.update({ where: { id: sessionId }, data: { sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam } }),
+    prisma.gameSession.update({
+      where: { id: sessionId },
+      data: {
+        sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam,
+        sabotageCooldownSeconds: parsed.data.sabotageCooldownSeconds,
+      },
+    }),
     prisma.teamProgress.updateMany({
       where: { teamId: { in: teamIds } },
       data: { sabotageCreditsRemaining: parsed.data.sabotageCreditsPerTeam },
     }),
   ]);
-  await logActivity(sessionId, null, "SABOTAGE_CAP_CHANGED", { sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam });
+  await logActivity(sessionId, null, "SABOTAGE_CAP_CHANGED", {
+    sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam,
+    sabotageCooldownSeconds: parsed.data.sabotageCooldownSeconds,
+  });
 
-  return NextResponse.json({ sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam });
+  return NextResponse.json({
+    sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam,
+    sabotageCooldownSeconds: parsed.data.sabotageCooldownSeconds,
+  });
 }
 
 const actionSchema = z.object({ action: z.enum(["start", "pause", "end", "reset"]) });
@@ -115,6 +132,7 @@ export async function POST(req: NextRequest) {
         hintReleasedLevel: null,
         helpCreditsRemaining: 2,
         sabotageCreditsRemaining: current.sabotageCreditsPerTeam,
+        lastSabotageAt: null,
       },
     }),
     prisma.team.updateMany({ where: { sessionId }, data: { members: "[]" } }),

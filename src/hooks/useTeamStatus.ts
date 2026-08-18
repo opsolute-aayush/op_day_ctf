@@ -34,6 +34,7 @@ export interface TeamStatus {
   hintAvailable: boolean;
   helpCreditsRemaining: number;
   sabotageCreditsRemaining: number;
+  sabotageCooldownRemainingMs: number;
   activeSabotage: ActiveSabotage | null;
   completed: boolean;
   completedAt: string | null;

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import TerminalPanel from "@/components/TerminalPanel";
 import { getAssignedArtFile, setAssignedArtFile } from "@/lib/artIdentity";
 
 // Drop image files into public/arts/settings/ — no code changes needed,
@@ -46,7 +45,13 @@ function imageToGrid(img: HTMLImageElement, cols: number): string[][] {
   return grid;
 }
 
-/** A static character-art render of one image assigned to this device, with cells inside its silhouette periodically glitching. */
+/**
+ * A character-art render of one image assigned to this device, living as a
+ * fixed background layer pinned to the right side of the viewport — not a
+ * panel in the page's content flow. Callers must keep their own content
+ * clear of that region (see settings/page.tsx's content column width) since
+ * nothing is meant to ever render on top of it here.
+ */
 export default function AsciiOperative() {
   const [grid, setGrid] = useState<string[][]>([]);
   const spanRefs = useRef<(HTMLSpanElement | null)[][]>([]);
@@ -132,9 +137,19 @@ export default function AsciiOperative() {
   }, [grid]);
 
   return (
-    <TerminalPanel title="operative.render">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-y-0 right-0 z-0 hidden w-[52%] items-center justify-center overflow-hidden lg:flex"
+      style={{
+        // Fades the art's left edge into the ambient grid instead of a hard
+        // rectangle boundary — makes the empty space in front of it (where
+        // the content column ends) read as atmosphere, not a layout gap.
+        maskImage: "linear-gradient(to right, transparent, black 14%)",
+        WebkitMaskImage: "linear-gradient(to right, transparent, black 14%)",
+      }}
+    >
       {status === "ready" ? (
-        <pre className="text-glow select-none text-center font-mono text-[8px] leading-[1.05] text-neon-500 sm:text-[9px]">
+        <pre className="text-glow select-none text-center font-mono text-[10px] leading-[1.05] text-neon-500/60 xl:text-xs">
           {grid.map((row, r) => (
             <span key={r} className="block">
               {row.map((ch, c) => (
@@ -152,11 +167,10 @@ export default function AsciiOperative() {
           ))}
         </pre>
       ) : (
-        <p className="py-10 text-center text-xs text-neon-100/30">
-          {status === "loading" ? "loading…" : "Drop images into public/arts/settings/ to activate."}
-        </p>
+        status === "empty" && (
+          <p className="text-center text-xs text-neon-100/20">Drop images into public/arts/settings/ to activate.</p>
+        )
       )}
-      <p className="mt-3 text-center text-[11px] uppercase tracking-widest text-neon-100/30">Agent Unit // Standby</p>
-    </TerminalPanel>
+    </div>
   );
 }

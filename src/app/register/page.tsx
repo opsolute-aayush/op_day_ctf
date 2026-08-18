@@ -60,12 +60,20 @@ export default function RegisterPage() {
   // Resumes straight to the squad list after Leave Team (or any fresh visit
   // from a device that already joined this session before) instead of
   // asking for the code again — falls back to step 1 silently if the saved
-  // code no longer resolves (session ended, wrong device, etc.).
+  // code no longer resolves (session ended, wrong device, etc.). `resuming`
+  // holds step 1 back off-screen while this check is in flight — without
+  // it, a returning device would flash step 1 for a beat and then jump to
+  // step 2, playing the step-change glitch twice in a row instead of once.
+  const [resuming, setResuming] = useState(true);
+
   useEffect(() => {
-    const saved = getSavedSessionCode();
-    if (!saved) return;
     let cancelled = false;
     (async () => {
+      const saved = getSavedSessionCode();
+      if (!saved) {
+        if (!cancelled) setResuming(false);
+        return;
+      }
       try {
         const res = await fetch(`/api/game/teams?code=${saved}`, { cache: "no-store" });
         if (cancelled) return;
@@ -78,6 +86,8 @@ export default function RegisterPage() {
         setSessionCode(saved);
       } catch {
         // Network hiccup — leave step 1 visible, no need to clear the saved code for a transient failure.
+      } finally {
+        if (!cancelled) setResuming(false);
       }
     })();
     return () => {
@@ -209,7 +219,14 @@ export default function RegisterPage() {
         {/* Same glitch-reveal keyframe admin's tab switches and /play's
             standby↔levels swap use — reused here (fresh key remounting the
             div, not Framer Motion) so this step change feels consistent
-            with the rest of the app. */}
+            with the rest of the app. Gated on `resuming` so a returning
+            device jumps straight to step 2 with one clean transition
+            instead of flashing step 1 first and glitching twice. */}
+        {resuming ? (
+          <TerminalPanel title="join-session.sh">
+            <p className="caret-blink text-sm text-neon-500">{"> resuming session..."}</p>
+          </TerminalPanel>
+        ) : (
         <div key={sessionCode ? "teams" : "code"} className="glitch-reveal">
         {!sessionCode ? (
           <TerminalPanel title="join-session.sh">
@@ -398,6 +415,7 @@ export default function RegisterPage() {
           </TerminalPanel>
         )}
         </div>
+        )}
       </div>
     </main>
   );

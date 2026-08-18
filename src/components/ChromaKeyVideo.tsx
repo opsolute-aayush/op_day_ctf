@@ -81,7 +81,18 @@ export default function ChromaKeyVideo({ src, onEnded, className = "" }: ChromaK
     }
 
     video.addEventListener("play", handlePlay);
-    void video.play().catch(() => onEnded());
+    // Start muted — that's what guarantees the browser actually lets play()
+    // through regardless of gesture/engagement history — then unmute right
+    // after playback has genuinely started. Toggling .muted on an already-
+    // playing element isn't a new autoplay attempt, so this isn't blocked
+    // the way calling play() unmuted from the start intermittently was.
+    video.muted = true;
+    void video
+      .play()
+      .then(() => {
+        video.muted = false;
+      })
+      .catch(() => onEnded());
 
     return () => {
       video.removeEventListener("play", handlePlay);
@@ -92,13 +103,7 @@ export default function ChromaKeyVideo({ src, onEnded, className = "" }: ChromaK
 
   return (
     <div className={className}>
-      {/* muted: unmuted autoplay is blocked by browser policy often enough
-          (inconsistently, depending on gesture/engagement history) that the
-          play() rejection's .catch below would silently clear the clip
-          right after it appears — muted autoplay has no such restriction.
-          These clips are a visual gag composited via canvas; the game's own
-          sfx system already covers audio feedback. */}
-      <video ref={videoRef} src={src} playsInline muted className="hidden" onEnded={onEnded} onError={onEnded} />
+      <video ref={videoRef} src={src} playsInline className="hidden" onEnded={onEnded} onError={onEnded} />
       <canvas ref={canvasRef} className="h-full w-full object-contain drop-shadow-[0_6px_20px_rgba(0,0,0,0.45)]" />
     </div>
   );

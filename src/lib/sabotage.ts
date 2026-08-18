@@ -72,10 +72,11 @@ export async function launchSabotage(params: {
     return { error: "You can't sabotage your own squad." };
   }
 
-  const [source, target, existing] = await Promise.all([
+  const [source, target, existing, session] = await Promise.all([
     prisma.teamProgress.findUnique({ where: { teamId: sourceTeamId } }),
     prisma.team.findUnique({ where: { id: targetTeamId }, select: { id: true, sessionId: true } }),
     prisma.sabotage.findFirst({ where: { targetTeamId, resolvedAt: null } }),
+    prisma.gameSession.findUnique({ where: { id: sessionId }, select: { sabotageCooldownSeconds: true } }),
   ]);
 
   if (!target || target.sessionId !== sessionId) {
@@ -90,6 +91,13 @@ export async function launchSabotage(params: {
   if (existing) {
     return { error: "That squad is already dealing with a sabotage." };
   }
+  const cooldownSeconds = session?.sabotageCooldownSeconds ?? 0;
+  if (cooldownSeconds > 0 && source.lastSabotageAt) {
+    const remainingMs = source.lastSabotageAt.getTime() + cooldownSeconds * 1000 - Date.now();
+    if (remainingMs > 0) {
+      return { error: `Sabotage systems recharging — ${Math.ceil(remainingMs / 1000)}s left.` };
+    }
+  }
 
   const plainText = randomPlainText();
   const { encoding, cipherText } = encode(plainText);
@@ -100,7 +108,7 @@ export async function launchSabotage(params: {
     }),
     prisma.teamProgress.update({
       where: { teamId: sourceTeamId },
-      data: { sabotageCreditsRemaining: { decrement: 1 } },
+      data: { sabotageCreditsRemaining: { decrement: 1 }, lastSabotageAt: new Date() },
     }),
   ]);
 

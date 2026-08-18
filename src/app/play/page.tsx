@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { LogOut, Trophy, Flag, Pencil, Check, X, Settings } from "lucide-react";
 import { useTeamStatus } from "@/hooks/useTeamStatus";
+import { useGlitchKey } from "@/hooks/useGlitchKey";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import LevelCard, { LevelCardState, WordVerifyResult } from "@/components/LevelCard";
@@ -63,6 +64,8 @@ export default function PlayPage() {
     else stopIntroMusic();
     return () => stopIntroMusic();
   }, [isWaitingForStart]);
+
+  const standbyGlitch = useGlitchKey(isWaitingForStart);
 
   if (loading) {
     return (
@@ -163,6 +166,7 @@ export default function PlayPage() {
         <PlayerStatsPanel
           helpCreditsRemaining={status.helpCreditsRemaining}
           sabotageCreditsRemaining={status.sabotageCreditsRemaining}
+          sabotageCooldownRemainingMs={status.sabotageCooldownRemainingMs}
           ownTeamId={status.team.id}
           gameActive={status.gameActive}
           onSabotageLaunched={refresh}
@@ -257,7 +261,7 @@ export default function PlayPage() {
           switching tabs — reused here (fresh key remounting the div, not
           Framer Motion) so the standby↔level-list swap feels consistent
           with the rest of the app instead of popping in instantly. */}
-      <div key={isWaitingForStart ? "standby" : "levels"} className="glitch-reveal">
+      <div key={standbyGlitch.key} className={standbyGlitch.className}>
       {isWaitingForStart ? (
         <TerminalPanel title="standby.exe">
           <div className="space-y-3 py-6 text-center">
