@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Crown, ShieldCheck, Home } from "lucide-react";
+import { Crown, ShieldCheck, Home, RotateCcw } from "lucide-react";
 import { useTeamStatus } from "@/hooks/useTeamStatus";
 import { usePolledFetch } from "@/hooks/usePolledFetch";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
+import NeonButton from "@/components/NeonButton";
 import TeamAvatar from "@/components/TeamAvatar";
 import AsciiWinnerPortrait from "@/components/AsciiWinnerPortrait";
 import VideoMonitor from "@/components/VideoMonitor";
@@ -27,6 +28,8 @@ export default function WinnerPage() {
   const { status, loading, unauthorized } = useTeamStatus(5000);
   const statsData = usePolledFetch<{ stats: TeamStat[] }>("/api/game/stats", 5000);
   const fired = useRef(false);
+  const [confirmPlayAgain, setConfirmPlayAgain] = useState(false);
+  const [playingAgain, setPlayingAgain] = useState(false);
 
   useEffect(() => {
     if (unauthorized) router.replace("/register");
@@ -48,6 +51,23 @@ export default function WinnerPage() {
         <p className="caret-blink text-neon-500">loading</p>
       </main>
     );
+  }
+
+  // Leaves this team the same way "Leave Team" on /play does — removes just
+  // this member's name from the roster and clears their cookie. TeamProgress
+  // (completed/completedAt), the session's winningTeamId, and this team's
+  // whole puzzle are never touched, so the finish stays on the board exactly
+  // as-is. Rejoining is a fresh /register visit, same or different name,
+  // same or different squad.
+  async function playAgain() {
+    if (!confirmPlayAgain) {
+      setConfirmPlayAgain(true);
+      setTimeout(() => setConfirmPlayAgain(false), 4000);
+      return;
+    }
+    setPlayingAgain(true);
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/register");
   }
 
   const isFirst = status.isFirstToFinish;
@@ -149,6 +169,16 @@ export default function WinnerPage() {
 
           <div className="glitch-flicker w-full max-w-md" style={{ animationDelay: "2.4s" }}>
             <VideoMonitor categories={["winning"]} caption="Victory transmission, replayed here." />
+          </div>
+
+          <div className="glitch-flicker flex flex-col items-center gap-1.5" style={{ animationDelay: "3s" }}>
+            <NeonButton variant="ghost" onClick={playAgain} disabled={playingAgain}>
+              <RotateCcw className="h-4 w-4" />
+              {playingAgain ? "Resetting…" : confirmPlayAgain ? "Confirm? This finish stays on the board" : "Play Again"}
+            </NeonButton>
+            <p className="text-xs text-neon-100/30">
+              Your rank and time are saved for good — you&apos;ll just need a fresh join to play another round.
+            </p>
           </div>
         </div>
       </div>
