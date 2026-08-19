@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Save, Lock, ListChecks } from "lucide-react";
+import { Plus, Trash2, Save, Lock, ListChecks, Shuffle, Copy, Check } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
 import TeamAvatar from "@/components/TeamAvatar";
+import { generateCipher, type CipherResult } from "@/lib/cipher";
 
 interface TeamOption {
   id: string;
@@ -31,6 +32,82 @@ interface LevelDraft {
 
 function toDraft(level: Level): LevelDraft {
   return { locationClue: level.locationClue, wordReward: level.wordReward, hint: level.hint ?? "", password: "" };
+}
+
+// Turns whatever the admin typed into the passphrase/password field into the
+// decoy-padded, shuffled, Base64 "encrypted message" from cipher.md — purely
+// a display tool for crafting the physical clue. Saving the level still
+// hashes the same typed word as the team's real unlock password untouched.
+function PassphraseCipherPanel({ passphrase }: { passphrase: string }) {
+  const [result, setResult] = useState<CipherResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function generate() {
+    setError(null);
+    setCopied(false);
+    try {
+      setResult(generateCipher(passphrase));
+    } catch (err) {
+      setResult(null);
+      setError(err instanceof Error ? err.message : "Failed to encrypt.");
+    }
+  }
+
+  async function copy() {
+    if (!result) return;
+    await navigator.clipboard.writeText(result.base64);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border border-cyan-400/20 bg-void-2/60 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs uppercase tracking-widest text-cyan-400/80">Encrypted Message (for teams)</span>
+        <NeonButton
+          variant="cyan"
+          onClick={generate}
+          disabled={!passphrase.trim()}
+          className="px-2 py-1 text-xs"
+        >
+          <Shuffle className="h-3 w-3" /> {result ? "Regenerate" : "Encrypt Passphrase"}
+        </NeonButton>
+      </div>
+      {!passphrase.trim() && (
+        <p className="text-xs text-neon-100/30">Type a passphrase above to generate its encrypted message.</p>
+      )}
+      {error && <p className="text-xs text-danger-400">{error}</p>}
+      {result && (
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-2">
+            <textarea
+              readOnly
+              rows={3}
+              value={result.base64}
+              onFocus={(e) => e.currentTarget.select()}
+              className="w-full resize-none rounded-md border border-panel-border bg-void px-2 py-1.5 font-mono text-xs text-neon-100 outline-none"
+            />
+            <button
+              type="button"
+              onClick={copy}
+              title="Copy"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-panel-border text-neon-100/60 transition-colors hover:text-cyan-400"
+            >
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+          <p className="text-xs text-neon-100/40">
+            Decoys used: <span className="text-neon-100/70">{result.decoys.join(", ")}</span>
+          </p>
+          <p className="text-xs text-amber-400/80">
+            Admin eyes only — the real passphrase is candidate #{result.answerIndex} of 5 once decoded. Never share
+            this index with teams.
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
@@ -320,11 +397,12 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
                 onChange={(e) => updateDraft(level.levelNumber, { hint: e.target.value })}
               />
               <InputField
-                label="Set New Password (leave blank to keep current)"
+                label="Passphrase — Set New Password (leave blank to keep current)"
                 placeholder={level.hasPassword ? "•••• already set •••• " : "required"}
                 value={draft.password}
                 onChange={(e) => updateDraft(level.levelNumber, { password: e.target.value })}
               />
+              <PassphraseCipherPanel passphrase={draft.password} />
               <div className="flex items-center gap-3 pt-1">
                 <NeonButton onClick={() => saveLevel(level.levelNumber)} disabled={savingLevel === level.levelNumber}>
                   <Save className="h-4 w-4" /> {savingLevel === level.levelNumber ? "Saving…" : "Save"}
@@ -359,10 +437,11 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
             onChange={(e) => setNewLevel((p) => ({ ...p, hint: e.target.value }))}
           />
           <InputField
-            label="Password"
+            label="Passphrase / Password"
             value={newLevel.password}
             onChange={(e) => setNewLevel((p) => ({ ...p, password: e.target.value }))}
           />
+          <PassphraseCipherPanel passphrase={newLevel.password} />
           <NeonButton variant="cyan" onClick={createLevel} disabled={creating}>
             <Plus className="h-4 w-4" /> {creating ? "Adding…" : "Add Level"}
           </NeonButton>
