@@ -4,9 +4,12 @@
 // rule lives in one place instead of being repeated at every call site:
 // - Right (password or word correct): sound OR video, chosen at random —
 //   never both at once.
-// - Wrong password: video only. Wrong word: sound only.
+// - Wrong password: sound always, plus video when it's enabled — a video-only
+//   cue went completely silent for anyone with video off/blocked, so sound is
+//   now guaranteed. Wrong word: sound only.
 // - Help revealed: sound only (random pick, same as always).
 // - Win: video only, then outro music ~7s later.
+// - Sabotage/swap cleared (player decode, or admin bypass/revert): resolve sound only.
 
 import {
   playRightPasswordSound,
@@ -15,6 +18,7 @@ import {
   playOutroMusic,
   playHackingSound,
   playAlertSound,
+  playResolveSound,
 } from "@/lib/sfx";
 import { playVideoClip } from "@/lib/videofx";
 
@@ -27,7 +31,8 @@ export function playRightFeedback() {
 }
 
 export function playWrongPasswordFeedback() {
-  playVideoClip("wrong_pass");
+  playRandomWrongPasswordSound();
+  void playVideoClip("wrong_pass");
 }
 
 export function playWrongWordFeedback() {
@@ -46,6 +51,11 @@ export function playHackingFeedback() {
 /** The team that just got sabotaged, or whose board just got swapped by someone else. */
 export function playAlertFeedback() {
   playAlertSound();
+}
+
+/** A sabotage just cleared — decoded by the team itself, or force-cleared/reverted by an admin. */
+export function playResolveFeedback() {
+  playResolveSound();
 }
 
 // Module-level, not a component ref: React 18/19 Strict Mode double-invokes

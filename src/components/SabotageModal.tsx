@@ -6,7 +6,7 @@ import { Skull, ShieldAlert, ShieldCheck } from "lucide-react";
 import CipherInput from "@/components/CipherInput";
 import NeonButton from "@/components/NeonButton";
 import type { ActiveSabotage } from "@/hooks/useTeamStatus";
-import { playWrongPasswordFeedback, playRightFeedback } from "@/lib/gameFeedback";
+import { playWrongPasswordFeedback, playResolveFeedback } from "@/lib/gameFeedback";
 
 type Status = "idle" | "verifying" | "denied" | "granted";
 
@@ -41,7 +41,7 @@ export default function SabotageModal({ sabotage, onResolved }: { sabotage: Acti
         return;
       }
       setStatus("granted");
-      playRightFeedback();
+      playResolveFeedback();
       setTimeout(onResolved, 700);
     } catch {
       setError("Network error — try again.");

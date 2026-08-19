@@ -5,6 +5,7 @@ import { Skull, ShieldOff, Eye, EyeOff } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import { usePolledFetch } from "@/hooks/usePolledFetch";
+import { playResolveFeedback } from "@/lib/gameFeedback";
 
 interface SabotageRow {
   id: string;
@@ -37,7 +38,8 @@ export default function SabotageLog({ onChanged }: { onChanged: () => void }) {
   async function bypass(id: string) {
     setBusyId(id);
     try {
-      await fetch(`/api/admin/sabotages/${id}/bypass`, { method: "POST" });
+      const res = await fetch(`/api/admin/sabotages/${id}/bypass`, { method: "POST" });
+      if (res.ok) playResolveFeedback();
       setNonce((n) => n + 1);
       onChanged();
     } finally {

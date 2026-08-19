@@ -1,13 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import confetti from "canvas-confetti";
-import { Trophy, PartyPopper } from "lucide-react";
+import { motion } from "framer-motion";
+import { Crown, ShieldCheck } from "lucide-react";
 import { useTeamStatus } from "@/hooks/useTeamStatus";
+import { usePolledFetch } from "@/hooks/usePolledFetch";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import TeamAvatar from "@/components/TeamAvatar";
+import MatrixRain from "@/components/MatrixRain";
+import HackedOverlay from "@/components/HackedOverlay";
+import HackBurst from "@/components/HackBurst";
+import FinalStandings from "@/components/FinalStandings";
+import { ordinal, RANK_STYLE, type TeamStat } from "@/components/TeamStandingsList";
 import { playWinFeedback } from "@/lib/gameFeedback";
 
 function formatDuration(ms: number): string {
@@ -20,7 +26,7 @@ function formatDuration(ms: number): string {
 export default function WinnerPage() {
   const router = useRouter();
   const { status, loading, unauthorized } = useTeamStatus(5000);
-  const [duration, setDuration] = useState<string | null>(null);
+  const statsData = usePolledFetch<{ stats: TeamStat[] }>("/api/game/stats", 5000);
   const fired = useRef(false);
 
   useEffect(() => {
@@ -32,30 +38,9 @@ export default function WinnerPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (!status?.completedAt) return;
-    if (status.gameStartedAt) {
-      const ms = new Date(status.completedAt).getTime() - new Date(status.gameStartedAt).getTime();
-      setDuration(formatDuration(ms));
-    }
-  }, [status]);
-
-  useEffect(() => {
     if (!status?.completed || fired.current) return;
     fired.current = true;
     playWinFeedback();
-
-    const colors = [status.team.color, "#39FF14", "#00F0FF"];
-    const isFirst = status.isFirstToFinish;
-    const duration = isFirst ? 4000 : 1500;
-    const end = Date.now() + duration;
-
-    (function frame() {
-      confetti({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0 }, colors });
-      confetti({ particleCount: 4, angle: 120, spread: 60, origin: { x: 1 }, colors });
-      if (Date.now() < end) requestAnimationFrame(frame);
-    })();
-
-    confetti({ particleCount: isFirst ? 150 : 80, spread: 100, origin: { y: 0.5 }, colors });
   }, [status]);
 
   if (loading || !status) {
@@ -67,42 +52,96 @@ export default function WinnerPage() {
   }
 
   const isFirst = status.isFirstToFinish;
+  const myStat = statsData?.stats.find((s) => s.teamNumber === status.team.teamNumber) ?? null;
+  const position = myStat?.position ?? (isFirst ? 1 : null);
+  const rankStyle = position ? RANK_STYLE[position] : undefined;
+  const duration =
+    status.completedAt && status.gameStartedAt
+      ? formatDuration(new Date(status.completedAt).getTime() - new Date(status.gameStartedAt).getTime())
+      : null;
+
+  const bootLines = [
+    "> decrypting final payload... OK",
+    "> integrity check: PASSED",
+    `> operative squad: ${status.team.name.toUpperCase()}`,
+    duration ? `> mission clock: ${duration}` : "> mission clock: —",
+    `> clearance rank: ${position ? ordinal(position).toUpperCase() : "PENDING"}`,
+  ];
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-4 py-12 text-center">
-      <div className="w-full max-w-md space-y-6">
-        {isFirst ? (
-          <Trophy className="mx-auto h-16 w-16 text-amber-400 text-glow" />
-        ) : (
-          <PartyPopper className="mx-auto h-16 w-16 text-neon-500 text-glow" />
-        )}
-        <GlitchTitle text={isFirst ? "VICTORY" : "HUNT COMPLETE"} className="text-3xl sm:text-4xl" />
+    <main className="relative flex flex-1 flex-col items-center px-4 py-10">
+      {/* One-shot breach flash — layered on top of the route's regular glitch-reveal. */}
+      <div className="victory-flash pointer-events-none fixed inset-0 z-[60]" aria-hidden="true" />
+      {/* Keeps glitching for as long as this page is open, not just on entry. */}
+      <HackedOverlay />
+      <HackBurst active={status.completed} intense={isFirst} accentColor={status.team.color} />
+      <MatrixRain columns={16} className="fixed inset-0 opacity-25" />
 
-        <div className="flex items-center justify-center gap-3">
-          <TeamAvatar teamNumber={status.team.teamNumber} color={status.team.color} size="lg" />
-          <p className="text-lg" style={{ color: status.team.color }}>
-            {status.team.name}
+      <div className="relative z-10 w-full max-w-md space-y-6 text-center">
+        <div>
+          {isFirst ? (
+            <Crown className="rank-pulse mx-auto h-20 w-20" style={{ color: "#FFD400" }} fill="#FFD400" strokeWidth={1.25} />
+          ) : (
+            <ShieldCheck
+              className="rank-pulse mx-auto h-16 w-16"
+              style={{ color: rankStyle?.color ?? "var(--neon-500)" }}
+              strokeWidth={1.5}
+            />
+          )}
+        </div>
+
+        <div className="space-y-1">
+          <GlitchTitle text={isFirst ? "MAINFRAME BREACHED" : "ACCESS GRANTED"} className="text-3xl sm:text-4xl" />
+          <p className="font-mono text-xs uppercase tracking-[0.3em] text-neon-100/40">
+            {isFirst ? "root privileges escalated — hunt fully solved" : "sentence verified — hunt solved"}
           </p>
         </div>
 
-        <TerminalPanel title="mission.log">
-          <p className="text-neon-100/80">
-            {isFirst
-              ? "First team to fully assemble and transmit the correct sentence. Nobody beat that time."
-              : "Sentence assembled and transmitted correctly — the hunt is solved. Another team beat you to first place, but great run."}
-          </p>
-          {duration && (
-            <p className="mt-3 text-sm text-neon-100/50">
-              Your time: <span className="text-neon-500">{duration}</span>
+        <div className="flex items-center justify-center gap-3">
+          <TeamAvatar teamNumber={status.team.teamNumber} color={status.team.color} size="lg" />
+          <div className="text-left">
+            <p className="text-lg font-semibold" style={{ color: status.team.color }}>
+              {status.team.name}
             </p>
-          )}
+            {position && (
+              <p className="text-xs uppercase tracking-widest" style={{ color: rankStyle?.color ?? "var(--neon-400)" }}>
+                {ordinal(position)} place
+              </p>
+            )}
+          </div>
+        </div>
+
+        <TerminalPanel title="mission.log">
+          <div className="space-y-1.5 text-left font-mono text-sm">
+            {bootLines.map((line, i) => (
+              <motion.p
+                key={line}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.25, delay: 0.15 + i * 0.18 }}
+                className="text-neon-500/90"
+              >
+                {line}
+              </motion.p>
+            ))}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.15 + bootLines.length * 0.18 }}
+              className="caret-blink text-neon-100/50"
+            >
+              awaiting next transmission
+            </motion.p>
+          </div>
         </TerminalPanel>
 
         <p className="text-xs uppercase tracking-widest text-neon-100/30">
-          {status.gameFinished
-            ? "The Game Master has ended the hunt."
-            : "The hunt is still live for other teams."}
+          {status.gameFinished ? "The Game Master has ended the hunt." : "The hunt is still live for other teams."}
         </p>
+      </div>
+
+      <div className="relative z-10 mt-8 w-full max-w-md">
+        <FinalStandings highlightTeamNumber={status.team.teamNumber} />
       </div>
     </main>
   );

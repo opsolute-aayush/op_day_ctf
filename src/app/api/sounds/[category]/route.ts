@@ -15,6 +15,7 @@ const CATEGORIES = [
   "settings",
   "hacking",
   "alert",
+  "resolve",
 ] as const;
 type Category = (typeof CATEGORIES)[number];
 

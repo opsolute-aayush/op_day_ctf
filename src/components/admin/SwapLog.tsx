@@ -5,6 +5,7 @@ import { Repeat, RotateCcw } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import { usePolledFetch } from "@/hooks/usePolledFetch";
+import { playResolveFeedback } from "@/lib/gameFeedback";
 
 interface SwapRow {
   id: string;
@@ -23,7 +24,8 @@ export default function SwapLog({ onChanged }: { onChanged: () => void }) {
   async function revert(id: string) {
     setBusyId(id);
     try {
-      await fetch(`/api/admin/swaps/${id}/revert`, { method: "POST" });
+      const res = await fetch(`/api/admin/swaps/${id}/revert`, { method: "POST" });
+      if (res.ok) playResolveFeedback();
       setNonce((n) => n + 1);
       onChanged();
     } finally {

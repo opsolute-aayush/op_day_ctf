@@ -33,15 +33,22 @@ export async function GET() {
       currentLevel: team.progress?.currentLevel ?? 1,
       totalLevels,
       completed: team.progress?.completed ?? false,
+      completedAt: team.progress?.completedAt?.toISOString() ?? null,
       isFirstToFinish: session.winningTeamId === team.id,
     };
   });
 
+  // Finishers first, ordered by actual finish time (not just the "isFirstToFinish"
+  // flag, which only marks 1st place) — this is what lets the board rank 2nd,
+  // 3rd, etc. Still-playing teams follow, ordered by progress.
   stats.sort((a, b) => {
-    if (a.isFirstToFinish !== b.isFirstToFinish) return a.isFirstToFinish ? -1 : 1;
     if (a.completed !== b.completed) return a.completed ? -1 : 1;
+    if (a.completed && b.completed) return new Date(a.completedAt!).getTime() - new Date(b.completedAt!).getTime();
     return b.currentLevel / b.totalLevels - a.currentLevel / a.totalLevels;
   });
 
-  return NextResponse.json({ stats, gameActive: session.isActive, gameFinished: session.isFinished });
+  let finishRank = 0;
+  const ranked = stats.map((s) => ({ ...s, position: s.completed ? ++finishRank : null }));
+
+  return NextResponse.json({ stats: ranked, gameActive: session.isActive, gameFinished: session.isFinished });
 }

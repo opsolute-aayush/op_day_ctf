@@ -1,8 +1,8 @@
 "use client";
 
 // Sounds auto-discover from public/sounds/<category>/ (wrong_pass, right_pass,
-// help, winning, intro, outro, button, settings, hacking, alert) via GET
-// /api/sounds/<category> — drop a file in, no registration needed. The
+// help, winning, intro, outro, button, settings, hacking, alert, resolve) via
+// GET /api/sounds/<category> — drop a file in, no registration needed. The
 // one-shot categories fall back to a synthesized chime when empty; the
 // full-track categories (intro, outro, settings) just stay silent with no assets.
 
@@ -18,7 +18,8 @@ type Category =
   | "button"
   | "settings"
   | "hacking"
-  | "alert";
+  | "alert"
+  | "resolve";
 
 const fileListCache = new Map<Category, string[]>();
 const fileListInFlight = new Map<Category, Promise<string[]>>();
@@ -58,6 +59,7 @@ const lastPlayed: Record<Category, string | null> = {
   settings: null,
   hacking: null,
   alert: null,
+  resolve: null,
 };
 
 function playFile(category: Category, filename: string, volume: number) {
@@ -223,6 +225,23 @@ export function playAlertSound(baseVolume = 0.55) {
       ],
       volume,
       "sawtooth"
+    );
+  });
+}
+
+/** For the team that just cleared a sabotage — their own decode, or an admin bypass/revert. */
+export function playResolveSound(baseVolume = 0.5) {
+  const settings = getSettings();
+  if (!settings.sfxEnabled) return;
+  const volume = baseVolume * settings.sfxVolume;
+  void playRandomFromCategory("resolve", volume, () => {
+    // A short settling two-note "all clear" chime.
+    playSynthChime(
+      [
+        [520, 0, 0.16],
+        [780, 0.12, 0.22],
+      ],
+      volume
     );
   });
 }

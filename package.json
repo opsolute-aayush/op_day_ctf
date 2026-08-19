@@ -23,7 +23,6 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
-    "canvas-confetti": "^1.9.4",
     "framer-motion": "^13.1.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.31.0",
@@ -37,7 +36,6 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
-    "@types/canvas-confetti": "^1.9.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19",
