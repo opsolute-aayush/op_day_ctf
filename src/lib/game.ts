@@ -3,6 +3,7 @@ import { parseIntArray, parseMembers } from "@/lib/json";
 import { withKeyLock } from "@/lib/mutex";
 import { getActiveSabotage } from "@/lib/sabotage";
 import { getSwapStatusFlags } from "@/lib/swap";
+import { getLobbyPresence } from "@/lib/lobbyPresence";
 
 export async function getSessionById(sessionId: string) {
   return prisma.gameSession.findUnique({ where: { id: sessionId } });
@@ -14,18 +15,24 @@ export async function getSessionByCode(code: string) {
 
 export interface ConnectedPlayer {
   name: string;
-  teamId: string;
-  teamNumber: number;
-  teamName: string;
-  color: string;
+  // null for someone who's entered the session code and is on the "Select
+  // Your Squad" screen but hasn't joined a team yet — nothing to point at,
+  // so the client renders them gray instead of a team color.
+  teamId: string | null;
+  teamNumber: number | null;
+  teamName: string | null;
+  color: string | null;
 }
 
 // Shared by the admin overview panel and the player-facing one on /play —
-// everyone still in a team's roster, scoped to one session. Deliberately
-// NOT filtered by recent heartbeat activity: a player reading a physical
-// clue with their phone locked, or with a flaky connection, is still in the
-// game — they should only drop off this list via an explicit Leave Team
-// (see removeMemberPresence), not a rolling few-seconds timeout.
+// everyone still in a team's roster, scoped to one session, PLUS anyone
+// currently sitting in the pre-team lobby (see lib/lobbyPresence.ts).
+// Roster entries are deliberately NOT filtered by recent heartbeat
+// activity: a player reading a physical clue with their phone locked, or
+// with a flaky connection, is still in the game — they should only drop
+// off via an explicit Leave Team (see removeMemberPresence), not a rolling
+// few-seconds timeout. Lobby entries, in contrast, ARE heartbeat-gated
+// (~15s) since that's genuinely "are they still on this screen right now."
 export async function getConnectedPlayers(sessionId: string): Promise<ConnectedPlayer[]> {
   const teams = await prisma.team.findMany({
     where: { sessionId },
@@ -33,7 +40,7 @@ export async function getConnectedPlayers(sessionId: string): Promise<ConnectedP
     select: { id: true, teamNumber: true, name: true, color: true, members: true },
   });
 
-  return teams.flatMap((team) =>
+  const rosterPlayers: ConnectedPlayer[] = teams.flatMap((team) =>
     parseMembers(team.members).map((m) => ({
       name: m.name,
       teamId: team.id,
@@ -42,6 +49,17 @@ export async function getConnectedPlayers(sessionId: string): Promise<ConnectedP
       color: team.color,
     }))
   );
+
+  // A device that just finished joining a team keeps heartbeating the lobby
+  // for a few more seconds until its next poll notices sessionCode is gone —
+  // skip anyone whose name already has a roster entry so they don't briefly
+  // show up twice.
+  const rosterNames = new Set(rosterPlayers.map((p) => p.name.toLowerCase()));
+  const lobbyPlayers: ConnectedPlayer[] = getLobbyPresence(sessionId)
+    .filter((p) => !rosterNames.has(p.name.toLowerCase()))
+    .map((p) => ({ name: p.name, teamId: null, teamNumber: null, teamName: null, color: null }));
+
+  return [...rosterPlayers, ...lobbyPlayers];
 }
 
 // Refreshes one member's lastSeenAt — called on every /api/team/status poll

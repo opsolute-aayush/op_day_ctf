@@ -9,9 +9,10 @@ const MAX_CLIP_MS = 9000;
 
 // right_pass/help used to pop up top-left, but PlayerStatsPanel's
 // signal-monitor already mirrors every clip category — showing those two
-// there as well was the same video playing twice on screen at once. This
-// popup now only handles wrong_pass/winning, anchored bottom-center.
-const POPUP_CATEGORIES: VideoClipEventDetail["category"][] = ["wrong_pass", "winning"];
+// there as well was the same video playing twice on screen at once. Same
+// story for winning, now mirrored by the winner page's own VideoMonitor.
+// This popup only handles wrong_pass, anchored bottom-center.
+const POPUP_CATEGORIES: VideoClipEventDetail["category"][] = ["wrong_pass"];
 
 /**
  * Global pop-up player for playVideoClip() clips, mounted once in the root

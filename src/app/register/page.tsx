@@ -13,6 +13,7 @@ import MatrixRain from "@/components/MatrixRain";
 import ColorPicker from "@/components/ColorPicker";
 import { getPlayerName, setPlayerName, subscribeToPlayerNameStore } from "@/lib/playerIdentity";
 import { getSavedSessionCode, setSavedSessionCode, clearSavedSessionCode } from "@/lib/sessionIdentity";
+import { getDeviceId } from "@/lib/deviceIdentity";
 
 interface JoinableMember {
   name: string;
@@ -95,6 +96,11 @@ export default function RegisterPage() {
     };
   }, []);
 
+  // Also heartbeats this device's lobby presence (see lib/lobbyPresence.ts)
+  // on the same tick — lets the admin/other players see "someone joined the
+  // session" the moment step 1 succeeds, instead of only once a team is
+  // picked. Stops the moment this effect's cleanup runs (session changed,
+  // or the page navigated away to /play after joining a team).
   useEffect(() => {
     if (!sessionCode) return;
     let cancelled = false;
@@ -107,6 +113,15 @@ export default function RegisterPage() {
       } catch {
         if (!cancelled) setTeams([]);
       }
+      const name = nameDraft.trim();
+      if (!name) return;
+      fetch("/api/game/lobby-presence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: sessionCode, deviceId: getDeviceId(), name }),
+      }).catch(() => {
+        // Transient network error — the next tick retries.
+      });
     }
     load();
     const interval = setInterval(load, 4000);
@@ -114,6 +129,7 @@ export default function RegisterPage() {
       cancelled = true;
       clearInterval(interval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionCode]);
 
   async function handleCodeSubmit(e: React.FormEvent) {
