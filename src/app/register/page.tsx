@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Terminal, Users, Check, ChevronRight, KeyRound, ArrowLeft } from "lucide-react";
@@ -96,11 +96,6 @@ export default function RegisterPage() {
     };
   }, []);
 
-  // Also heartbeats this device's lobby presence (see lib/lobbyPresence.ts)
-  // on the same tick — lets the admin/other players see "someone joined the
-  // session" the moment step 1 succeeds, instead of only once a team is
-  // picked. Stops the moment this effect's cleanup runs (session changed,
-  // or the page navigated away to /play after joining a team).
   useEffect(() => {
     if (!sessionCode) return;
     let cancelled = false;
@@ -113,7 +108,33 @@ export default function RegisterPage() {
       } catch {
         if (!cancelled) setTeams([]);
       }
-      const name = nameDraft.trim();
+    }
+    load();
+    const interval = setInterval(load, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [sessionCode]);
+
+  // Heartbeats this device's lobby presence (see lib/lobbyPresence.ts),
+  // independent of the teams-list poll above — lets the admin/other
+  // players see "someone joined the session" within a few seconds of step 1
+  // succeeding, instead of only once a team is picked. A ref (not a `nameDraft`
+  // dependency) reads the latest name each tick without restarting the
+  // interval — it can't change after step 1 anyway (the name field only
+  // shows there), but this way nothing depends on that staying true. Stops
+  // the moment sessionCode changes or the page unmounts (e.g. navigating to
+  // /play after actually joining a team).
+  const latestNameRef = useRef(nameDraft);
+  useEffect(() => {
+    latestNameRef.current = nameDraft;
+  }, [nameDraft]);
+
+  useEffect(() => {
+    if (!sessionCode) return;
+    function heartbeat() {
+      const name = latestNameRef.current.trim();
       if (!name) return;
       fetch("/api/game/lobby-presence", {
         method: "POST",
@@ -123,13 +144,9 @@ export default function RegisterPage() {
         // Transient network error — the next tick retries.
       });
     }
-    load();
-    const interval = setInterval(load, 4000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    heartbeat();
+    const interval = setInterval(heartbeat, 4000);
+    return () => clearInterval(interval);
   }, [sessionCode]);
 
   async function handleCodeSubmit(e: React.FormEvent) {

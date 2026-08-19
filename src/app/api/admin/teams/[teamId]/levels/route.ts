@@ -34,7 +34,9 @@ const createSchema = z.object({
   locationClue: z.string().min(1).max(2000),
   wordReward: z.string().min(1).max(200),
   hint: z.string().max(2000).optional(),
-  cipherMessage: z.string().max(4000).optional(),
+  // "Ye Lee" — required, same as locationClue/wordReward: it's the display
+  // field that shows this team the *next* level's encoded password.
+  cipherMessage: z.string().min(1).max(4000),
 });
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ teamId: string }> }) {

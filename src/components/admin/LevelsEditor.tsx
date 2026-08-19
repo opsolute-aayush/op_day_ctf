@@ -299,6 +299,10 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
 
   async function saveLevel(levelNumber: number) {
     const draft = drafts[levelNumber];
+    if (!draft.cipherMessage.trim()) {
+      setError("Ye Lee is required — it's what this team decodes to get the next level's password.");
+      return;
+    }
     setSavingLevel(levelNumber);
     setError(null);
     const body: Record<string, string> = {
@@ -334,8 +338,13 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
   }
 
   async function createLevel() {
-    if (!newLevel.password.trim() || !newLevel.locationClue.trim() || !newLevel.wordReward.trim()) {
-      setError("New level needs a password, location clue, and word reward.");
+    if (
+      !newLevel.password.trim() ||
+      !newLevel.locationClue.trim() ||
+      !newLevel.wordReward.trim() ||
+      !newLevel.cipherMessage.trim()
+    ) {
+      setError("New level needs a password, location clue, word reward, and Ye Lee.");
       return;
     }
     setCreating(true);
@@ -348,7 +357,7 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
         locationClue: newLevel.locationClue,
         wordReward: newLevel.wordReward,
         hint: newLevel.hint || undefined,
-        cipherMessage: newLevel.cipherMessage || undefined,
+        cipherMessage: newLevel.cipherMessage,
       }),
     });
     setCreating(false);
@@ -429,12 +438,12 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
                 onChange={(e) => updateDraft(level.levelNumber, { password: e.target.value })}
               />
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs uppercase tracking-widest text-neon-400/80">Ye Lee (optional)</label>
+                <label className="text-xs uppercase tracking-widest text-neon-400/80">Ye Lee</label>
                 <textarea
                   rows={2}
                   value={draft.cipherMessage}
                   onChange={(e) => updateDraft(level.levelNumber, { cipherMessage: e.target.value })}
-                  placeholder="Encoded password for the NEXT level — paste from cipher-selector.sh"
+                  placeholder="Required — encoded password for the NEXT level, paste from cipher-selector.sh"
                   className="w-full resize-none rounded-md border border-panel-border bg-void-2 px-3 py-2.5 font-mono text-xs text-neon-100 placeholder:text-neon-100/30 outline-none focus:border-neon-500 focus:ring-1 focus:ring-neon-500"
                 />
                 <p className="text-xs text-neon-100/30">
@@ -481,12 +490,12 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
             onChange={(e) => setNewLevel((p) => ({ ...p, password: e.target.value }))}
           />
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs uppercase tracking-widest text-neon-400/80">Ye Lee (optional)</label>
+            <label className="text-xs uppercase tracking-widest text-neon-400/80">Ye Lee</label>
             <textarea
               rows={2}
               value={newLevel.cipherMessage}
               onChange={(e) => setNewLevel((p) => ({ ...p, cipherMessage: e.target.value }))}
-              placeholder="Encoded password for the NEXT level — paste from cipher-selector.sh"
+              placeholder="Required — encoded password for the NEXT level, paste from cipher-selector.sh"
               className="w-full resize-none rounded-md border border-panel-border bg-void-2 px-3 py-2.5 font-mono text-xs text-neon-100 placeholder:text-neon-100/30 outline-none focus:border-neon-500 focus:ring-1 focus:ring-neon-500"
             />
           </div>
