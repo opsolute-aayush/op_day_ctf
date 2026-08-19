@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 import { normalizePassword } from "@/lib/normalize";
+import { generateCipher } from "@/lib/cipher";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ teamId: string }> }) {
   const admin = await requireAdmin();
@@ -22,6 +23,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ teamId: st
       locationClue: l.locationClue,
       wordReward: l.wordReward,
       hint: l.hint,
+      cipherMessage: l.cipherMessage,
       hasPassword: Boolean(l.password),
       updatedAt: l.updatedAt,
     })),
@@ -54,12 +56,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ teamId: st
   const count = await prisma.levelConfig.count({ where: { teamId } });
   const levelNumber = count + 1;
   const passwordHash = await bcrypt.hash(normalizePassword(parsed.data.password), 10);
+  const cipherMessage = generateCipher(parsed.data.password).base64;
 
   const level = await prisma.levelConfig.create({
     data: {
       teamId,
       levelNumber,
       password: passwordHash,
+      cipherMessage,
       locationClue: parsed.data.locationClue,
       wordReward: parsed.data.wordReward,
       hint: parsed.data.hint,
@@ -72,6 +76,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ teamId: st
       locationClue: level.locationClue,
       wordReward: level.wordReward,
       hint: level.hint,
+      cipherMessage: level.cipherMessage,
       hasPassword: true,
     },
   });

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Unlock, CheckCircle2, MapPin, Sparkles, LifeBuoy, Loader2, ArrowRight } from "lucide-react";
+import { Lock, Unlock, CheckCircle2, MapPin, Sparkles, LifeBuoy, Loader2, ArrowRight, Binary } from "lucide-react";
 
 export type LevelCardState = "locked" | "active" | "completed";
 
@@ -17,6 +17,7 @@ interface LevelCardProps {
   locationClue?: string;
   wordReward?: string;
   hint?: string | null;
+  cipherMessage?: string | null;
   onClick?: () => void;
   index?: number;
   hintAvailable?: boolean;
@@ -32,6 +33,7 @@ export default function LevelCard({
   locationClue,
   wordReward,
   hint,
+  cipherMessage,
   onClick,
   index = 0,
   hintAvailable,
@@ -100,6 +102,12 @@ export default function LevelCard({
       {state === "active" && (
         <div className="mt-2 space-y-2">
           <p className="text-sm text-neon-100/80">Password required to decrypt this level.</p>
+
+          {cipherMessage && (
+            <p className="flex items-start gap-1.5 break-all font-mono text-[11px] text-neon-500/80">
+              <Binary className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Ye Lee: {cipherMessage}
+            </p>
+          )}
 
           <AnimatePresence mode="wait">
             {hint ? (

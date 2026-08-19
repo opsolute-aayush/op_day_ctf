@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { ArrowLeft, User, Check } from "lucide-react";
+import { ArrowLeft, User, Check, Hash } from "lucide-react";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import InputField from "@/components/InputField";
@@ -10,6 +10,7 @@ import NeonButton from "@/components/NeonButton";
 import AsciiOperative from "@/components/AsciiOperative";
 import AudioVideoSettings from "@/components/AudioVideoSettings";
 import { getPlayerName, setPlayerName, subscribeToPlayerNameStore } from "@/lib/playerIdentity";
+import { getSavedSessionCode, subscribeToSessionCodeStore } from "@/lib/sessionIdentity";
 import { startSettingsMusic, stopSettingsMusic } from "@/lib/sfx";
 
 export default function SettingsPage() {
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [nameError, setNameError] = useState<string | null>(null);
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
+  const sessionCode = useSyncExternalStore(subscribeToSessionCodeStore, getSavedSessionCode, () => "");
 
   // Loops for as long as this page is open, and stops the moment it's left.
   useEffect(() => {
@@ -72,6 +74,17 @@ export default function SettingsPage() {
             </Link>
             <GlitchTitle text="Settings" className="text-2xl" as="h1" />
           </header>
+
+          {sessionCode && (
+            <TerminalPanel title="session.cfg">
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-neon-100/80">
+                  <Hash className="h-4 w-4 text-neon-500" /> Session Code
+                </span>
+                <span className="font-display text-lg tracking-widest text-neon-500">{sessionCode}</span>
+              </div>
+            </TerminalPanel>
+          )}
 
           <TerminalPanel title="identity.cfg">
             <div className="space-y-2">

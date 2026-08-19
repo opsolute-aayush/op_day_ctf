@@ -146,6 +146,11 @@ export async function buildTeamStatus(teamId: string) {
   // actually do something.
   const hintAvailable = Boolean(currentLevelConfig?.hint) && !finalUnlocked;
 
+  // "Ye Lee" — the current level's encoded password (see lib/cipher.ts),
+  // shown as-is with no release gating (unlike hint): it's the puzzle for
+  // getting into this level in the first place, not a bonus assist.
+  const activeCipherMessage = finalUnlocked ? null : currentLevelConfig?.cipherMessage ?? null;
+
   // Computed server-side (not just "cooldown seconds - client clock guess")
   // so the countdown the player sees can't drift from clock skew or from
   // sitting on the page a while before this status was fetched.
@@ -174,6 +179,7 @@ export async function buildTeamStatus(teamId: string) {
     finalUnlocked,
     activeHint,
     hintAvailable,
+    activeCipherMessage,
     helpCreditsRemaining: progress.helpCreditsRemaining,
     sabotageCreditsRemaining: progress.sabotageCreditsRemaining,
     sabotageCooldownRemainingMs,

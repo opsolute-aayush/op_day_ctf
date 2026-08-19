@@ -12,41 +12,41 @@ datasource db {
 // into another. Players join by the 6-digit `code`; the master
 // authenticates against this row's own `adminPasswordHash`.
 model GameSession {
-  id                     String        @id @default(uuid())
-  code                   String        @unique // 6-digit join code, e.g. "482913"
-  isActive               Boolean       @default(false)
-  isFinished             Boolean       @default(false)
-  winningTeamId          String?
-  winningTeam            Team?         @relation("WinningTeam", fields: [winningTeamId], references: [id])
-  adminPasswordHash      String?
-  startedAt              DateTime?
-  sabotageCreditsPerTeam Int           @default(2) // admin-configurable — how many sabotages each team may launch this game
-  sabotageCooldownSeconds Int          @default(0) // admin-configurable — seconds a team must wait between its own sabotage launches; 0 disables the cooldown
-  swapCode               String? // admin-authored plaintext a team must find-and-enter to redeem the hidden swap card; null disables the feature. The admin hides/obscures this physically however they like — the platform never transforms or encodes it.
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
-  teams                  Team[]        @relation("SessionTeams")
-  activity               ActivityLog[]
-  sabotages              Sabotage[]
-  progressSwaps          ProgressSwap[]
+  id                      String         @id @default(uuid())
+  code                    String         @unique // 6-digit join code, e.g. "482913"
+  isActive                Boolean        @default(false)
+  isFinished              Boolean        @default(false)
+  winningTeamId           String?
+  winningTeam             Team?          @relation("WinningTeam", fields: [winningTeamId], references: [id])
+  adminPasswordHash       String?
+  startedAt               DateTime?
+  sabotageCreditsPerTeam  Int            @default(2) // admin-configurable — how many sabotages each team may launch this game
+  sabotageCooldownSeconds Int            @default(0) // admin-configurable — seconds a team must wait between its own sabotage launches; 0 disables the cooldown
+  swapCode                String? // admin-authored plaintext a team must find-and-enter to redeem the hidden swap card; null disables the feature. The admin hides/obscures this physically however they like — the platform never transforms or encodes it.
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  teams                   Team[]         @relation("SessionTeams")
+  activity                ActivityLog[]
+  sabotages               Sabotage[]
+  progressSwaps           ProgressSwap[]
 }
 
 model Team {
-  id              String        @id @default(uuid())
+  id              String         @id @default(uuid())
   sessionId       String
-  session         GameSession   @relation("SessionTeams", fields: [sessionId], references: [id], onDelete: Cascade)
-  teamNumber      Int           // fixed slot assigned by the admin; unique within its session, never reused after a delete
-  name            String        // player-chosen display name — freely editable, not required to be unique
-  color           String        @default("#39FF14")
+  session         GameSession    @relation("SessionTeams", fields: [sessionId], references: [id], onDelete: Cascade)
+  teamNumber      Int // fixed slot assigned by the admin; unique within its session, never reused after a delete
+  name            String // player-chosen display name — freely editable, not required to be unique
+  color           String         @default("#39FF14")
   members         String // JSON string array
-  winningSentence String        @default("") // this team's own final sentence — unique per team
-  createdAt       DateTime      @default(now())
+  winningSentence String         @default("") // this team's own final sentence — unique per team
+  createdAt       DateTime       @default(now())
   progress        TeamProgress?
   levels          LevelConfig[]
   activity        ActivityLog[]
-  wonGame         GameSession[] @relation("WinningTeam")
-  sabotagesSent   Sabotage[]    @relation("SabotageSource")
-  sabotagesFaced  Sabotage[]    @relation("SabotageTarget")
+  wonGame         GameSession[]  @relation("WinningTeam")
+  sabotagesSent   Sabotage[]     @relation("SabotageSource")
+  sabotagesFaced  Sabotage[]     @relation("SabotageTarget")
   swapsInitiated  ProgressSwap[] @relation("SwapInitiator")
   swapsReceived   ProgressSwap[] @relation("SwapPartner")
 
@@ -56,35 +56,36 @@ model Team {
 // Levels 1..N-1; the implicit final level (N) is the sentence-assembly
 // stage and has no row here. Each row belongs to exactly one team.
 model LevelConfig {
-  id           Int      @id @default(autoincrement())
-  teamId       String
-  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  levelNumber  Int
-  password     String // bcrypt hash
-  locationClue String
-  wordReward   String
-  hint         String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  teamId        String
+  team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  levelNumber   Int
+  password      String // bcrypt hash
+  cipherMessage String? // "Ye Lee" — Base64 cipher.md encoding of the plaintext password (see lib/cipher.ts), regenerated whenever the password is changed; shown to teams as the puzzle to decode for this level
+  locationClue  String
+  wordReward    String
+  hint          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@unique([teamId, levelNumber])
 }
 
 model TeamProgress {
-  id                String    @id @default(uuid())
-  teamId            String    @unique
-  team              Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  currentLevel      Int       @default(1)
-  unlockedLevels    String    @default("[0]") // JSON int array
-  collectedWords    String    @default("[]") // unused — kept only so `prisma db push` never has to drop a populated column on an existing deployment; see verifiedWordLevels
-  verifiedWordLevels String   @default("[]") // JSON int array — levels whose physical word has been typed in and confirmed
-  hintReleasedLevel Int? // level number a hint has been released for (self-service or admin)
-  helpCreditsRemaining Int  @default(2) // self-service "Help" button uses left this game
-  sabotageCreditsRemaining Int @default(2) // sabotages this team may still launch against another team
-  lastSabotageAt    DateTime? // stamped when this team's most recent sabotage launch succeeded — drives the cooldown
-  completed         Boolean   @default(false)
-  completedAt       DateTime?
-  updatedAt         DateTime  @updatedAt
+  id                       String    @id @default(uuid())
+  teamId                   String    @unique
+  team                     Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  currentLevel             Int       @default(1)
+  unlockedLevels           String    @default("[0]") // JSON int array
+  collectedWords           String    @default("[]") // unused — kept only so `prisma db push` never has to drop a populated column on an existing deployment; see verifiedWordLevels
+  verifiedWordLevels       String    @default("[]") // JSON int array — levels whose physical word has been typed in and confirmed
+  hintReleasedLevel        Int? // level number a hint has been released for (self-service or admin)
+  helpCreditsRemaining     Int       @default(2) // self-service "Help" button uses left this game
+  sabotageCreditsRemaining Int       @default(2) // sabotages this team may still launch against another team
+  lastSabotageAt           DateTime? // stamped when this team's most recent sabotage launch succeeded — drives the cooldown
+  completed                Boolean   @default(false)
+  completedAt              DateTime?
+  updatedAt                DateTime  @updatedAt
 }
 
 // A live "decode this to clear it" challenge one team fires at another.

@@ -326,6 +326,7 @@ export default function PlayPage() {
                 locationClue={clue?.locationClue}
                 wordReward={clue?.wordReward}
                 hint={state === "active" ? status.activeHint : null}
+                cipherMessage={state === "active" ? status.activeCipherMessage : null}
                 hintAvailable={status.hintAvailable}
                 helpCreditsRemaining={status.helpCreditsRemaining}
                 onRequestHint={requestHint}

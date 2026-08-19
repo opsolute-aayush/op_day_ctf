@@ -7,8 +7,10 @@
 // - Wrong password: sound always, plus video when it's enabled — a video-only
 //   cue went completely silent for anyone with video off/blocked, so sound is
 //   now guaranteed. Wrong word: sound only.
+// - Sabotage decode denied: video only, no sound — distinct from a wrong
+//   level password.
 // - Help revealed: sound only (random pick, same as always).
-// - Win: video only, then outro music ~7s later.
+// - Win: sound + video, then outro music ~7s later.
 // - Sabotage/swap cleared (player decode, or admin bypass/revert): resolve sound only.
 
 import {
@@ -40,6 +42,11 @@ export function playWrongWordFeedback() {
   playRandomWrongPasswordSound();
 }
 
+/** A sabotage decode attempt came back wrong — video only, no sound. */
+export function playSabotageDeniedFeedback() {
+  void playVideoClip("wrong_pass");
+}
+
 export function playHelpFeedback() {
   playHelpSound();
 }
@@ -66,9 +73,10 @@ export function playResolveFeedback() {
 // to race against.
 let outroScheduled = false;
 
-/** Fires the winning video immediately, then the outro track ~7s later (once per page load). */
+/** Fires the winning sound + video immediately, then the outro track ~7s later (once per page load). */
 export function playWinFeedback(): void {
   playWinningSound();
+  void playVideoClip("winning");
   if (outroScheduled) return;
   outroScheduled = true;
   setTimeout(() => playOutroMusic(), 7000);

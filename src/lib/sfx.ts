@@ -1,7 +1,7 @@
 "use client";
 
 // Sounds auto-discover from public/sounds/<category>/ (wrong_pass, right_pass,
-// help, winning, intro, outro, button, settings, hacking, alert, resolve) via
+// help, winning, intro, outro, button, settings, hacking, alert, resolve, art) via
 // GET /api/sounds/<category> — drop a file in, no registration needed. The
 // one-shot categories fall back to a synthesized chime when empty; the
 // full-track categories (intro, outro, settings) just stay silent with no assets.
@@ -19,7 +19,8 @@ type Category =
   | "settings"
   | "hacking"
   | "alert"
-  | "resolve";
+  | "resolve"
+  | "art";
 
 const fileListCache = new Map<Category, string[]>();
 const fileListInFlight = new Map<Category, Promise<string[]>>();
@@ -60,6 +61,7 @@ const lastPlayed: Record<Category, string | null> = {
   hacking: null,
   alert: null,
   resolve: null,
+  art: null,
 };
 
 function playFile(category: Category, filename: string, volume: number) {
@@ -328,6 +330,17 @@ export function playOutroMusic(baseVolume = 0.5) {
   const volume = baseVolume * settings.musicVolume;
   void playRandomFromCategory("outro", volume, () => {
     // No outro track dropped in yet — nothing meaningful to synthesize.
+  });
+}
+
+/** A tap/click on an interactive ASCII portrait (e.g. the winner page's ripple effect). */
+export function playArtTouchSound(baseVolume = 0.4) {
+  const settings = getSettings();
+  if (!settings.sfxEnabled) return;
+  const volume = baseVolume * settings.sfxVolume;
+  void playRandomFromCategory("art", volume, () => {
+    // No file dropped in yet — a quick glitchy tick.
+    playSynthChime([[1200, 0, 0.05], [900, 0.04, 0.06]], volume, "square");
   });
 }
 

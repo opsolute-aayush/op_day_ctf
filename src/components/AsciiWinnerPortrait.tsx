@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { playArtTouchSound } from "@/lib/sfx";
 
 // Same ASCII-from-image pipeline as AsciiOperative (public/arts/<category>/,
 // no code changes to add art), but repurposed as the winner page's hero
@@ -122,6 +123,7 @@ export default function AsciiWinnerPortrait({ accentColor }: { accentColor?: str
   // touch point, each ring firing a little later than the last.
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (grid.length === 0 || !containerRef.current) return;
+    playArtTouchSound();
     const rect = containerRef.current.getBoundingClientRect();
     const rows = grid.length;
     const cols = grid[0]?.length ?? 0;

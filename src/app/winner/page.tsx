@@ -10,6 +10,7 @@ import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import TeamAvatar from "@/components/TeamAvatar";
 import AsciiWinnerPortrait from "@/components/AsciiWinnerPortrait";
+import VideoMonitor from "@/components/VideoMonitor";
 import { ordinal, RANK_STYLE, type TeamStat } from "@/components/TeamStandingsList";
 import { playWinFeedback } from "@/lib/gameFeedback";
 
@@ -136,6 +137,10 @@ export default function WinnerPage() {
                 </motion.p>
               </div>
             </TerminalPanel>
+          </div>
+
+          <div className="glitch-flicker w-full max-w-md" style={{ animationDelay: "2.4s" }}>
+            <VideoMonitor categories={["winning"]} caption="Victory transmission, replayed here." />
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 import { normalizePassword } from "@/lib/normalize";
+import { generateCipher } from "@/lib/cipher";
 
 const updateSchema = z.object({
   password: z.string().min(1).max(200).optional(),
@@ -50,6 +51,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ teamId: str
   if (parsed.data.hint !== undefined) data.hint = parsed.data.hint;
   if (parsed.data.password) {
     data.password = await bcrypt.hash(normalizePassword(parsed.data.password), 10);
+    data.cipherMessage = generateCipher(parsed.data.password).base64;
   }
 
   const level = await prisma.levelConfig.update({ where: { id: existing.id }, data });
@@ -60,6 +62,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ teamId: str
       locationClue: level.locationClue,
       wordReward: level.wordReward,
       hint: level.hint,
+      cipherMessage: level.cipherMessage,
       hasPassword: true,
     },
   });

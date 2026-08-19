@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Save, Lock, ListChecks, Shuffle, Copy, Check } from "lucide-react";
+import { Plus, Trash2, Save, Lock, ListChecks, Copy, Check } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
 import TeamAvatar from "@/components/TeamAvatar";
-import { generateCipher, type CipherResult } from "@/lib/cipher";
+import { generateCipher } from "@/lib/cipher";
 
 interface TeamOption {
   id: string;
@@ -20,6 +20,7 @@ interface Level {
   locationClue: string;
   wordReward: string;
   hint: string | null;
+  cipherMessage: string | null;
   hasPassword: boolean;
 }
 
@@ -34,79 +35,85 @@ function toDraft(level: Level): LevelDraft {
   return { locationClue: level.locationClue, wordReward: level.wordReward, hint: level.hint ?? "", password: "" };
 }
 
-// Turns whatever the admin typed into the passphrase/password field into the
-// decoy-padded, shuffled, Base64 "encrypted message" from cipher.md — purely
-// a display tool for crafting the physical clue. Saving the level still
-// hashes the same typed word as the team's real unlock password untouched.
-function PassphraseCipherPanel({ passphrase }: { passphrase: string }) {
-  const [result, setResult] = useState<CipherResult | null>(null);
+// Standalone cipher scratchpad, decoupled from any specific level/team —
+// admin types any word and picks a difficulty to see its encrypted form.
+// Only "Easy" actually runs cipher.md's pipeline today; the other tiers are
+// stubbed pending their own encoding schemes.
+function CipherSelector() {
+  const [password, setPassword] = useState("");
+  const [encrypted, setEncrypted] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  function generate() {
-    setError(null);
+  function runDifficulty(difficulty: "easy" | "medium" | "hard" | "intense") {
     setCopied(false);
+    setError(null);
+    if (difficulty !== "easy") {
+      setEncrypted("Coming soon");
+      return;
+    }
     try {
-      setResult(generateCipher(passphrase));
+      setEncrypted(generateCipher(password).base64);
     } catch (err) {
-      setResult(null);
+      setEncrypted("");
       setError(err instanceof Error ? err.message : "Failed to encrypt.");
     }
   }
 
   async function copy() {
-    if (!result) return;
-    await navigator.clipboard.writeText(result.base64);
+    if (!encrypted) return;
+    await navigator.clipboard.writeText(encrypted);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
 
   return (
-    <div className="space-y-2 rounded-md border border-cyan-400/20 bg-void-2/60 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs uppercase tracking-widest text-cyan-400/80">Encrypted Message (for teams)</span>
-        <NeonButton
-          variant="cyan"
-          onClick={generate}
-          disabled={!passphrase.trim()}
-          className="px-2 py-1 text-xs"
-        >
-          <Shuffle className="h-3 w-3" /> {result ? "Regenerate" : "Encrypt Passphrase"}
-        </NeonButton>
-      </div>
-      {!passphrase.trim() && (
-        <p className="text-xs text-neon-100/30">Type a passphrase above to generate its encrypted message.</p>
-      )}
-      {error && <p className="text-xs text-danger-400">{error}</p>}
-      {result && (
-        <div className="space-y-1.5">
+    <TerminalPanel title="cipher-selector.sh" className="border-cyan-400/20">
+      <div className="space-y-3">
+        <InputField
+          label="Enter Password"
+          placeholder="Word to encrypt"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs uppercase tracking-widest text-neon-400/80">Encoded Password</label>
           <div className="flex items-start gap-2">
             <textarea
               readOnly
               rows={3}
-              value={result.base64}
+              value={encrypted}
+              placeholder="Encrypted output appears here"
               onFocus={(e) => e.currentTarget.select()}
-              className="w-full resize-none rounded-md border border-panel-border bg-void px-2 py-1.5 font-mono text-xs text-neon-100 outline-none"
+              className="w-full resize-none rounded-md border border-panel-border bg-void-2 px-3 py-2.5 font-mono text-xs text-neon-100 placeholder:text-neon-100/30 outline-none focus:border-neon-500 focus:ring-1 focus:ring-neon-500"
             />
             <button
               type="button"
               onClick={copy}
               title="Copy"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-panel-border text-neon-100/60 transition-colors hover:text-cyan-400"
+              disabled={!encrypted}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-panel-border text-neon-100/60 transition-colors hover:text-cyan-400 disabled:opacity-30"
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
           </div>
-          <p className="text-xs text-neon-100/40">
-            Decoys used: <span className="text-neon-100/70">{result.decoys.join(", ")}</span>
-          </p>
-          <p className="text-xs text-amber-400/80">
-            Admin eyes only — the real passphrase is candidate #{result.answerIndex} of 5 once decoded. Never share
-            this index with teams.
-          </p>
         </div>
-      )}
-    </div>
+        {error && <p className="text-xs text-danger-400">{error}</p>}
+        <div className="grid grid-cols-4 gap-2 pt-1">
+          {(["easy", "medium", "hard", "intense"] as const).map((difficulty) => (
+            <NeonButton
+              key={difficulty}
+              variant={difficulty === "easy" ? "cyan" : "ghost"}
+              onClick={() => runDifficulty(difficulty)}
+              disabled={!password.trim()}
+              className="px-2 py-1.5 text-xs capitalize"
+            >
+              {difficulty}
+            </NeonButton>
+          ))}
+        </div>
+      </div>
+    </TerminalPanel>
   );
 }
 
@@ -199,6 +206,8 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
             </li>
           </ol>
         </TerminalPanel>
+
+        <CipherSelector />
       </div>
     </div>
   );
@@ -297,6 +306,8 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
       setError(data.error ?? "Failed to save level.");
       return;
     }
+    const data = await res.json();
+    setLevels((prev) => prev.map((l) => (l.levelNumber === levelNumber ? { ...l, ...data.level } : l)));
     updateDraft(levelNumber, { password: "" });
     onChanged();
   }
@@ -397,12 +408,25 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
                 onChange={(e) => updateDraft(level.levelNumber, { hint: e.target.value })}
               />
               <InputField
-                label="Passphrase — Set New Password (leave blank to keep current)"
+                label="Set New Password (leave blank to keep current)"
                 placeholder={level.hasPassword ? "•••• already set •••• " : "required"}
                 value={draft.password}
                 onChange={(e) => updateDraft(level.levelNumber, { password: e.target.value })}
               />
-              <PassphraseCipherPanel passphrase={draft.password} />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs uppercase tracking-widest text-neon-400/80">Ye Lee</label>
+                <textarea
+                  readOnly
+                  rows={2}
+                  value={level.cipherMessage ?? ""}
+                  placeholder="Generated automatically once a password is set"
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="w-full resize-none rounded-md border border-panel-border bg-void-2 px-3 py-2.5 font-mono text-xs text-neon-100 placeholder:text-neon-100/30 outline-none focus:border-neon-500 focus:ring-1 focus:ring-neon-500"
+                />
+                <p className="text-xs text-neon-100/30">
+                  Shown to this team as the puzzle for their current level — regenerates whenever the password above is changed.
+                </p>
+              </div>
               <div className="flex items-center gap-3 pt-1">
                 <NeonButton onClick={() => saveLevel(level.levelNumber)} disabled={savingLevel === level.levelNumber}>
                   <Save className="h-4 w-4" /> {savingLevel === level.levelNumber ? "Saving…" : "Save"}
@@ -437,11 +461,10 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
             onChange={(e) => setNewLevel((p) => ({ ...p, hint: e.target.value }))}
           />
           <InputField
-            label="Passphrase / Password"
+            label="Password"
             value={newLevel.password}
             onChange={(e) => setNewLevel((p) => ({ ...p, password: e.target.value }))}
           />
-          <PassphraseCipherPanel passphrase={newLevel.password} />
           <NeonButton variant="cyan" onClick={createLevel} disabled={creating}>
             <Plus className="h-4 w-4" /> {creating ? "Adding…" : "Add Level"}
           </NeonButton>

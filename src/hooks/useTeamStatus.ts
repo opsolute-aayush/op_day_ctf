@@ -32,6 +32,7 @@ export interface TeamStatus {
   finalUnlocked: boolean;
   activeHint: string | null;
   hintAvailable: boolean;
+  activeCipherMessage: string | null;
   helpCreditsRemaining: number;
   sabotageCreditsRemaining: number;
   sabotageCooldownRemainingMs: number;

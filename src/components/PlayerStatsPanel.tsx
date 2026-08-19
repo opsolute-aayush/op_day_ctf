@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lightbulb, Skull, Radio, ChevronDown, Repeat } from "lucide-react";
+import { Lightbulb, Skull, ChevronDown, Repeat } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
-import ChromaKeyVideo from "@/components/ChromaKeyVideo";
-import { subscribeToVideoClips, VideoClipEventDetail } from "@/lib/videofx";
+import VideoMonitor from "@/components/VideoMonitor";
 import { playHackingFeedback } from "@/lib/gameFeedback";
 import { useOtherTeams, type OtherTeam } from "@/hooks/useOtherTeams";
 
@@ -39,7 +38,6 @@ export default function PlayerStatsPanel({
   const otherTeams = useOtherTeams(pickerOpen, ownTeamId);
   const [launching, setLaunching] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastClip, setLastClip] = useState<VideoClipEventDetail | null>(null);
   const [swapCode, setSwapCode] = useState("");
   const [swapVerifying, setSwapVerifying] = useState(false);
   const [swapVerified, setSwapVerified] = useState(false);
@@ -64,17 +62,6 @@ export default function PlayerStatsPanel({
     const timeout = setTimeout(() => setCooldownMs((ms) => Math.max(0, ms - 1000)), 1000);
     return () => clearTimeout(timeout);
   }, [cooldownMs]);
-
-  // right_pass/help clips show here and only here (VideoOverlay no longer
-  // pops them up top-left) — wrong_pass/winning stay on VideoOverlay's own
-  // bottom-center popup instead of also duplicating into this monitor.
-  useEffect(
-    () =>
-      subscribeToVideoClips((detail) => {
-        if (detail.category === "right_pass" || detail.category === "help") setLastClip(detail);
-      }),
-    []
-  );
 
   async function verifySwap() {
     setSwapVerifying(true);
@@ -144,25 +131,11 @@ export default function PlayerStatsPanel({
 
   return (
     <div className="space-y-6">
-      <TerminalPanel title="signal-monitor.exe">
-        <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-md border-2 border-panel-border bg-black">
-          <div className="scanlines pointer-events-none absolute inset-0 z-10 opacity-30" />
-          {lastClip ? (
-            <ChromaKeyVideo
-              key={lastClip.src}
-              src={lastClip.src}
-              onEnded={() => setLastClip(null)}
-              className="h-full w-full"
-            />
-          ) : (
-            <div className="flex flex-col items-center gap-2 text-neon-500/50">
-              <Radio className="h-6 w-6 animate-pulse" />
-              <span className="font-mono text-[11px] uppercase tracking-widest">No Signal</span>
-            </div>
-          )}
-        </div>
-        <p className="mt-2 text-center text-[11px] text-neon-100/30">Last video feedback triggered, replayed here.</p>
-      </TerminalPanel>
+      {/* right_pass/help clips show here and only here (VideoOverlay no
+          longer pops them up top-left) — wrong_pass/winning stay on
+          VideoOverlay's own bottom-center popup instead of also duplicating
+          into this monitor. */}
+      <VideoMonitor categories={["right_pass", "help"]} />
 
       <TerminalPanel title="agent-stats.cfg">
         <div className="space-y-3">
