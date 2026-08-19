@@ -19,6 +19,7 @@ import SwapConfig from "@/components/admin/SwapConfig";
 import SwapLog from "@/components/admin/SwapLog";
 import AudioVideoSettings from "@/components/AudioVideoSettings";
 import { startSettingsMusic, stopSettingsMusic } from "@/lib/sfx";
+import { playResolveFeedback } from "@/lib/gameFeedback";
 
 type Tab = "overview" | "levels" | "control" | "sound" | "security";
 type AuthMode = "choose" | "create" | "login";
@@ -66,6 +67,7 @@ export default function AdminPage() {
         setLoginError(data.error ?? "Couldn't create a session.");
         return;
       }
+      playResolveFeedback();
       setCreatedCreds({ code: data.code, password: data.password });
     } finally {
       setCreating(false);
@@ -131,7 +133,7 @@ export default function AdminPage() {
           ) : authMode === "choose" ? (
             <TerminalPanel title="admin-auth.sh">
               <div className="space-y-3">
-                <NeonButton variant="cyan" className="w-full" onClick={() => setAuthMode("create")}>
+                <NeonButton variant="cyan" className="w-full" onClick={() => setAuthMode("create")} data-sfx-nav>
                   <PlusCircle className="h-4 w-4" /> Create New Session
                 </NeonButton>
                 <NeonButton variant="ghost" className="w-full" onClick={() => setAuthMode("login")}>
@@ -152,8 +154,8 @@ export default function AdminPage() {
                     {loginError}
                   </p>
                 )}
-                <NeonButton variant="cyan" className="w-full" onClick={handleCreateSession} disabled={creating}>
-                  <PlusCircle className="h-4 w-4" /> {creating ? "Creating…" : "Create New Session"}
+                <NeonButton variant="cyan" className="w-full" onClick={handleCreateSession} disabled={creating} data-sfx-nav>
+                  <PlusCircle className="h-4 w-4" /> {creating ? "Creating…" : "Confirm & Create"}
                 </NeonButton>
               </div>
             </TerminalPanel>

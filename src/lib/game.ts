@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { parseIntArray, parseMembers, isMemberActive } from "@/lib/json";
+import { parseIntArray, parseMembers } from "@/lib/json";
 import { withKeyLock } from "@/lib/mutex";
 import { getActiveSabotage } from "@/lib/sabotage";
 import { getSwapStatusFlags } from "@/lib/swap";
@@ -21,7 +21,11 @@ export interface ConnectedPlayer {
 }
 
 // Shared by the admin overview panel and the player-facing one on /play —
-// both just show whoever is active right now, scoped to one session.
+// everyone still in a team's roster, scoped to one session. Deliberately
+// NOT filtered by recent heartbeat activity: a player reading a physical
+// clue with their phone locked, or with a flaky connection, is still in the
+// game — they should only drop off this list via an explicit Leave Team
+// (see removeMemberPresence), not a rolling few-seconds timeout.
 export async function getConnectedPlayers(sessionId: string): Promise<ConnectedPlayer[]> {
   const teams = await prisma.team.findMany({
     where: { sessionId },
@@ -29,11 +33,14 @@ export async function getConnectedPlayers(sessionId: string): Promise<ConnectedP
     select: { id: true, teamNumber: true, name: true, color: true, members: true },
   });
 
-  const now = Date.now();
   return teams.flatMap((team) =>
-    parseMembers(team.members)
-      .filter((m) => isMemberActive(m.lastSeenAt, now))
-      .map((m) => ({ name: m.name, teamId: team.id, teamNumber: team.teamNumber, teamName: team.name, color: team.color }))
+    parseMembers(team.members).map((m) => ({
+      name: m.name,
+      teamId: team.id,
+      teamNumber: team.teamNumber,
+      teamName: team.name,
+      color: team.color,
+    }))
   );
 }
 

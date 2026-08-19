@@ -16,9 +16,8 @@ export interface TeamStat {
   position: number | null;
 }
 
-// Shared by TeamStatsPanel (live sidebar, mid-hunt) and FinalStandings (the
-// winner page's full board) so "who finished in what order" is rendered
-// identically everywhere instead of two components drifting apart.
+// Used by TeamStatsPanel (the live sidebar shown mid-hunt on /play) to render
+// "who finished in what order" consistently with its ranking/medal styling.
 export const RANK_STYLE: Record<number, { color: string; glow: string }> = {
   1: { color: "#FFD700", glow: "rgba(255, 212, 0, 0.5)" },
   2: { color: "#D8E2EC", glow: "rgba(216, 226, 236, 0.4)" },

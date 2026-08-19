@@ -19,6 +19,7 @@ import {
   playHackingSound,
   playAlertSound,
   playResolveSound,
+  playWinningSound,
 } from "@/lib/sfx";
 import { playVideoClip } from "@/lib/videofx";
 
@@ -67,7 +68,7 @@ let outroScheduled = false;
 
 /** Fires the winning video immediately, then the outro track ~7s later (once per page load). */
 export function playWinFeedback(): void {
-  playVideoClip("winning");
+  playWinningSound();
   if (outroScheduled) return;
   outroScheduled = true;
   setTimeout(() => playOutroMusic(), 7000);

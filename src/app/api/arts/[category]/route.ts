@@ -5,7 +5,7 @@ import path from "path";
 // Mirrors /api/sounds/[category] and /api/videos/[category] for
 // public/arts/<category> — drop image files in, no code changes needed;
 // AsciiOperative picks a random one and re-picks on its own timer.
-const CATEGORIES = ["settings"] as const;
+const CATEGORIES = ["settings", "winner"] as const;
 type Category = (typeof CATEGORIES)[number];
 
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".gif"];

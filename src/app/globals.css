@@ -507,49 +507,6 @@ body {
   animation: flash-green 0.6s ease-out;
 }
 
-/* One-shot "mainframe breach" burst — /winner's entrance only, layered on
-   top of RouteTransition's regular .glitch-reveal (which every page gets)
-   to make the win moment read as distinct from ordinary navigation. Pure
-   CSS + steps() so it's frame-locked like the rest of the glitch kit,
-   not a smooth fade. */
-@keyframes victory-flash {
-  0% {
-    opacity: 0.95;
-    background: #f4fff8;
-  }
-  8% {
-    opacity: 0.9;
-    background: var(--neon-500);
-  }
-  16% {
-    opacity: 0.85;
-    background: #000;
-  }
-  24% {
-    opacity: 0.8;
-    background: var(--cyan-400);
-  }
-  34% {
-    opacity: 0.5;
-    background: #000;
-  }
-  48% {
-    opacity: 0.35;
-    background: var(--magenta-400);
-  }
-  65% {
-    opacity: 0.15;
-    background: #000;
-  }
-  100% {
-    opacity: 0;
-    background: transparent;
-  }
-}
-.victory-flash {
-  animation: victory-flash 0.9s steps(1, jump-end) forwards;
-}
-
 @keyframes rank-pulse {
   0%,
   100% {
@@ -563,94 +520,14 @@ body {
   animation: rank-pulse 2.2s ease-in-out infinite;
 }
 
-/* ---- /winner persistent "still being hacked" ambience (HackedOverlay.tsx) ----
-   Unlike .victory-flash (one entrance burst), these loop for as long as the
-   page stays mounted. Several independently-timed layers — fixed durations/
-   delays, not Math.random, same reasoning as AmbientGlitch — so the eye
-   never catches an obvious repeating cycle. */
-@keyframes hack-scan-sweep {
-  0% {
-    top: -4%;
-    opacity: 0;
-  }
-  3% {
-    opacity: 0.55;
-  }
-  9% {
-    opacity: 0;
-  }
-  100% {
-    top: 104%;
-    opacity: 0;
-  }
-}
-.hack-scan-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--cyan-400) 25%,
-    var(--neon-500) 50%,
-    var(--cyan-400) 75%,
-    transparent
-  );
-  box-shadow: 0 0 14px var(--cyan-400);
-  mix-blend-mode: screen;
-  animation: hack-scan-sweep var(--dur, 4.5s) linear infinite;
-  animation-delay: var(--delay, 0s);
-}
-
-@keyframes hack-tear-flicker {
-  0%,
-  100% {
-    opacity: 0;
-    transform: scaleY(0) translateX(0);
-  }
-  1% {
-    opacity: 0.85;
-    transform: scaleY(1) translateX(-1.5%);
-  }
-  2% {
-    opacity: 0.6;
-    transform: scaleY(1) translateX(1%);
-  }
-  3% {
-    opacity: 0;
-    transform: scaleY(0) translateX(0);
-  }
-}
-.hack-tear-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: var(--top, 30%);
-  height: var(--h, 6px);
-  background: var(--cyan-400);
-  mix-blend-mode: difference;
-  animation: hack-tear-flicker var(--dur, 5s) steps(1, jump-end) infinite;
-  animation-delay: var(--delay, 0s);
-}
-
-@keyframes hack-flash-pulse {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  1%,
-  2% {
-    opacity: 0.1;
-  }
-}
-.hack-flash-layer {
-  position: absolute;
-  inset: 0;
-  background: var(--neon-500);
-  mix-blend-mode: overlay;
-  animation: hack-flash-pulse var(--dur, 7s) steps(1, jump-end) infinite;
-  animation-delay: var(--delay, 0s);
+/* Continuous per-element version of .glitch-reveal (see that keyframe) —
+   same tearing/RGB-split reveal motion, but looped and slowed down so each
+   element it's applied to keeps flickering for as long as it's on screen,
+   instead of revealing once and going still. Give each element its own
+   animation-delay (inline style) so a page full of these never flickers
+   as one synced unit. */
+.glitch-flicker {
+  animation: glitch-reveal 3.6s steps(1, jump-end) infinite both;
 }
 
 /* ---- Route/panel entrance animations ----
@@ -740,4 +617,14 @@ body {
 .char-glitch-flash {
   color: var(--magenta-400);
   text-shadow: 0 0 4px var(--cyan-400);
+}
+
+/* ---- AsciiWinnerPortrait.tsx's continuous mesh-line sweep ----
+   Toggled directly on/off one row's spans at a time via ref (same
+   direct-DOM approach as .char-glitch-flash, for the same reason: this
+   fires many times a second and re-rendering the whole grid for it would
+   be wasteful). Brightens+widens the glow as the "scan line" passes. */
+.mesh-scan-glow {
+  color: var(--cyan-400);
+  text-shadow: 0 0 10px var(--cyan-400);
 }

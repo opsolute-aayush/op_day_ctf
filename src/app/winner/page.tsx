@@ -9,10 +9,7 @@ import { usePolledFetch } from "@/hooks/usePolledFetch";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import TeamAvatar from "@/components/TeamAvatar";
-import MatrixRain from "@/components/MatrixRain";
-import HackedOverlay from "@/components/HackedOverlay";
-import HackBurst from "@/components/HackBurst";
-import FinalStandings from "@/components/FinalStandings";
+import AsciiWinnerPortrait from "@/components/AsciiWinnerPortrait";
 import { ordinal, RANK_STYLE, type TeamStat } from "@/components/TeamStandingsList";
 import { playWinFeedback } from "@/lib/gameFeedback";
 
@@ -70,78 +67,77 @@ export default function WinnerPage() {
 
   return (
     <main className="relative flex flex-1 flex-col items-center px-4 py-10">
-      {/* One-shot breach flash — layered on top of the route's regular glitch-reveal. */}
-      <div className="victory-flash pointer-events-none fixed inset-0 z-[60]" aria-hidden="true" />
-      {/* Keeps glitching for as long as this page is open, not just on entry. */}
-      <HackedOverlay />
-      <HackBurst active={status.completed} intense={isFirst} accentColor={status.team.color} />
-      <MatrixRain columns={16} className="fixed inset-0 opacity-25" />
-
-      <div className="relative z-10 w-full max-w-md space-y-6 text-center">
-        <div>
-          {isFirst ? (
-            <Crown className="rank-pulse mx-auto h-20 w-20" style={{ color: "#FFD400" }} fill="#FFD400" strokeWidth={1.25} />
-          ) : (
-            <ShieldCheck
-              className="rank-pulse mx-auto h-16 w-16"
-              style={{ color: rankStyle?.color ?? "var(--neon-500)" }}
-              strokeWidth={1.5}
-            />
-          )}
+      <div className="relative z-10 flex w-full max-w-5xl flex-col items-center gap-10 md:flex-row md:items-start md:justify-center">
+        {/* Left — the interactive ASCII portrait: sweeps with a continuous
+            mesh-line scan, and ripples outward from a tap/click. Drop an
+            image into public/arts/winner/ to activate it. Left untouched
+            by the glitch-flicker treatment below — it's already alive on its own. */}
+        <div className="w-full md:w-2/5 md:sticky md:top-16">
+          <AsciiWinnerPortrait accentColor={status.team.color} />
         </div>
 
-        <div className="space-y-1">
-          <GlitchTitle text={isFirst ? "MAINFRAME BREACHED" : "ACCESS GRANTED"} className="text-3xl sm:text-4xl" />
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-neon-100/40">
-            {isFirst ? "root privileges escalated — hunt fully solved" : "sentence verified — hunt solved"}
-          </p>
-        </div>
-
-        <div className="flex items-center justify-center gap-3">
-          <TeamAvatar teamNumber={status.team.teamNumber} color={status.team.color} size="lg" />
-          <div className="text-left">
-            <p className="text-lg font-semibold" style={{ color: status.team.color }}>
-              {status.team.name}
-            </p>
-            {position && (
-              <p className="text-xs uppercase tracking-widest" style={{ color: rankStyle?.color ?? "var(--neon-400)" }}>
-                {ordinal(position)} place
-              </p>
+        {/* Right — exactly three blocks: the headline, the team/rank line,
+            and mission.log. Each flickers on its own continuous loop (see
+            .glitch-flicker in globals.css — the same tearing/RGB-split
+            reveal used for nav transitions, just slower and looping) instead
+            of a single whole-page effect, so they never glitch in unison. */}
+        <div className="flex w-full flex-col items-center gap-6 text-center md:w-3/5">
+          <div className="glitch-flicker">
+            {isFirst ? (
+              <Crown className="rank-pulse mx-auto h-14 w-14" style={{ color: "#FFD400" }} fill="#FFD400" strokeWidth={1.25} />
+            ) : (
+              <ShieldCheck
+                className="rank-pulse mx-auto h-12 w-12"
+                style={{ color: rankStyle?.color ?? "var(--neon-500)" }}
+                strokeWidth={1.5}
+              />
             )}
+            <GlitchTitle text={isFirst ? "MAINFRAME BREACHED" : "ACCESS GRANTED"} className="text-3xl sm:text-4xl" />
+          </div>
+
+          <div
+            className="glitch-flicker flex items-center justify-center gap-3"
+            style={{ animationDelay: "0.9s" }}
+          >
+            <TeamAvatar teamNumber={status.team.teamNumber} color={status.team.color} size="lg" />
+            <div className="text-left">
+              <p className="text-lg font-semibold" style={{ color: status.team.color }}>
+                {status.team.name}
+              </p>
+              {position && (
+                <p className="text-xs uppercase tracking-widest" style={{ color: rankStyle?.color ?? "var(--neon-400)" }}>
+                  {ordinal(position)} place
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="glitch-flicker w-full max-w-md" style={{ animationDelay: "1.8s" }}>
+            <TerminalPanel title="mission.log">
+              <div className="space-y-1.5 text-left font-mono text-sm">
+                {bootLines.map((line, i) => (
+                  <motion.p
+                    key={line}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.25, delay: 0.1 + i * 0.15 }}
+                    className="text-neon-500/90"
+                  >
+                    {line}
+                  </motion.p>
+                ))}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 + bootLines.length * 0.15 }}
+                  className="caret-blink text-neon-100/50"
+                >
+                  awaiting next transmission
+                </motion.p>
+              </div>
+            </TerminalPanel>
           </div>
         </div>
-
-        <TerminalPanel title="mission.log">
-          <div className="space-y-1.5 text-left font-mono text-sm">
-            {bootLines.map((line, i) => (
-              <motion.p
-                key={line}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.25, delay: 0.15 + i * 0.18 }}
-                className="text-neon-500/90"
-              >
-                {line}
-              </motion.p>
-            ))}
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.15 + bootLines.length * 0.18 }}
-              className="caret-blink text-neon-100/50"
-            >
-              awaiting next transmission
-            </motion.p>
-          </div>
-        </TerminalPanel>
-
-        <p className="text-xs uppercase tracking-widest text-neon-100/30">
-          {status.gameFinished ? "The Game Master has ended the hunt." : "The hunt is still live for other teams."}
-        </p>
-      </div>
-
-      <div className="relative z-10 mt-8 w-full max-w-md">
-        <FinalStandings highlightTeamNumber={status.team.teamNumber} />
       </div>
     </main>
   );
