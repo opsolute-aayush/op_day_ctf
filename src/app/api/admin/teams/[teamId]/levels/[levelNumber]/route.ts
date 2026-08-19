@@ -4,13 +4,13 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 import { normalizePassword } from "@/lib/normalize";
-import { generateCipher } from "@/lib/cipher";
 
 const updateSchema = z.object({
   password: z.string().min(1).max(200).optional(),
   locationClue: z.string().min(1).max(2000).optional(),
   wordReward: z.string().min(1).max(200).optional(),
   hint: z.string().max(2000).nullable().optional(),
+  cipherMessage: z.string().max(4000).nullable().optional(),
 });
 
 async function assertTeamOwnedByAdmin(teamId: string, sessionId: string) {
@@ -49,9 +49,9 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ teamId: str
   if (parsed.data.locationClue !== undefined) data.locationClue = parsed.data.locationClue;
   if (parsed.data.wordReward !== undefined) data.wordReward = parsed.data.wordReward;
   if (parsed.data.hint !== undefined) data.hint = parsed.data.hint;
+  if (parsed.data.cipherMessage !== undefined) data.cipherMessage = parsed.data.cipherMessage;
   if (parsed.data.password) {
     data.password = await bcrypt.hash(normalizePassword(parsed.data.password), 10);
-    data.cipherMessage = generateCipher(parsed.data.password).base64;
   }
 
   const level = await prisma.levelConfig.update({ where: { id: existing.id }, data });

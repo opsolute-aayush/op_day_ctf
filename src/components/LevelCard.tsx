@@ -103,12 +103,6 @@ export default function LevelCard({
         <div className="mt-2 space-y-2">
           <p className="text-sm text-neon-100/80">Password required to decrypt this level.</p>
 
-          {cipherMessage && (
-            <p className="flex items-start gap-1.5 break-all font-mono text-[11px] text-neon-500/80">
-              <Binary className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Ye Lee: {cipherMessage}
-            </p>
-          )}
-
           <AnimatePresence mode="wait">
             {hint ? (
               <motion.p
@@ -156,6 +150,12 @@ export default function LevelCard({
           {locationClue && (
             <p className="flex items-start gap-1.5 text-sm text-neon-100/70">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-neon-500" /> {locationClue}
+            </p>
+          )}
+
+          {cipherMessage && (
+            <p className="flex items-start gap-1.5 break-all font-mono text-[11px] text-neon-500/80">
+              <Binary className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Ye Lee — decode for the next password: {cipherMessage}
             </p>
           )}
 

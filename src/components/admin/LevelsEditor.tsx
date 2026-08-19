@@ -28,11 +28,18 @@ interface LevelDraft {
   locationClue: string;
   wordReward: string;
   hint: string;
+  cipherMessage: string;
   password: string;
 }
 
 function toDraft(level: Level): LevelDraft {
-  return { locationClue: level.locationClue, wordReward: level.wordReward, hint: level.hint ?? "", password: "" };
+  return {
+    locationClue: level.locationClue,
+    wordReward: level.wordReward,
+    hint: level.hint ?? "",
+    cipherMessage: level.cipherMessage ?? "",
+    password: "",
+  };
 }
 
 // Standalone cipher scratchpad, decoupled from any specific level/team —
@@ -222,7 +229,13 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
   const [levels, setLevels] = useState<Level[]>([]);
   const [drafts, setDrafts] = useState<Record<number, LevelDraft>>({});
   const [savingLevel, setSavingLevel] = useState<number | null>(null);
-  const [newLevel, setNewLevel] = useState<LevelDraft>({ locationClue: "", wordReward: "", hint: "", password: "" });
+  const [newLevel, setNewLevel] = useState<LevelDraft>({
+    locationClue: "",
+    wordReward: "",
+    hint: "",
+    cipherMessage: "",
+    password: "",
+  });
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -292,6 +305,7 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
       locationClue: draft.locationClue,
       wordReward: draft.wordReward,
       hint: draft.hint,
+      cipherMessage: draft.cipherMessage,
     };
     if (draft.password.trim()) body.password = draft.password;
 
@@ -334,6 +348,7 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
         locationClue: newLevel.locationClue,
         wordReward: newLevel.wordReward,
         hint: newLevel.hint || undefined,
+        cipherMessage: newLevel.cipherMessage || undefined,
       }),
     });
     setCreating(false);
@@ -342,7 +357,7 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
       setError(data.error ?? "Failed to create level.");
       return;
     }
-    setNewLevel({ locationClue: "", wordReward: "", hint: "", password: "" });
+    setNewLevel({ locationClue: "", wordReward: "", hint: "", cipherMessage: "", password: "" });
     await loadLevels();
     onChanged();
   }
@@ -414,17 +429,17 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
                 onChange={(e) => updateDraft(level.levelNumber, { password: e.target.value })}
               />
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs uppercase tracking-widest text-neon-400/80">Ye Lee</label>
+                <label className="text-xs uppercase tracking-widest text-neon-400/80">Ye Lee (optional)</label>
                 <textarea
-                  readOnly
                   rows={2}
-                  value={level.cipherMessage ?? ""}
-                  placeholder="Generated automatically once a password is set"
-                  onFocus={(e) => e.currentTarget.select()}
+                  value={draft.cipherMessage}
+                  onChange={(e) => updateDraft(level.levelNumber, { cipherMessage: e.target.value })}
+                  placeholder="Encoded password for the NEXT level — paste from cipher-selector.sh"
                   className="w-full resize-none rounded-md border border-panel-border bg-void-2 px-3 py-2.5 font-mono text-xs text-neon-100 placeholder:text-neon-100/30 outline-none focus:border-neon-500 focus:ring-1 focus:ring-neon-500"
                 />
                 <p className="text-xs text-neon-100/30">
-                  Shown to this team as the puzzle for their current level — regenerates whenever the password above is changed.
+                  Shown to this team once they unlock this level — it&apos;s the clue for the level after this one, not
+                  this level&apos;s own password.
                 </p>
               </div>
               <div className="flex items-center gap-3 pt-1">
@@ -465,6 +480,16 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
             value={newLevel.password}
             onChange={(e) => setNewLevel((p) => ({ ...p, password: e.target.value }))}
           />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs uppercase tracking-widest text-neon-400/80">Ye Lee (optional)</label>
+            <textarea
+              rows={2}
+              value={newLevel.cipherMessage}
+              onChange={(e) => setNewLevel((p) => ({ ...p, cipherMessage: e.target.value }))}
+              placeholder="Encoded password for the NEXT level — paste from cipher-selector.sh"
+              className="w-full resize-none rounded-md border border-panel-border bg-void-2 px-3 py-2.5 font-mono text-xs text-neon-100 placeholder:text-neon-100/30 outline-none focus:border-neon-500 focus:ring-1 focus:ring-neon-500"
+            />
+          </div>
           <NeonButton variant="cyan" onClick={createLevel} disabled={creating}>
             <Plus className="h-4 w-4" /> {creating ? "Adding…" : "Add Level"}
           </NeonButton>

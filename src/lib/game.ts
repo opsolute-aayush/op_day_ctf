@@ -118,6 +118,10 @@ export async function buildTeamStatus(teamId: string) {
 
   // wordReward is only included once the team has confirmed it via
   // verify-word — a correct password alone never leaks the word text.
+  // cipherMessage ("Ye Lee") is admin-authored per level and holds the
+  // *next* level's encoded password — surfacing it once this level unlocks
+  // is what lets a team start decoding their way into the level after this
+  // one, same gating as locationClue/wordReward.
   const unlockedClues = levelConfigs
     .filter((lc) => unlockedLevels.includes(lc.levelNumber))
     .map((lc) => ({
@@ -125,6 +129,7 @@ export async function buildTeamStatus(teamId: string) {
       locationClue: lc.locationClue,
       wordReward: verifiedWordLevels.includes(lc.levelNumber) ? lc.wordReward : undefined,
       hint: lc.hint ?? undefined,
+      cipherMessage: lc.cipherMessage ?? undefined,
     }));
 
   const collectedWords = levelConfigs
@@ -145,11 +150,6 @@ export async function buildTeamStatus(teamId: string) {
   // lets the client only show the "Ask for a Hint" button when it would
   // actually do something.
   const hintAvailable = Boolean(currentLevelConfig?.hint) && !finalUnlocked;
-
-  // "Ye Lee" — the current level's encoded password (see lib/cipher.ts),
-  // shown as-is with no release gating (unlike hint): it's the puzzle for
-  // getting into this level in the first place, not a bonus assist.
-  const activeCipherMessage = finalUnlocked ? null : currentLevelConfig?.cipherMessage ?? null;
 
   // Computed server-side (not just "cooldown seconds - client clock guess")
   // so the countdown the player sees can't drift from clock skew or from
@@ -179,7 +179,6 @@ export async function buildTeamStatus(teamId: string) {
     finalUnlocked,
     activeHint,
     hintAvailable,
-    activeCipherMessage,
     helpCreditsRemaining: progress.helpCreditsRemaining,
     sabotageCreditsRemaining: progress.sabotageCreditsRemaining,
     sabotageCooldownRemainingMs,
