@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import TerminalPanel from "@/components/TerminalPanel";
+import { usePolledFetch } from "@/hooks/usePolledFetch";
 
 interface ActivityItem {
   id: string;
@@ -61,19 +61,8 @@ function describe(item: ActivityItem): string {
 }
 
 export default function ActivityFeed({ refreshKey }: { refreshKey: number }) {
-  const [items, setItems] = useState<ActivityItem[]>([]);
-
-  useEffect(() => {
-    async function load() {
-      const res = await fetch("/api/admin/activity", { cache: "no-store" });
-      if (!res.ok) return;
-      const data = await res.json();
-      setItems(data.feed);
-    }
-    load();
-    const interval = setInterval(load, 2500);
-    return () => clearInterval(interval);
-  }, [refreshKey]);
+  const data = usePolledFetch<{ feed: ActivityItem[] }>("/api/admin/activity", 2500, [refreshKey]);
+  const items = data?.feed ?? [];
 
   return (
     <TerminalPanel title="activity-feed.log">

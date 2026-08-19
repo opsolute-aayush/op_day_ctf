@@ -188,7 +188,7 @@ There's no admin password to configure — each session generates its own when c
 - **Teams pick their own color** — a neon swatch picker at join time or from `/play`.
 - **Self-service hints** — 2 free hints per team; the admin can also release one for free.
 - **Live leaderboard** for players — everyone can see everyone's progress, not just the admin.
-- **Sound effects, video clips, background music** — drop files into `public/sounds/<category>/` or `public/videos/<category>/` (`wrong_pass`, `right_pass`, `help`, `winning`, plus `intro`/`outro` for music) and they play automatically. No code changes needed.
+- **Sound effects, video clips, background music** — drop files into `public/sounds/<category>/` or `public/videos/<category>/` (`wrong_pass`, `right_pass`, `help`, `winning`, `hacking`, `alert`, plus `intro`/`outro` for music) and they play automatically. No code changes needed. `hacking` plays for whichever team just launched a sabotage or executed a swap; `alert` plays for the team on the other end of it.
 - **Player settings** at `/settings` — mute or adjust volume for sound/video/music, per device.
 - **Non-blocking wins** — a team finishing never stops the hunt for anyone else. Only the admin's **End Game** does that.
 

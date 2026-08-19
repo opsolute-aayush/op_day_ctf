@@ -38,6 +38,7 @@ export interface TeamStatus {
   activeSabotage: ActiveSabotage | null;
   swapCardEnabled: boolean;
   swapCardUsed: boolean;
+  swapAlert: string | null;
   completed: boolean;
   completedAt: string | null;
   gameStartedAt: string | null;

@@ -101,7 +101,7 @@ export async function buildTeamStatus(teamId: string) {
     prisma.levelConfig.findMany({ where: { teamId }, orderBy: { levelNumber: "asc" } }),
     prisma.gameSession.findUnique({ where: { id: team.sessionId } }),
     getActiveSabotage(teamId),
-    getSwapStatusFlags(team.sessionId),
+    getSwapStatusFlags(team.sessionId, teamId),
   ]);
 
   if (!progress || !session) return null;
@@ -173,6 +173,7 @@ export async function buildTeamStatus(teamId: string) {
     activeSabotage,
     swapCardEnabled: swapFlags.swapCardEnabled,
     swapCardUsed: swapFlags.swapCardUsed,
+    swapAlert: swapFlags.swapAlertId,
     completed: progress.completed,
     completedAt: progress.completedAt,
     gameStartedAt: session.startedAt,

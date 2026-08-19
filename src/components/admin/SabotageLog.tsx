@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Skull, ShieldOff, Eye, EyeOff } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
+import { usePolledFetch } from "@/hooks/usePolledFetch";
 
 interface SabotageRow {
   id: string;
@@ -18,26 +19,11 @@ interface SabotageRow {
 }
 
 export default function SabotageLog({ onChanged }: { onChanged: () => void }) {
-  const [rows, setRows] = useState<SabotageRow[] | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const res = await fetch("/api/admin/sabotages", { cache: "no-store" });
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      if (!cancelled) setRows(data.sabotages);
-    }
-    load();
-    const interval = setInterval(load, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [nonce]);
+  const data = usePolledFetch<{ sabotages: SabotageRow[] }>("/api/admin/sabotages", 5000, [nonce]);
+  const rows = data?.sabotages ?? null;
 
   function toggleReveal(id: string) {
     setRevealed((prev) => {

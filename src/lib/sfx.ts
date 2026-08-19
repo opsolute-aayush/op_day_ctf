@@ -1,14 +1,24 @@
 "use client";
 
 // Sounds auto-discover from public/sounds/<category>/ (wrong_pass, right_pass,
-// help, winning, intro, outro, button, settings) via GET /api/sounds/<category>
-// — drop a file in, no registration needed. The one-shot categories fall back
-// to a synthesized chime when empty; the full-track categories (intro, outro,
-// settings) just stay silent with no assets.
+// help, winning, intro, outro, button, settings, hacking, alert) via GET
+// /api/sounds/<category> — drop a file in, no registration needed. The
+// one-shot categories fall back to a synthesized chime when empty; the
+// full-track categories (intro, outro, settings) just stay silent with no assets.
 
 import { getSettings, subscribeToSettings } from "@/lib/settings";
 
-type Category = "wrong_pass" | "right_pass" | "help" | "winning" | "intro" | "outro" | "button" | "settings";
+type Category =
+  | "wrong_pass"
+  | "right_pass"
+  | "help"
+  | "winning"
+  | "intro"
+  | "outro"
+  | "button"
+  | "settings"
+  | "hacking"
+  | "alert";
 
 const fileListCache = new Map<Category, string[]>();
 const fileListInFlight = new Map<Category, Promise<string[]>>();
@@ -46,6 +56,8 @@ const lastPlayed: Record<Category, string | null> = {
   outro: null,
   button: null,
   settings: null,
+  hacking: null,
+  alert: null,
 };
 
 function playFile(category: Category, filename: string, volume: number) {
@@ -97,11 +109,15 @@ function tone(ctx: AudioContext, freq: number, startOffset: number, duration: nu
   osc.stop(startAt + duration + 0.02);
 }
 
-function playSynthChime(notes: Array<[freq: number, offset: number, duration: number]>, volume: number) {
+function playSynthChime(
+  notes: Array<[freq: number, offset: number, duration: number]>,
+  volume: number,
+  type: OscillatorType = "sine"
+) {
   const ctx = getAudioContext();
   if (!ctx) return;
   for (const [freq, offset, duration] of notes) {
-    tone(ctx, freq, offset, duration, volume);
+    tone(ctx, freq, offset, duration, volume, type);
   }
 }
 
@@ -167,6 +183,46 @@ export function playHelpSound(baseVolume = 0.5) {
         [660, 0.2, 0.15],
       ],
       volume
+    );
+  });
+}
+
+/** For the team that just launched a sabotage or executed a swap. */
+export function playHackingSound(baseVolume = 0.5) {
+  const settings = getSettings();
+  if (!settings.sfxEnabled) return;
+  const volume = baseVolume * settings.sfxVolume;
+  void playRandomFromCategory("hacking", volume, () => {
+    // A fast descending run of digital blips.
+    playSynthChime(
+      [
+        [900, 0, 0.05],
+        [700, 0.05, 0.05],
+        [500, 0.1, 0.05],
+        [350, 0.15, 0.09],
+      ],
+      volume,
+      "square"
+    );
+  });
+}
+
+/** For the team that just got sabotaged, or whose board just got swapped by someone else. */
+export function playAlertSound(baseVolume = 0.55) {
+  const settings = getSettings();
+  if (!settings.sfxEnabled) return;
+  const volume = baseVolume * settings.sfxVolume;
+  void playRandomFromCategory("alert", volume, () => {
+    // A two-tone klaxon.
+    playSynthChime(
+      [
+        [1000, 0, 0.18],
+        [700, 0.18, 0.18],
+        [1000, 0.36, 0.18],
+        [700, 0.54, 0.22],
+      ],
+      volume,
+      "sawtooth"
     );
   });
 }

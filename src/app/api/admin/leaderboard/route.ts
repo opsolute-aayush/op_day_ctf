@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
-import { parseIntArray, parseStringArray, parseMembers } from "@/lib/json";
+import { parseIntArray, parseMembers } from "@/lib/json";
 import { getSessionById } from "@/lib/game";
 
 export async function GET() {
@@ -38,7 +38,6 @@ export async function GET() {
   const leaderboard = teams.map((team) => {
     const progress = team.progress;
     const unlockedLevels = progress ? parseIntArray(progress.unlockedLevels) : [0];
-    const collectedWords = progress ? parseStringArray(progress.collectedWords) : [];
     const totalLevels = team._count.levels + 1; // + implicit final sentence-assembly level
     return {
       teamId: team.id,
@@ -49,7 +48,6 @@ export async function GET() {
       currentLevel: progress?.currentLevel ?? 1,
       totalLevels,
       unlockedLevels,
-      collectedWords,
       attempts: attemptsByTeam.get(team.id) ?? 0,
       helpCreditsRemaining: progress?.helpCreditsRemaining ?? 2,
       completed: progress?.completed ?? false,

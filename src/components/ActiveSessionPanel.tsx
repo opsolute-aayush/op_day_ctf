@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Radio } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
+import { usePolledFetch } from "@/hooks/usePolledFetch";
 
 interface ActivePlayer {
   name: string;
@@ -13,23 +13,8 @@ interface ActivePlayer {
 
 /** Session-wide "who's online right now" — every squad, not just your own. */
 export default function ActiveSessionPanel({ selfName }: { selfName?: string }) {
-  const [players, setPlayers] = useState<ActivePlayer[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const res = await fetch("/api/game/connected-players", { cache: "no-store" });
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      setPlayers(data.players);
-    }
-    load();
-    const interval = setInterval(load, 4000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
+  const data = usePolledFetch<{ players: ActivePlayer[] }>("/api/game/connected-players", 4000);
+  const players = data?.players ?? null;
 
   return (
     <TerminalPanel title="active-agents.log" className="mt-6">

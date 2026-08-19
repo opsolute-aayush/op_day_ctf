@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShieldCheck, LogOut, KeyRound, PlusCircle, LogIn, Copy, Check, ArrowLeft } from "lucide-react";
+import { ShieldCheck, LogOut, PlusCircle, LogIn, ArrowLeft } from "lucide-react";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
+import SessionCreatedPanel from "@/components/admin/SessionCreatedPanel";
+import SecuritySettings from "@/components/admin/SecuritySettings";
 import Leaderboard from "@/components/admin/Leaderboard";
 import ConnectedPlayers from "@/components/admin/ConnectedPlayers";
 import ActivityFeed from "@/components/admin/ActivityFeed";
@@ -297,154 +299,3 @@ function BackButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function CopyButton({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard access can be blocked in some contexts — silently ignore.
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={copy}
-      aria-label="Copy to clipboard"
-      className="flex shrink-0 items-center gap-1 rounded-md border border-neon-500/40 px-2 py-1 text-[11px] uppercase tracking-widest text-neon-400 hover:bg-neon-500/10"
-    >
-      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-      {copied ? "Copied" : "Copy"}
-    </button>
-  );
-}
-
-function SessionCreatedPanel({
-  creds,
-  onContinue,
-}: {
-  creds: { code: string; password: string };
-  onContinue: () => void;
-}) {
-  return (
-    <TerminalPanel title="session-created.sh" className="border-neon-500/40">
-      <div className="space-y-4 text-left">
-        <p className="flex items-start gap-2 text-sm text-amber-400">
-          <KeyRound className="mt-0.5 h-4 w-4 shrink-0" />
-          Save these now — the password won&apos;t be shown again. You can set a new one any time from the Security
-          tab.
-        </p>
-
-        <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-widest text-neon-400/80">
-            Session Code — share with players
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="flex-1 rounded-md border border-panel-border bg-void-2 px-3 py-2.5 text-center font-display text-xl tracking-[0.3em] text-neon-400">
-              {creds.code}
-            </span>
-            <CopyButton value={creds.code} />
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-widest text-neon-400/80">Master Password</label>
-          <div className="flex items-center gap-2">
-            <span className="flex-1 truncate rounded-md border border-panel-border bg-void-2 px-3 py-2.5 font-mono text-sm text-neon-100">
-              {creds.password}
-            </span>
-            <CopyButton value={creds.password} />
-          </div>
-        </div>
-
-        <NeonButton variant="cyan" className="w-full" onClick={onContinue} data-sfx-nav>
-          I&apos;ve saved this — Continue
-        </NeonButton>
-      </div>
-    </TerminalPanel>
-  );
-}
-
-function SecuritySettings({ sessionCode }: { sessionCode: string | null }) {
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setMessage(null);
-
-    if (newPassword.length < 8) {
-      setError("At least 8 characters.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError("Passwords don't match.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const res = await fetch("/api/admin/set-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newPassword }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error ?? "Couldn't update the password.");
-        return;
-      }
-      setMessage("Password updated. Use it next time you log in.");
-      setNewPassword("");
-      setConfirmPassword("");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <TerminalPanel title="admin-security.cfg" className="border-cyan-400/30">
-      <div className="mb-4 flex items-start gap-2 text-sm text-neon-100/70">
-        <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
-        <p>
-          This password unlocks session <span className="text-neon-400">{sessionCode}</span> only. Set a new one any
-          time; it takes effect immediately, no restart needed.
-        </p>
-      </div>
-      <form onSubmit={handleSubmit} className="max-w-sm space-y-4">
-        <InputField
-          type="password"
-          label="New Password"
-          placeholder="At least 8 characters"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          autoComplete="new-password"
-        />
-        <InputField
-          type="password"
-          label="Confirm New Password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          autoComplete="new-password"
-        />
-        {error && (
-          <p className="shake rounded-md border border-danger-400/40 bg-danger-400/10 px-3 py-2 text-sm text-danger-400">
-            {error}
-          </p>
-        )}
-        {message && <p className="text-sm text-neon-400">{message}</p>}
-        <NeonButton variant="cyan" type="submit" disabled={saving}>
-          {saving ? "Saving…" : "Update Password"}
-        </NeonButton>
-      </form>
-    </TerminalPanel>
-  );
-}

@@ -8,7 +8,14 @@
 // - Help revealed: sound only (random pick, same as always).
 // - Win: video only, then outro music ~7s later.
 
-import { playRightPasswordSound, playRandomWrongPasswordSound, playHelpSound, playOutroMusic } from "@/lib/sfx";
+import {
+  playRightPasswordSound,
+  playRandomWrongPasswordSound,
+  playHelpSound,
+  playOutroMusic,
+  playHackingSound,
+  playAlertSound,
+} from "@/lib/sfx";
 import { playVideoClip } from "@/lib/videofx";
 
 export function playRightFeedback() {
@@ -29,6 +36,16 @@ export function playWrongWordFeedback() {
 
 export function playHelpFeedback() {
   playHelpSound();
+}
+
+/** The team that just launched a sabotage or executed a swap. */
+export function playHackingFeedback() {
+  playHackingSound();
+}
+
+/** The team that just got sabotaged, or whose board just got swapped by someone else. */
+export function playAlertFeedback() {
+  playAlertSound();
 }
 
 // Module-level, not a component ref: React 18/19 Strict Mode double-invokes

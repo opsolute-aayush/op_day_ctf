@@ -27,14 +27,6 @@ export function setPlayerName(name: string): void {
   }
 }
 
-export function subscribeToPlayerName(handler: (name: string) => void): () => void {
-  function listener(e: Event) {
-    handler((e as CustomEvent<string>).detail);
-  }
-  window.addEventListener(EVENT, listener);
-  return () => window.removeEventListener(EVENT, listener);
-}
-
 /** Subscribe form expected by useSyncExternalStore — no value needed, just re-read getPlayerName(). */
 export function subscribeToPlayerNameStore(callback: () => void): () => void {
   window.addEventListener(EVENT, callback);

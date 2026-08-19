@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Trophy, Radio } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import TeamAvatar from "@/components/TeamAvatar";
+import { usePolledFetch } from "@/hooks/usePolledFetch";
 
 interface TeamStat {
   teamNumber: number;
@@ -17,23 +17,8 @@ interface TeamStat {
 }
 
 export default function TeamStatsPanel({ highlightTeamNumber }: { highlightTeamNumber?: number }) {
-  const [stats, setStats] = useState<TeamStat[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const res = await fetch("/api/game/stats", { cache: "no-store" });
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      setStats(data.stats);
-    }
-    load();
-    const interval = setInterval(load, 4000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
+  const data = usePolledFetch<{ stats: TeamStat[] }>("/api/game/stats", 4000);
+  const stats = data?.stats ?? null;
 
   return (
     <TerminalPanel title="all-squads.tsv">

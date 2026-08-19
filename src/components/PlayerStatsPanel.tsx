@@ -8,13 +8,8 @@ import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
 import ChromaKeyVideo from "@/components/ChromaKeyVideo";
 import { subscribeToVideoClips, VideoClipEventDetail } from "@/lib/videofx";
-
-interface OtherTeam {
-  id: string;
-  teamNumber: number;
-  teamName: string;
-  color: string;
-}
+import { playHackingFeedback } from "@/lib/gameFeedback";
+import { useOtherTeams, type OtherTeam } from "@/hooks/useOtherTeams";
 
 interface PlayerStatsPanelProps {
   helpCreditsRemaining: number;
@@ -41,7 +36,7 @@ export default function PlayerStatsPanel({
   onSwapCompleted,
 }: PlayerStatsPanelProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [otherTeams, setOtherTeams] = useState<OtherTeam[] | null>(null);
+  const otherTeams = useOtherTeams(pickerOpen, ownTeamId);
   const [launching, setLaunching] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastClip, setLastClip] = useState<VideoClipEventDetail | null>(null);
@@ -49,7 +44,7 @@ export default function PlayerStatsPanel({
   const [swapVerifying, setSwapVerifying] = useState(false);
   const [swapVerified, setSwapVerified] = useState(false);
   const [swapError, setSwapError] = useState<string | null>(null);
-  const [swapTeams, setSwapTeams] = useState<OtherTeam[] | null>(null);
+  const swapTeams = useOtherTeams(swapVerified, ownTeamId);
   const [swapping, setSwapping] = useState<string | null>(null);
   const [swapResult, setSwapResult] = useState<string | null>(null);
   // Ticks down locally between poll refreshes so the countdown reads
@@ -80,34 +75,6 @@ export default function PlayerStatsPanel({
       }),
     []
   );
-
-  useEffect(() => {
-    if (!pickerOpen) return;
-    let cancelled = false;
-    (async () => {
-      const res = await fetch("/api/game/stats", { cache: "no-store" });
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      setOtherTeams((data.stats as OtherTeam[]).filter((t) => t.id !== ownTeamId));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [pickerOpen, ownTeamId]);
-
-  useEffect(() => {
-    if (!swapVerified) return;
-    let cancelled = false;
-    (async () => {
-      const res = await fetch("/api/game/stats", { cache: "no-store" });
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      setSwapTeams((data.stats as OtherTeam[]).filter((t) => t.id !== ownTeamId));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [swapVerified, ownTeamId]);
 
   async function verifySwap() {
     setSwapVerifying(true);
@@ -145,8 +112,8 @@ export default function PlayerStatsPanel({
       }
       setSwapVerified(false);
       setSwapCode("");
-      setSwapTeams(null);
       setSwapResult(partner.teamName);
+      playHackingFeedback();
       onSwapCompleted();
     } finally {
       setSwapping(null);
@@ -168,6 +135,7 @@ export default function PlayerStatsPanel({
         return;
       }
       setPickerOpen(false);
+      playHackingFeedback();
       onSabotageLaunched();
     } finally {
       setLaunching(null);

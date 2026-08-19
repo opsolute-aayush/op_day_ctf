@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Radio, UserX } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
+import { usePolledFetch } from "@/hooks/usePolledFetch";
 
 interface ConnectedPlayer {
   name: string;
@@ -13,25 +14,10 @@ interface ConnectedPlayer {
 }
 
 export default function ConnectedPlayers({ refreshKey }: { refreshKey: number }) {
-  const [players, setPlayers] = useState<ConnectedPlayer[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const res = await fetch("/api/admin/connected-players", { cache: "no-store" });
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      setPlayers(data.players);
-    }
-    load();
-    const interval = setInterval(load, 3000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [refreshKey, nonce]);
+  const data = usePolledFetch<{ players: ConnectedPlayer[] }>("/api/admin/connected-players", 3000, [refreshKey, nonce]);
+  const players = data?.players ?? [];
 
   async function kick(p: ConnectedPlayer) {
     const key = `${p.teamId}-${p.name}`;

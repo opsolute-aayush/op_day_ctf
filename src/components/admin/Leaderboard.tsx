@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Trophy, Unlock, Lightbulb, Trash2 } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import TeamAvatar from "@/components/TeamAvatar";
+import { usePolledFetch } from "@/hooks/usePolledFetch";
 
 interface LeaderboardRow {
   teamId: string;
@@ -22,25 +23,10 @@ interface LeaderboardRow {
 }
 
 export default function Leaderboard({ refreshKey }: { refreshKey: number }) {
-  const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [busyTeam, setBusyTeam] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const res = await fetch("/api/admin/leaderboard", { cache: "no-store" });
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      setRows(data.leaderboard);
-    }
-    load();
-    const interval = setInterval(load, 3000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [refreshKey, nonce]);
+  const data = usePolledFetch<{ leaderboard: LeaderboardRow[] }>("/api/admin/leaderboard", 3000, [refreshKey, nonce]);
+  const rows = data?.leaderboard ?? [];
 
   const reload = () => setNonce((n) => n + 1);
 

@@ -390,18 +390,6 @@ body {
   animation: shake-x 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
-@keyframes scan-sweep {
-  0% {
-    transform: translateY(-100%);
-  }
-  100% {
-    transform: translateY(100%);
-  }
-}
-.scan-sweep {
-  animation: scan-sweep 3s linear infinite;
-}
-
 /* ---- Cipher / password breach console ---- */
 
 @keyframes matrix-fall {

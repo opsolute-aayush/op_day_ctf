@@ -1,34 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Repeat, Eye, EyeOff } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
+import { usePolledFetch } from "@/hooks/usePolledFetch";
 
 export default function SwapConfig({ onChanged }: { onChanged: () => void }) {
+  const gameData = usePolledFetch<{ swapCode: string | null; swapUsed: boolean }>("/api/admin/game", 5000);
+  // "Adjust state during render" (setState in the body, guarded by a
+  // prev-value comparison) rather than an effect, same as useGlitchKey.ts —
+  // avoids the react-hooks/set-state-in-effect lint rule.
+  const [prevGameData, setPrevGameData] = useState(gameData);
   const [code, setCode] = useState<string | null>(null);
   const [swapUsed, setSwapUsed] = useState(false);
   const [codeDraft, setCodeDraft] = useState("");
   const [revealCode, setRevealCode] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const res = await fetch("/api/admin/game", { cache: "no-store" });
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      setCode(data.swapCode);
-      setSwapUsed(data.swapUsed);
+  if (gameData !== prevGameData) {
+    setPrevGameData(gameData);
+    if (gameData) {
+      setCode(gameData.swapCode);
+      setSwapUsed(gameData.swapUsed);
     }
-    load();
-    const interval = setInterval(load, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
+  }
 
   async function setSwapCode() {
     const trimmed = codeDraft.trim();

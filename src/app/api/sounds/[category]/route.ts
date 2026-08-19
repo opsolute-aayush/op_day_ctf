@@ -4,7 +4,18 @@ import path from "path";
 
 // Lists whatever audio files exist in public/sounds/<category>. Category is
 // whitelisted so this can't list arbitrary server directories.
-const CATEGORIES = ["wrong_pass", "right_pass", "help", "winning", "intro", "outro", "button", "settings"] as const;
+const CATEGORIES = [
+  "wrong_pass",
+  "right_pass",
+  "help",
+  "winning",
+  "intro",
+  "outro",
+  "button",
+  "settings",
+  "hacking",
+  "alert",
+] as const;
 type Category = (typeof CATEGORIES)[number];
 
 const AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a"];

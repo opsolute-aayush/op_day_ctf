@@ -64,13 +64,26 @@ function progressUpdateData(p: ProgressFields) {
   };
 }
 
-/** Whether this session has a swap card configured, and whether it's already been claimed. */
-export async function getSwapStatusFlags(sessionId: string): Promise<{ swapCardEnabled: boolean; swapCardUsed: boolean }> {
+/**
+ * Whether this session has a swap card configured, whether it's already
+ * been claimed, and — for `teamId` specifically — the active swap's id if
+ * this team was the passive partner (didn't click confirm themselves, so
+ * the client needs a signal to know to alert them). Never set for the
+ * initiator: they already get immediate feedback from their own action.
+ */
+export async function getSwapStatusFlags(
+  sessionId: string,
+  teamId: string
+): Promise<{ swapCardEnabled: boolean; swapCardUsed: boolean; swapAlertId: string | null }> {
   const [session, active] = await Promise.all([
     prisma.gameSession.findUnique({ where: { id: sessionId }, select: { swapCode: true } }),
-    prisma.progressSwap.findFirst({ where: { sessionId, revertedAt: null }, select: { id: true } }),
+    prisma.progressSwap.findFirst({ where: { sessionId, revertedAt: null } }),
   ]);
-  return { swapCardEnabled: Boolean(session?.swapCode), swapCardUsed: Boolean(active) };
+  return {
+    swapCardEnabled: Boolean(session?.swapCode),
+    swapCardUsed: Boolean(active),
+    swapAlertId: active && active.partnerTeamId === teamId ? active.id : null,
+  };
 }
 
 export async function verifySwapCode(sessionId: string, code: string): Promise<{ error: string } | { ok: true }> {

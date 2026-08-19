@@ -20,7 +20,7 @@ import SabotageModal from "@/components/SabotageModal";
 import ColorPicker from "@/components/ColorPicker";
 import { getPlayerName } from "@/lib/playerIdentity";
 import { startIntroMusic, stopIntroMusic } from "@/lib/sfx";
-import { playHelpFeedback, playWrongWordFeedback, playRightFeedback } from "@/lib/gameFeedback";
+import { playHelpFeedback, playWrongWordFeedback, playRightFeedback, playAlertFeedback } from "@/lib/gameFeedback";
 
 export default function PlayPage() {
   const router = useRouter();
@@ -34,6 +34,8 @@ export default function PlayPage() {
   const [requestingHint, setRequestingHint] = useState(false);
   const [hintError, setHintError] = useState<string | null>(null);
   const lastHintRef = useRef<string | null>(null);
+  const lastSabotageIdRef = useRef<string | null>(null);
+  const lastSwapAlertRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (unauthorized) router.replace("/register");
@@ -49,6 +51,26 @@ export default function PlayPage() {
     }
     lastHintRef.current = status?.activeHint ?? null;
   }, [status?.activeHint]);
+
+  // Alerts the team being sabotaged or having its board swapped by someone
+  // else — the team that performed either action gets its own immediate
+  // "hacking" sound from the button click itself, so this only ever needs
+  // to fire for the passive/affected side.
+  useEffect(() => {
+    const sabotageId = status?.activeSabotage?.id ?? null;
+    if (sabotageId && sabotageId !== lastSabotageIdRef.current) {
+      playAlertFeedback();
+    }
+    lastSabotageIdRef.current = sabotageId;
+  }, [status?.activeSabotage?.id]);
+
+  useEffect(() => {
+    const swapAlertId = status?.swapAlert ?? null;
+    if (swapAlertId && swapAlertId !== lastSwapAlertRef.current) {
+      playAlertFeedback();
+    }
+    lastSwapAlertRef.current = swapAlertId;
+  }, [status?.swapAlert]);
 
   const isWaitingForStart = Boolean(
     status &&

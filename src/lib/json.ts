@@ -7,15 +7,6 @@ export function parseIntArray(json: string): number[] {
   }
 }
 
-export function parseStringArray(json: string): string[] {
-  try {
-    const val = JSON.parse(json);
-    return Array.isArray(val) ? val.filter((v) => typeof v === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
 export interface TeamMember {
   name: string;
   lastSeenAt: string; // ISO timestamp, refreshed on every /api/team/status poll

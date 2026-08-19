@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Repeat, RotateCcw } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
+import { usePolledFetch } from "@/hooks/usePolledFetch";
 
 interface SwapRow {
   id: string;
@@ -14,25 +15,10 @@ interface SwapRow {
 }
 
 export default function SwapLog({ onChanged }: { onChanged: () => void }) {
-  const [rows, setRows] = useState<SwapRow[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const res = await fetch("/api/admin/swaps", { cache: "no-store" });
-      if (!res.ok || cancelled) return;
-      const data = await res.json();
-      if (!cancelled) setRows(data.swaps);
-    }
-    load();
-    const interval = setInterval(load, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [nonce]);
+  const data = usePolledFetch<{ swaps: SwapRow[] }>("/api/admin/swaps", 5000, [nonce]);
+  const rows = data?.swaps ?? null;
 
   async function revert(id: string) {
     setBusyId(id);
