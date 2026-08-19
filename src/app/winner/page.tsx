@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { Crown, ShieldCheck } from "lucide-react";
+import { Crown, ShieldCheck, Home } from "lucide-react";
 import { useTeamStatus } from "@/hooks/useTeamStatus";
 import { usePolledFetch } from "@/hooks/usePolledFetch";
 import GlitchTitle from "@/components/GlitchTitle";
@@ -68,6 +69,13 @@ export default function WinnerPage() {
 
   return (
     <main className="relative flex flex-1 flex-col items-center px-4 py-10">
+      <Link
+        href="/"
+        className="absolute left-4 top-4 z-20 flex items-center gap-1.5 text-xs uppercase tracking-widest text-neon-100/40 hover:text-cyan-400"
+      >
+        <Home className="h-4 w-4" /> Home
+      </Link>
+
       <div className="relative z-10 flex w-full max-w-5xl flex-col items-center gap-10 md:flex-row md:items-start md:justify-center">
         {/* Left — the interactive ASCII portrait: sweeps with a continuous
             mesh-line scan, and ripples outward from a tap/click. Drop an

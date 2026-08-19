@@ -4,9 +4,9 @@ import { Radio } from "lucide-react";
 import TerminalPanel from "@/components/TerminalPanel";
 import { usePolledFetch } from "@/hooks/usePolledFetch";
 
-// Gray stand-in color for someone who's joined the session but hasn't
+// White stand-in color for someone who's joined the session but hasn't
 // picked a team yet — there's no team color to show them in.
-const LOBBY_COLOR = "#9CA3AF";
+const LOBBY_COLOR = "#FFFFFF";
 
 interface ActivePlayer {
   name: string;
