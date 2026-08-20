@@ -198,9 +198,9 @@ No admin password to set up front — each session generates its own, changeable
 
 ## Cipher
 
-Each level's **Ye Lee** field holds a Base64 string that decodes to the next level's password. Generated from the admin dashboard's Team Management tab.
+Each level's **Ye Lee** field holds a Base64 string that decodes to the next level's password. Made from the admin dashboard's Team Management tab, which randomly picks a technique (Easy has 2) and shows the admin which one it used.
 
-Full details: **[cipher.md](cipher.md)**.
+Full details: **[cipher/README.md](cipher/README.md)**.
 
 ## Security
 
@@ -212,6 +212,7 @@ Full details: **[cipher.md](cipher.md)**.
 ## Project structure
 
 ```
+cipher/          Per-difficulty cipher technique specs (see cipher/README.md)
 docker/          Dockerfile, docker-compose.yml, docker-compose.prod.yml,
                  certbot-init.sh, nginx/app.conf
 scripts/         run.sh, docker-entrypoint.sh, compose-up.sh
@@ -221,6 +222,7 @@ src/
   app/api/       API routes
   components/    UI components
   lib/           Auth, sessions, game logic, sound/video/settings
+  lib/ciphers/   One script per cipher technique + registry picking randomly per difficulty
 public/
   sounds/        Auto-discovered audio, by category
   videos/        Auto-discovered green-screen clips, by category

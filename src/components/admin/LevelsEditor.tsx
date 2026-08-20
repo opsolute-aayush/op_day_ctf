@@ -6,7 +6,7 @@ import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 import InputField from "@/components/InputField";
 import TeamAvatar from "@/components/TeamAvatar";
-import { generateCipher } from "@/lib/cipher";
+import { generateCipherForDifficulty, type Difficulty } from "@/lib/ciphers";
 
 interface TeamOption {
   id: string;
@@ -44,25 +44,26 @@ function toDraft(level: Level): LevelDraft {
 
 // Standalone cipher scratchpad, decoupled from any specific level/team —
 // admin types any word and picks a difficulty to see its encrypted form.
-// Only "Easy" actually runs cipher.md's pipeline today; the other tiers are
-// stubbed pending their own encoding schemes.
+// Each difficulty draws from a pool of techniques in src/lib/ciphers/ and
+// picks one at random per run, so the same word never encodes the same way
+// twice. Medium/Hard/Intense are stubbed until cipher/<level>/*.md specs land.
 function CipherSelector() {
   const [password, setPassword] = useState("");
   const [encrypted, setEncrypted] = useState("");
+  const [methodUsed, setMethodUsed] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  function runDifficulty(difficulty: "easy" | "medium" | "hard" | "intense") {
+  function runDifficulty(difficulty: Difficulty) {
     setCopied(false);
     setError(null);
-    if (difficulty !== "easy") {
-      setEncrypted("Coming soon");
-      return;
-    }
     try {
-      setEncrypted(generateCipher(password).base64);
+      const result = generateCipherForDifficulty(difficulty, password);
+      setEncrypted(result.base64);
+      setMethodUsed(`${result.methodLabel} — target in slot ${result.answerIndex}/5`);
     } catch (err) {
       setEncrypted("");
+      setMethodUsed(null);
       setError(err instanceof Error ? err.message : "Failed to encrypt.");
     }
   }
@@ -104,6 +105,11 @@ function CipherSelector() {
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
           </div>
+          {methodUsed && (
+            <p className="text-xs text-cyan-400/80">
+              <span className="text-neon-100/40">Method used (admin only, never shown to teams):</span> {methodUsed}
+            </p>
+          )}
         </div>
         {error && <p className="text-xs text-danger-400">{error}</p>}
         <div className="grid grid-cols-4 gap-2 pt-1">
