@@ -46,6 +46,10 @@ jobs:
           TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
             -d "{\"username\": \"${{ secrets.DOCKERHUB_USERNAME }}\", \"password\": \"${{ secrets.DOCKERHUB_TOKEN }}\"}" \
             https://hub.docker.com/v2/users/login/ | jq -r .token)
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "::error::Docker Hub hub-api login failed — check DOCKERHUB_USERNAME/DOCKERHUB_TOKEN. The version-exists check and old-tag cleanup below both depend on this token."
+            exit 1
+          fi
           echo "::add-mask::$TOKEN"
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
 
@@ -73,10 +77,20 @@ jobs:
         run: |
           TAGS=$(curl -s -H "Authorization: Bearer ${{ steps.hub.outputs.token }}" \
             "https://hub.docker.com/v2/repositories/aayushop/opday-ctf/tags/?page_size=100" | jq -r '.results[].name')
+          FAILED=0
           for TAG in $TAGS; do
             if [ "$TAG" != "latest" ] && [ "$TAG" != "${{ inputs.version }}" ]; then
               echo "Deleting old tag: $TAG"
-              curl -s -o /dev/null -X DELETE -H "Authorization: Bearer ${{ steps.hub.outputs.token }}" \
-                "https://hub.docker.com/v2/repositories/aayushop/opday-ctf/tags/$TAG/"
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
+                -H "Authorization: Bearer ${{ steps.hub.outputs.token }}" \
+                "https://hub.docker.com/v2/repositories/aayushop/opday-ctf/tags/$TAG/")
+              # 202/204 = deleted, 404 = already gone (fine, nothing to clean up).
+              if [ "$STATUS" != "202" ] && [ "$STATUS" != "204" ] && [ "$STATUS" != "404" ]; then
+                echo "::warning::Failed to delete tag '$TAG' (HTTP $STATUS). It may still be linked on Docker Hub; delete it manually or check DOCKERHUB_TOKEN's Delete scope."
+                FAILED=1
+              fi
             fi
           done
+          if [ "$FAILED" = "1" ]; then
+            echo "::warning::One or more old tags could not be deleted. The new release still published fine, this is cleanup-only."
+          fi
