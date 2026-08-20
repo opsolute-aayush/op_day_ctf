@@ -2,6 +2,8 @@
 
 [![Build and push Docker image](https://github.com/opsolute-aayush/op_day_ctf/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/opsolute-aayush/op_day_ctf/actions/workflows/docker-publish.yml)
 [![Docker Hub](https://img.shields.io/docker/v/aayushop/opday-ctf?sort=semver&label=docker&logo=docker)](https://hub.docker.com/r/aayushop/opday-ctf/tags)
+[![Docker Pulls](https://img.shields.io/docker/pulls/aayushop/opday-ctf?label=pulls&logo=docker)](https://hub.docker.com/r/aayushop/opday-ctf)
+[![Status](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fopsolute-aayush%2Fop_day_ctf%2Fstatus%2Fstatus.json)](https://aegios.co.in)
 
 A physical + digital scavenger hunt. Teams decode a cipher, find hidden word cards, and race to build a final sentence. One self-contained Next.js app, no external services needed.
 
@@ -162,6 +164,8 @@ docker buildx build --platform linux/amd64 -f docker/Dockerfile \
 | `nginx` | Handles HTTPS, redirects port 80 → 443, reloads every 12h for renewed certs |
 | `certbot` | Renews the Let's Encrypt cert every 12h |
 | `watchtower` | Checks Docker Hub every 5 min; pulls + restarts `app` when a new image lands |
+
+**Status badge:** `.github/workflows/status-badge.yml` pings `aegios.co.in` every 15 min and publishes Operational/Degraded/Down to the `status` branch, shown as the **Status** badge above. Update `CHECK_URL` in that workflow if the domain changes. It only reflects reality while the VM is actually running; expect "Down" between events unless something stays up in between.
 
 ## Environment variables
 

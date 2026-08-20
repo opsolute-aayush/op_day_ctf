@@ -1,0 +1,75 @@
+name: Update status badge
+
+# Pings the live app every 15 min and publishes a tiny status.json to the
+# "status" branch (kept separate from main so it never clutters real
+# history). The README's badge reads that file live via shields.io's public
+# "endpoint" badge type - no third-party account, no extra secret, just the
+# workflow's own GITHUB_TOKEN.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+env:
+  CHECK_URL: "https://aegios.co.in/"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ping the live app
+        id: check
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code} %{time_total}" --max-time 10 "$CHECK_URL" || echo "000 0")
+          HTTP_STATUS=$(echo "$RESPONSE" | awk '{print $1}')
+          RESPONSE_MS=$(echo "$RESPONSE" | awk '{printf "%d", $2 * 1000}')
+
+          if [ "$HTTP_STATUS" -ge 200 ] 2>/dev/null && [ "$HTTP_STATUS" -lt 400 ] 2>/dev/null; then
+            if [ "$RESPONSE_MS" -gt 3000 ]; then
+              MESSAGE="Degraded Performance"
+              COLOR="yellow"
+            else
+              MESSAGE="Operational"
+              COLOR="brightgreen"
+            fi
+          else
+            MESSAGE="Down"
+            COLOR="red"
+          fi
+
+          echo "message=$MESSAGE" >> "$GITHUB_OUTPUT"
+          echo "color=$COLOR" >> "$GITHUB_OUTPUT"
+          echo "http_status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
+          echo "response_ms=$RESPONSE_MS" >> "$GITHUB_OUTPUT"
+          echo "Checked $CHECK_URL: $MESSAGE (HTTP $HTTP_STATUS, ${RESPONSE_MS}ms)"
+
+      - name: Publish status.json to the status branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git fetch origin status; then
+            git checkout -B status origin/status
+          else
+            git checkout --orphan status
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          cat > status.json <<EOF
+          {"schemaVersion": 1, "label": "status", "message": "${{ steps.check.outputs.message }}", "color": "${{ steps.check.outputs.color }}"}
+          EOF
+
+          git add status.json
+          if git diff --cached --quiet; then
+            echo "No change, skipping commit."
+          else
+            git commit -m "status: ${{ steps.check.outputs.message }} (HTTP ${{ steps.check.outputs.http_status }}, ${{ steps.check.outputs.response_ms }}ms)"
+            git push origin status
+          fi
