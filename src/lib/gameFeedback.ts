@@ -4,9 +4,7 @@
 // rule lives in one place instead of being repeated at every call site:
 // - Right (password or word correct): sound OR video, chosen at random,
 //   never both at once.
-// - Wrong password: sound always, plus video when it's enabled. A video-only
-//   cue went completely silent for anyone with video off/blocked, so sound is
-//   now guaranteed. Wrong word: sound only.
+// - Wrong password: video only, no sound. Wrong word: sound only.
 // - Sabotage decode denied: video only, no sound. Distinct from a wrong
 //   level password.
 // - Help revealed: sound only (random pick, same as always).
@@ -34,7 +32,6 @@ export function playRightFeedback() {
 }
 
 export function playWrongPasswordFeedback() {
-  playRandomWrongPasswordSound();
   void playVideoClip("wrong_pass");
 }
 
