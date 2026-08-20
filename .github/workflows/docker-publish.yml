@@ -1,9 +1,27 @@
 name: Build and push Docker image
 
+# Manual only — you pick the version when you run it (Actions tab → this
+# workflow → Run workflow). Nothing pushes on its own.
+#
+# Versioning: x.y.z
+#   x = major change / new feature
+#   y = UI change, placement, or fix
+#   z = bug fix
+#
+# Pushes aayushop/opday-ctf:<version> AND aayushop/opday-ctf:latest — the
+# VM's Watchtower polls whatever tag docker-compose.prod.yml is pinned to
+# (DOCKER_TAG, default "latest"), so pushing :latest is what makes it
+# auto-update. Refuses to overwrite a version that's already published, and
+# deletes every other version tag from Docker Hub afterward so old images
+# don't pile up (git history is the record of what changed, not Docker Hub).
+
 on:
-  push:
-    branches: [main]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, x.y.z (e.g. 1.4.2)"
+        required: true
+        type: string
 
 jobs:
   build-and-push:
@@ -12,13 +30,53 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Validate version format
+        run: |
+          if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must be x.y.z (got '${{ inputs.version }}')"
+            exit 1
+          fi
 
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
+      - name: Get Docker Hub API token
+        id: hub
+        run: |
+          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
+            -d "{\"username\": \"${{ secrets.DOCKERHUB_USERNAME }}\", \"password\": \"${{ secrets.DOCKERHUB_TOKEN }}\"}" \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Refuse to overwrite an existing version tag
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ steps.hub.outputs.token }}" \
+            "https://hub.docker.com/v2/repositories/aayushop/opday-ctf/tags/${{ inputs.version }}/")
+          if [ "$STATUS" = "200" ]; then
+            echo "::error::aayushop/opday-ctf:${{ inputs.version }} already exists on Docker Hub — bump the version and re-run."
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push (linux/amd64)
         run: |
           docker buildx build --platform linux/amd64 -f docker/Dockerfile \
-            -t aayushop/opday-ctf:latest --push .
+            -t aayushop/opday-ctf:${{ inputs.version }} \
+            -t aayushop/opday-ctf:latest \
+            --push .
+
+      - name: Delete older version tags from Docker Hub
+        run: |
+          TAGS=$(curl -s -H "Authorization: Bearer ${{ steps.hub.outputs.token }}" \
+            "https://hub.docker.com/v2/repositories/aayushop/opday-ctf/tags/?page_size=100" | jq -r '.results[].name')
+          for TAG in $TAGS; do
+            if [ "$TAG" != "latest" ] && [ "$TAG" != "${{ inputs.version }}" ]; then
+              echo "Deleting old tag: $TAG"
+              curl -s -o /dev/null -X DELETE -H "Authorization: Bearer ${{ steps.hub.outputs.token }}" \
+                "https://hub.docker.com/v2/repositories/aayushop/opday-ctf/tags/$TAG/"
+            fi
+          done

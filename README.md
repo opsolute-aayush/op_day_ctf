@@ -130,19 +130,27 @@ docker compose -p opday-ctf -f docker-compose.prod.yml up -d
 
 Open `https://aegios.co.in/admin` → **Create New Session**.
 
-**Future updates deploy automatically** — `.github/workflows/docker-publish.yml` builds and pushes `aayushop/opday-ctf:latest` on every push to `main`. Watchtower checks every 5 minutes and pulls + restarts the app on its own. Nothing to run on the VM or on your machine.
+**Releasing an update is manual, by version.** Go to **Actions → Build and push Docker image → Run workflow**, and type a version. Nothing publishes on its own — you choose when and what version.
+
+Versioning is `x.y.z`:
+- **x** — major change or new feature
+- **y** — UI change, placement, or fix
+- **z** — bug fix
+
+The workflow builds and pushes both `aayushop/opday-ctf:<version>` and `aayushop/opday-ctf:latest`. Watchtower on the VM watches `latest` (that's `DOCKER_TAG`'s default), so it auto-updates within 5 minutes of a release — nothing to run on the VM. It also refuses to reuse a version that's already published, and deletes every other version tag from Docker Hub after a successful push, so old images don't pile up.
 
 The workflow needs two repo secrets, set once under **Settings → Secrets and variables → Actions**:
 
 | Secret | Value |
 |---|---|
 | `DOCKERHUB_USERNAME` | Docker Hub username (`aayushop`) |
-| `DOCKERHUB_TOKEN` | A Docker Hub **access token** (Account Settings → Personal access tokens), not the password |
+| `DOCKERHUB_TOKEN` | A Docker Hub **access token** with Read/Write/Delete scope (Account Settings → Personal access tokens) — Delete is needed to prune old version tags |
 
 To build and push by hand instead (CI down, or testing before secrets are set):
 
 ```bash
-docker buildx build --platform linux/amd64 -f docker/Dockerfile -t aayushop/opday-ctf:latest --push .
+docker buildx build --platform linux/amd64 -f docker/Dockerfile \
+  -t aayushop/opday-ctf:<version> -t aayushop/opday-ctf:latest --push .
 ```
 
 **What's running:**
