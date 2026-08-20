@@ -16,7 +16,7 @@ export async function getSessionByCode(code: string) {
 export interface ConnectedPlayer {
   name: string;
   // null for someone who's entered the session code and is on the "Select
-  // Your Squad" screen but hasn't joined a team yet — nothing to point at,
+  // Your Squad" screen but hasn't joined a team yet. Nothing to point at,
   // so the client renders them gray instead of a team color.
   teamId: string | null;
   teamNumber: number | null;
@@ -24,12 +24,12 @@ export interface ConnectedPlayer {
   color: string | null;
 }
 
-// Shared by the admin overview panel and the player-facing one on /play —
-// everyone still in a team's roster, scoped to one session, PLUS anyone
-// currently sitting in the pre-team lobby (see lib/lobbyPresence.ts).
+// Shared by the admin overview panel and the player-facing one on /play.
+// Includes everyone still in a team's roster, scoped to one session, plus
+// anyone currently sitting in the pre-team lobby (see lib/lobbyPresence.ts).
 // Roster entries are deliberately NOT filtered by recent heartbeat
-// activity: a player reading a physical clue with their phone locked, or
-// with a flaky connection, is still in the game — they should only drop
+// activity. A player reading a physical clue with their phone locked, or
+// with a flaky connection, is still in the game. They should only drop
 // off via an explicit Leave Team (see removeMemberPresence), not a rolling
 // few-seconds timeout. Lobby entries, in contrast, ARE heartbeat-gated
 // (~15s) since that's genuinely "are they still on this screen right now."
@@ -51,8 +51,8 @@ export async function getConnectedPlayers(sessionId: string): Promise<ConnectedP
   );
 
   // A device that just finished joining a team keeps heartbeating the lobby
-  // for a few more seconds until its next poll notices sessionCode is gone —
-  // skip anyone whose name already has a roster entry so they don't briefly
+  // for a few more seconds until its next poll notices sessionCode is gone.
+  // Skip anyone whose name already has a roster entry so they don't briefly
   // show up twice.
   const rosterNames = new Set(rosterPlayers.map((p) => p.name.toLowerCase()));
   const lobbyPlayers: ConnectedPlayer[] = getLobbyPresence(sessionId)
@@ -62,7 +62,7 @@ export async function getConnectedPlayers(sessionId: string): Promise<ConnectedP
   return [...rosterPlayers, ...lobbyPlayers];
 }
 
-// Refreshes one member's lastSeenAt — called on every /api/team/status poll
+// Refreshes one member's lastSeenAt. Called on every /api/team/status poll
 // (3-5s intervals from /play, /final, /winner), which doubles as a presence
 // heartbeat with no extra network traffic. A no-op if the member isn't found
 // (e.g. rosters were cleared by an admin End Game/Reset since this browser
@@ -115,7 +115,7 @@ export async function logActivity(
   });
 }
 
-/** Client-safe team status — only unlocked levels' clues/words are included. */
+/** Client-safe team status: only unlocked levels' clues/words are included. */
 export async function buildTeamStatus(teamId: string) {
   const team = await prisma.team.findUnique({ where: { id: teamId } });
   if (!team) return null;
@@ -135,9 +135,9 @@ export async function buildTeamStatus(teamId: string) {
   const verifiedWordLevels = parseIntArray(progress.verifiedWordLevels);
 
   // wordReward is only included once the team has confirmed it via
-  // verify-word — a correct password alone never leaks the word text.
+  // verify-word. A correct password alone never leaks the word text.
   // cipherMessage ("Ye Lee") is admin-authored per level and holds the
-  // *next* level's encoded password — surfacing it once this level unlocks
+  // *next* level's encoded password. Surfacing it once this level unlocks
   // is what lets a team start decoding their way into the level after this
   // one, same gating as locationClue/wordReward.
   const unlockedClues = levelConfigs
@@ -164,8 +164,8 @@ export async function buildTeamStatus(teamId: string) {
       ? currentLevelConfig?.hint ?? null
       : null;
 
-  // Whether a hint *exists* for the current level (without revealing it) —
-  // lets the client only show the "Ask for a Hint" button when it would
+  // Whether a hint *exists* for the current level (without revealing it).
+  // Lets the client only show the "Ask for a Hint" button when it would
   // actually do something.
   const hintAvailable = Boolean(currentLevelConfig?.hint) && !finalUnlocked;
 

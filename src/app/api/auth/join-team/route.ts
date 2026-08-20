@@ -6,13 +6,13 @@ import { logActivity, buildTeamStatus, getSessionByCode } from "@/lib/game";
 import { parseMembers } from "@/lib/json";
 import { withKeyLock } from "@/lib/mutex";
 
-// Teams are pre-created by the Game Master (see /api/admin/teams) so the
-// team count always matches the physical groups at the event — players can
+// Teams are pre-created by the Game Master (see /api/admin/teams), so the
+// team count always matches the physical groups at the event. Players can
 // only join an existing team, never mint a new one from the app. `code` is
-// required and re-validated server-side against the team's own session —
-// even though teamId alone would resolve a team, requiring the code too
-// stops a client from joining a team it only reached by guessing/reusing an
-// ID from a different session.
+// required and re-validated server-side against the team's own session.
+// Even though teamId alone would resolve a team, requiring the code too
+// stops a client from joining a team it only reached by guessing or reusing
+// an ID from a different session.
 const schema = z.object({
   code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit session code"),
   teamId: z.string().min(1),
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Two teammates can submit within milliseconds of each other (e.g. both
-  // tapping "Join" right after scanning the same QR code) — without a lock,
+  // tapping "Join" right after scanning the same QR code). Without a lock,
   // both requests read the same members list before either write lands, and
   // whichever write finishes last silently erases the other's entry. Locking
   // per team serializes the read-modify-write so nobody gets dropped.

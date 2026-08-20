@@ -132,9 +132,9 @@ export default function PlayerStatsPanel({
   return (
     <div className="space-y-6">
       {/* right_pass/help clips show here and only here (VideoOverlay no
-          longer pops them up top-left) — wrong_pass/winning stay on
-          VideoOverlay's own bottom-center popup instead of also duplicating
-          into this monitor. */}
+          longer pops them up top-left). wrong_pass/winning stay on
+          VideoOverlay's own bottom-center popup instead, so they aren't
+          duplicated into this monitor. */}
       <VideoMonitor categories={["right_pass", "help"]} />
 
       <TerminalPanel title="agent-stats.cfg">
@@ -229,7 +229,7 @@ export default function PlayerStatsPanel({
                   </div>
                 ) : (
                   <div className="space-y-1.5">
-                    <p className="text-xs text-purple-400">Code accepted — pick a squad to swap progress with:</p>
+                    <p className="text-xs text-purple-400">Code accepted. Pick a squad to swap progress with:</p>
                     {swapTeams === null && <p className="text-xs text-neon-100/30">loading squads…</p>}
                     {swapTeams?.length === 0 && <p className="text-xs text-neon-100/30">No other squads yet.</p>}
                     {swapTeams?.map((t) => (
@@ -257,7 +257,7 @@ export default function PlayerStatsPanel({
               <div className="flex items-start gap-2 rounded-md border border-purple-400/40 bg-purple-400/10 px-3 py-2 text-xs text-purple-300">
                 <Repeat className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
-                  Boards swapped with <strong>{swapResult}</strong> — your levels, clues and passwords just changed.
+                  Boards swapped with <strong>{swapResult}</strong>. Your levels, clues and passwords just changed.
                   Check the list below.
                 </span>
               </div>

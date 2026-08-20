@@ -44,7 +44,7 @@ export default function SettingsPage() {
     setNameOverride(null);
     try {
       // 404/401 here just means this device isn't currently joined to a
-      // team — the local name above is still the source of truth and will
+      // team. The local name above is still the source of truth and will
       // be used the next time they join.
       await fetch("/api/team/member-name", {
         method: "PUT",
@@ -52,7 +52,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ name: trimmed }),
       });
     } catch {
-      // Offline — local name is still saved.
+      // Offline: local name is still saved.
     } finally {
       setSavingName(false);
       setNameSaved(true);
@@ -92,7 +92,7 @@ export default function SettingsPage() {
                 <User className="h-4 w-4 text-neon-500" /> Display Name
               </span>
               <p className="text-xs text-neon-100/40">
-                Used everywhere you show up — your squad roster and the active-agents list.
+                Used everywhere you show up: your squad roster and the active-agents list.
               </p>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
@@ -117,7 +117,7 @@ export default function SettingsPage() {
           </TerminalPanel>
 
           <p className="text-center text-xs text-neon-100/30">
-            Saved on this device only — every teammate sets their own.
+            Saved on this device only. Every teammate sets their own.
           </p>
         </div>
       </main>

@@ -34,7 +34,7 @@ function readFromStorage(): OpDaySettings {
 }
 
 // Stable object reference so getSettings() can double as a
-// useSyncExternalStore snapshot — identity only changes on setSettings().
+// useSyncExternalStore snapshot. Identity only changes on setSettings().
 let cached: OpDaySettings = readFromStorage();
 
 export function getSettings(): OpDaySettings {
@@ -58,7 +58,7 @@ export function subscribeToSettings(handler: (settings: OpDaySettings) => void):
   return () => window.removeEventListener(SETTINGS_EVENT, listener);
 }
 
-/** Subscribe form expected by useSyncExternalStore — no value needed, just re-read getSettings(). */
+/** Subscribe form expected by useSyncExternalStore: no value needed, just re-read getSettings(). */
 export function subscribeToSettingsStore(callback: () => void): () => void {
   window.addEventListener(SETTINGS_EVENT, callback);
   return () => window.removeEventListener(SETTINGS_EVENT, callback);

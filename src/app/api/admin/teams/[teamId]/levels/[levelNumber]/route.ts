@@ -10,8 +10,8 @@ const updateSchema = z.object({
   locationClue: z.string().min(1).max(2000).optional(),
   wordReward: z.string().min(1).max(200).optional(),
   hint: z.string().max(2000).nullable().optional(),
-  // "Ye Lee" — omit the field to leave it untouched (PUT is partial), but
-  // if included it can't be blanked out, same as locationClue/wordReward.
+  // "Ye Lee": omit the field to leave it untouched (PUT is partial). If
+  // included, it can't be blanked out, same as locationClue/wordReward.
   cipherMessage: z.string().min(1).max(4000).optional(),
 });
 

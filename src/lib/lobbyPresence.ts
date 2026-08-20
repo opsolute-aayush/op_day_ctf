@@ -1,11 +1,11 @@
 // Tracks devices that have entered a session code and are sitting on the
-// "Select Your Squad" screen but haven't joined a team yet — so the admin
-// (and other players) can see them show up the moment they join the
+// "Select Your Squad" screen but haven't joined a team yet. This lets the
+// admin (and other players) see them show up the moment they join the
 // session, not only once they pick a squad. Per-process, in-memory only:
 // this is ephemeral lobby chatter, not something worth persisting to the
 // DB or surviving a restart. A device drops off ~15s after its last
-// heartbeat (matches lib/json.ts's ACTIVE_WINDOW_MS) — same lazy-cleanup-on-read
-// style as lib/sessionLifecycle.ts's idle sweep.
+// heartbeat (matches lib/json.ts's ACTIVE_WINDOW_MS), using the same
+// lazy-cleanup-on-read style as lib/sessionLifecycle.ts's idle sweep.
 
 const LOBBY_TTL_MS = 15_000;
 

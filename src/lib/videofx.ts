@@ -1,7 +1,7 @@
 "use client";
 
 // Video clips auto-discover from public/videos/<category>/ the same way
-// sfx.ts does for sounds — winning/ clips are green-screen, chroma-keyed
+// sfx.ts does for sounds. winning/ clips are green-screen, chroma-keyed
 // live by VideoOverlay rather than played as a plain rectangle.
 
 import { getSettings } from "@/lib/settings";
@@ -52,7 +52,7 @@ const lastPlayed: Record<VideoCategory, string | null> = {
 /**
  * Picks a random clip from public/videos/<category> and broadcasts it via a
  * window event. VideoOverlay (mounted once in the root layout) is the sole
- * listener and actually renders it — this function never touches the DOM
+ * listener and actually renders it. This function never touches the DOM
  * itself, so it's safe to call from anywhere (modals, pages, hooks).
  */
 export async function playVideoClip(category: VideoCategory) {

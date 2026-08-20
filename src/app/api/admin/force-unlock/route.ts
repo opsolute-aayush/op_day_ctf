@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // mode === "unlock": Game Master bypass — skip the password check entirely.
+  // mode === "unlock": Game Master bypass. Skip the password check entirely.
   if (targetLevel >= totalLevels) {
     return NextResponse.json({ error: "Team already has every level unlocked." }, { status: 400 });
   }
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   const unlockedLevels = parseIntArray(progress.unlockedLevels);
   if (!unlockedLevels.includes(targetLevel)) unlockedLevels.push(targetLevel);
-  // The Game Master's override is a full bypass — it also confirms the
+  // The Game Master's override is a full bypass. It also confirms the
   // word for free, since a stuck team wouldn't otherwise have any way to
   // know it.
   const verifiedWordLevels = parseIntArray(progress.verifiedWordLevels);

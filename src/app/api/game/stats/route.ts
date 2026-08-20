@@ -39,7 +39,7 @@ export async function GET() {
   });
 
   // Finishers first, ordered by actual finish time (not just the "isFirstToFinish"
-  // flag, which only marks 1st place) — this is what lets the board rank 2nd,
+  // flag, which only marks 1st place). This is what lets the board rank 2nd,
   // 3rd, etc. Still-playing teams follow, ordered by progress.
   stats.sort((a, b) => {
     if (a.completed !== b.completed) return a.completed ? -1 : 1;

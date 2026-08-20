@@ -5,7 +5,7 @@ import { playButtonClickSound } from "@/lib/sfx";
 
 /**
  * Plays a generic click blip, but only for clicks that actually move you to a
- * new screen — a next/link anchor, or a button explicitly marked
+ * new screen: a next/link anchor, or a button explicitly marked
  * `data-sfx-nav` (e.g. "Continue", "Join Squad"). Typing into a field,
  * dragging a slider, flipping a toggle, or any other in-place adjustment
  * stays silent. `data-sfx-exempt` still wins even over a nav match, for

@@ -8,7 +8,7 @@ import { withKeyLock } from "@/lib/mutex";
 
 const schema = z.object({ name: z.string().trim().min(1, "Enter your name").max(40) });
 
-// Renaming re-signs the team cookie with the new memberName — every other
+// Renaming re-signs the team cookie with the new memberName. Every other
 // route (presence heartbeat, leave-team, connected-players) matches a
 // player by that exact string, so a stale cookie would silently stop their
 // heartbeat from finding their own roster entry.
@@ -37,7 +37,7 @@ export async function PUT(req: NextRequest) {
 
   await logActivity(teamAuth.sessionId, teamAuth.teamId, "MEMBER_RENAMED", { from: oldName, to: newName });
 
-  // Rebuild the payload from scratch rather than spreading teamAuth — the
+  // Rebuild the payload from scratch rather than spreading teamAuth. The
   // decoded token also carries iat/exp, and jwt.sign() rejects a payload
   // that already has exp when expiresIn is also passed.
   const token = signTeamToken({

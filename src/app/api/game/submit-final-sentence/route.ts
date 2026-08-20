@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   }
   if (session.isFinished) {
     return NextResponse.json(
-      { error: "The Game Master has ended the hunt — no more submissions are being accepted." },
+      { error: "The Game Master has ended the hunt. No more submissions are being accepted." },
       { status: 403 }
     );
   }
@@ -66,12 +66,12 @@ export async function POST(req: NextRequest) {
 
   if (!correct) {
     await logActivity(teamAuth.sessionId, teamAuth.teamId, "WRONG_FINAL_SENTENCE", { submitted: parsed.data.sentence });
-    return NextResponse.json({ error: "Not quite — recheck the order of your words." }, { status: 401 });
+    return NextResponse.json({ error: "Not quite. Recheck the order of your words." }, { status: 401 });
   }
 
-  // Track (but don't act on) who finished first — bragging rights only. The
-  // game itself keeps running for everyone else until the Game Master
-  // explicitly ends it; one team finishing never locks anyone else out.
+  // Track (but don't act on) who finished first, for bragging rights only.
+  // The game itself keeps running for everyone else until the Game Master
+  // explicitly ends it. One team finishing never locks anyone else out.
   const claim = await prisma.gameSession.updateMany({
     where: { id: teamAuth.sessionId, winningTeamId: null },
     data: { winningTeamId: teamAuth.teamId },

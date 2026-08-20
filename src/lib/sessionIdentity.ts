@@ -1,6 +1,6 @@
 "use client";
 
-// The last session code this device joined — lets /register auto-resume
+// The last session code this device joined. Lets /register auto-resume
 // straight to the squad list after Leave Team, instead of asking for the
 // code again. Cleared explicitly when the player chooses "Change code".
 
@@ -22,7 +22,7 @@ export function setSavedSessionCode(code: string): void {
     window.localStorage.setItem(STORAGE_KEY, code);
     window.dispatchEvent(new CustomEvent<string>(EVENT, { detail: code }));
   } catch {
-    // localStorage unavailable — just won't auto-resume next time.
+    // localStorage unavailable, so it just won't auto-resume next time.
   }
 }
 
@@ -36,7 +36,7 @@ export function clearSavedSessionCode(): void {
   }
 }
 
-/** Subscribe form expected by useSyncExternalStore — no value needed, just re-read getSavedSessionCode(). */
+/** Subscribe form expected by useSyncExternalStore: no value needed, just re-read getSavedSessionCode(). */
 export function subscribeToSessionCodeStore(callback: () => void): () => void {
   window.addEventListener(EVENT, callback);
   return () => window.removeEventListener(EVENT, callback);

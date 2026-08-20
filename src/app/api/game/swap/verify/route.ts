@@ -6,7 +6,7 @@ import { verifySwapCode } from "@/lib/swap";
 
 const schema = z.object({ code: z.string().min(1) });
 
-// Just checks the code — doesn't move any progress yet. A correct response
+// Just checks the code. It doesn't move any progress yet. A correct response
 // unlocks the partner-team picker on the client; the actual swap only
 // happens once /api/game/swap/execute is called with a chosen partner.
 export async function POST(req: NextRequest) {

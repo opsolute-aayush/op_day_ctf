@@ -8,7 +8,7 @@ async function logActivity(sessionId: string, teamId: string | null, eventType: 
   });
 }
 
-// A short word bank, not gibberish — the point is a quick, satisfying
+// A short word bank, not gibberish. The point is a quick, satisfying
 // "aha, it says X" decode, not a cryptography puzzle.
 const CHALLENGE_WORDS = [
   "FIREWALL",
@@ -44,7 +44,7 @@ export interface ActiveSabotage {
   createdAt: string;
 }
 
-/** The one unresolved sabotage against this team, if any — safe to send to the target (no plainText). */
+/** The one unresolved sabotage against this team, if any. Safe to send to the target (no plainText). */
 export async function getActiveSabotage(teamId: string): Promise<ActiveSabotage | null> {
   const row = await prisma.sabotage.findFirst({
     where: { targetTeamId: teamId, resolvedAt: null },
@@ -95,7 +95,7 @@ export async function launchSabotage(params: {
   if (cooldownSeconds > 0 && source.lastSabotageAt) {
     const remainingMs = source.lastSabotageAt.getTime() + cooldownSeconds * 1000 - Date.now();
     if (remainingMs > 0) {
-      return { error: `Sabotage systems recharging — ${Math.ceil(remainingMs / 1000)}s left.` };
+      return { error: `Sabotage systems recharging: ${Math.ceil(remainingMs / 1000)}s left.` };
     }
   }
 

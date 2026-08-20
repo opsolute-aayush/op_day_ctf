@@ -16,7 +16,7 @@ const RULES: { icon: typeof KeyRound; text: string; color: string }[] = [
   { icon: Trophy, text: "Unlock every level, then arrange all your collected words into the final sentence to win.", color: "text-neon-400" },
 ];
 
-/** Shown only on the pre-start standby screen — gone the moment the Game Master starts the hunt. */
+/** Shown only on the pre-start standby screen. Gone the moment the Game Master starts the hunt. */
 export default function GameRules() {
   return (
     <div className="relative overflow-hidden rounded-lg border border-panel-border bg-gradient-to-b from-panel to-void-2">

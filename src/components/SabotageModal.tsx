@@ -11,7 +11,7 @@ import { playSabotageDeniedFeedback, playResolveFeedback } from "@/lib/gameFeedb
 type Status = "idle" | "verifying" | "denied" | "granted";
 
 /**
- * Full-screen, non-dismissable overlay — while a sabotage is active on this
+ * Full-screen, non-dismissable overlay. While a sabotage is active on this
  * team, it blocks everything else on /play (no close button) until the
  * decoded answer is submitted or an admin bypasses it.
  */
@@ -44,7 +44,7 @@ export default function SabotageModal({ sabotage, onResolved }: { sabotage: Acti
       playResolveFeedback();
       setTimeout(onResolved, 700);
     } catch {
-      setError("Network error — try again.");
+      setError("Network error. Try again.");
       setStatus("denied");
       setTimeout(() => setStatus((s) => (s === "denied" ? "idle" : s)), 550);
     }

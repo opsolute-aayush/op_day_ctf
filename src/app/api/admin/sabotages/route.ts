@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 
-// Admin sees everything, including the correct decoded answer — players
+// Admin sees everything, including the correct decoded answer. Players
 // on the receiving end only ever get cipherText (see lib/sabotage.ts).
 export async function GET() {
   const admin = await requireAdmin();

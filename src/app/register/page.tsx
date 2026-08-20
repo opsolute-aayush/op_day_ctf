@@ -32,17 +32,17 @@ interface JoinableTeam {
 export default function RegisterPage() {
   const router = useRouter();
 
-  // Step 1 — who are you, and which master's session are you joining? Any
+  // Step 1: who are you, and which master's session are you joining? Any
   // number of independent sessions can exist at once, each with its own
   // 6-digit code. The name captured here becomes the single source of truth
-  // for this player everywhere else (join, presence, connected-players) —
-  // see lib/playerIdentity.ts — instead of asking again at step 2.
+  // for this player everywhere else (join, presence, connected-players),
+  // instead of asking again at step 2. See lib/playerIdentity.ts for details.
   const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [codeDraft, setCodeDraft] = useState("");
   const [codeError, setCodeError] = useState<string | null>(null);
   const [checkingCode, setCheckingCode] = useState(false);
 
-  // Step 2 — pick a squad within that session and join it.
+  // Step 2: pick a squad within that session and join it.
   const [teams, setTeams] = useState<JoinableTeam[] | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [teamNameDraft, setTeamNameDraft] = useState("");
@@ -50,7 +50,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Prefills from a prior visit — useSyncExternalStore (not an effect) so
+  // Prefills from a prior visit using useSyncExternalStore (not an effect), so
   // the SSR/first-hydration render (no localStorage) and the real client
   // value reconcile without a setState-after-mount flash. nameOverride is
   // only set once the user actually edits the field; until then the value
@@ -61,9 +61,9 @@ export default function RegisterPage() {
 
   // Resumes straight to the squad list after Leave Team (or any fresh visit
   // from a device that already joined this session before) instead of
-  // asking for the code again — falls back to step 1 silently if the saved
+  // asking for the code again. Falls back to step 1 silently if the saved
   // code no longer resolves (session ended, wrong device, etc.). `resuming`
-  // holds step 1 back off-screen while this check is in flight — without
+  // holds step 1 back off-screen while this check is in flight. Without
   // it, a returning device would flash step 1 for a beat and then jump to
   // step 2, playing the step-change glitch twice in a row instead of once.
   const [resuming, setResuming] = useState(true);
@@ -87,7 +87,7 @@ export default function RegisterPage() {
         setTeams(data.teams);
         setSessionCode(saved);
       } catch {
-        // Network hiccup — leave step 1 visible, no need to clear the saved code for a transient failure.
+        // Network hiccup. Leave step 1 visible. No need to clear the saved code for a transient failure.
       } finally {
         if (!cancelled) setResuming(false);
       }
@@ -119,11 +119,11 @@ export default function RegisterPage() {
   }, [sessionCode]);
 
   // Heartbeats this device's lobby presence (see lib/lobbyPresence.ts),
-  // independent of the teams-list poll above — lets the admin/other
+  // independent of the teams-list poll above. Lets the admin/other
   // players see "someone joined the session" within a few seconds of step 1
   // succeeding, instead of only once a team is picked. A ref (not a `nameDraft`
   // dependency) reads the latest name each tick without restarting the
-  // interval — it can't change after step 1 anyway (the name field only
+  // interval. It can't change after step 1 anyway (the name field only
   // shows there), but this way nothing depends on that staying true. Stops
   // the moment sessionCode changes or the page unmounts (e.g. navigating to
   // /play after actually joining a team).
@@ -142,7 +142,7 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: sessionCode, deviceId: getDeviceId(), name }),
       }).catch(() => {
-        // Transient network error — the next tick retries.
+        // Transient network error. The next tick retries.
       });
     }
     heartbeat();
@@ -176,7 +176,7 @@ export default function RegisterPage() {
       setTeams(data.teams);
       setSessionCode(codeDraft);
     } catch {
-      setCodeError("Network error — try again.");
+      setCodeError("Network error. Try again.");
     } finally {
       setCheckingCode(false);
     }
@@ -232,7 +232,7 @@ export default function RegisterPage() {
       router.push("/play");
       router.refresh();
     } catch {
-      setError("Network error — try again.");
+      setError("Network error. Try again.");
       setSubmitting(false);
     }
   }
@@ -251,7 +251,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Same glitch-reveal keyframe admin's tab switches and /play's
-            standby↔levels swap use — reused here (fresh key remounting the
+            standby↔levels swap use. Reused here (fresh key remounting the
             div, not Framer Motion) so this step change feels consistent
             with the rest of the app. Gated on `resuming` so a returning
             device jumps straight to step 2 with one clean transition
@@ -321,7 +321,7 @@ export default function RegisterPage() {
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <label className="text-xs uppercase tracking-widest text-neon-400/80">
-                      Select Your Squad — {teams.length} online
+                      Select Your Squad: {teams.length} online
                     </label>
                     <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                       {teams.map((team) => {
@@ -421,7 +421,7 @@ export default function RegisterPage() {
 
                         <p className="flex items-center gap-1.5 text-xs text-neon-100/50">
                           Joining as <span className="font-semibold text-neon-100/80">{nameDraft}</span>
-                          <span className="text-neon-100/30">— change this anytime in Settings</span>
+                          <span className="text-neon-100/30">. Change this anytime in Settings</span>
                         </p>
 
                         <InputField

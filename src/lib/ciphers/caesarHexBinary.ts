@@ -3,7 +3,7 @@
 // shuffle + 8-bit binary -> Base64.
 
 import type { CipherMethod } from "./types";
-import { resolveWords, shuffle, toBase64 } from "./shared";
+import { fromBase64, resolveWords, shuffle, toBase64 } from "./shared";
 
 const CAESAR_SHIFT = 5;
 
@@ -29,6 +29,22 @@ function hexToBinary(hex: string): string {
   return out;
 }
 
+function binaryToHex(binary: string): string {
+  let out = "";
+  for (let i = 0; i < binary.length; i += 8) {
+    out += parseInt(binary.slice(i, i + 8), 2).toString(16).padStart(2, "0");
+  }
+  return out;
+}
+
+function hexToText(hex: string): string {
+  let out = "";
+  for (let i = 0; i < hex.length; i += 2) {
+    out += String.fromCharCode(parseInt(hex.slice(i, i + 2), 16));
+  }
+  return out;
+}
+
 export const caesarHexBinaryCipher: CipherMethod = {
   id: "caesar-hex-binary",
   label: "Caesar +5 -> Hex -> Shuffle+Binary -> Base64",
@@ -49,5 +65,11 @@ export const caesarHexBinaryCipher: CipherMethod = {
     const base64 = toBase64(binaries.join(" "));
 
     return { base64, answerIndex, decoys: words.slice(1) };
+  },
+  decode({ base64, answerIndex }) {
+    const binaries = fromBase64(base64).split(" ");
+    const hex = binaryToHex(binaries[answerIndex - 1]);
+    const shifted = hexToText(hex);
+    return caesarEncode(shifted, 26 - CAESAR_SHIFT);
   },
 };

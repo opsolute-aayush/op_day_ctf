@@ -40,7 +40,7 @@ export async function POST() {
     return NextResponse.json({ error: "No hint is available for this level." }, { status: 400 });
   }
 
-  // Already revealed (e.g. the admin gave it for free) — don't charge a credit again.
+  // Already revealed (e.g. the admin gave it for free), so don't charge a credit again.
   const alreadyRevealed = progress.hintReleasedLevel === progress.currentLevel;
 
   if (!alreadyRevealed) {

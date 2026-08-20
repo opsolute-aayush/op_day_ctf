@@ -12,8 +12,8 @@ import {
 
 export { TEAM_COOKIE, ADMIN_COOKIE, signTeamToken, signAdminToken, verifyTeamToken, verifyAdminToken };
 
-// This runs on venue wifi over plain http:// (see docker/docker-compose.yml)
-// — there's no TLS cert for a LAN IP or a local-only domain, so a `Secure`
+// This runs on venue wifi over plain http:// (see docker/docker-compose.yml).
+// There's no TLS cert for a LAN IP or a local-only domain, so a `Secure`
 // cookie would just get silently dropped by every player's phone. They'd
 // still show as joined server-side, but every following request would come
 // back 401 and bounce them straight back to /register, which looks exactly

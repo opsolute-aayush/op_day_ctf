@@ -2,12 +2,12 @@
 
 // Centralizes exactly which sound/video fires for which game moment, so the
 // rule lives in one place instead of being repeated at every call site:
-// - Right (password or word correct): sound OR video, chosen at random —
+// - Right (password or word correct): sound OR video, chosen at random,
 //   never both at once.
-// - Wrong password: sound always, plus video when it's enabled — a video-only
+// - Wrong password: sound always, plus video when it's enabled. A video-only
 //   cue went completely silent for anyone with video off/blocked, so sound is
 //   now guaranteed. Wrong word: sound only.
-// - Sabotage decode denied: video only, no sound — distinct from a wrong
+// - Sabotage decode denied: video only, no sound. Distinct from a wrong
 //   level password.
 // - Help revealed: sound only (random pick, same as always).
 // - Win: sound + video, then outro music ~7s later.
@@ -42,7 +42,7 @@ export function playWrongWordFeedback() {
   playRandomWrongPasswordSound();
 }
 
-/** A sabotage decode attempt came back wrong — video only, no sound. */
+/** A sabotage decode attempt came back wrong: video only, no sound. */
 export function playSabotageDeniedFeedback() {
   void playVideoClip("wrong_pass");
 }
@@ -61,14 +61,14 @@ export function playAlertFeedback() {
   playAlertSound();
 }
 
-/** A sabotage just cleared — decoded by the team itself, or force-cleared/reverted by an admin. */
+/** A sabotage just cleared, decoded by the team itself, or force-cleared/reverted by an admin. */
 export function playResolveFeedback() {
   playResolveSound();
 }
 
-// Module-level, not a component ref: React 18/19 Strict Mode double-invokes
-// effects in dev (mount → cleanup → mount), and a timer stored in a ref
-// gets cancelled by the simulated cleanup before the real mount can use it —
+// Module-level, not a component ref. React 18/19 Strict Mode double-invokes
+// effects in dev (mount → cleanup → mount). A timer stored in a ref gets
+// cancelled by the simulated cleanup before the real mount can use it, so
 // the outro would silently never play. A plain module flag has no lifecycle
 // to race against.
 let outroScheduled = false;

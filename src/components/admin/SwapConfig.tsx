@@ -10,8 +10,8 @@ import { usePolledFetch } from "@/hooks/usePolledFetch";
 export default function SwapConfig({ onChanged }: { onChanged: () => void }) {
   const gameData = usePolledFetch<{ swapCode: string | null; swapUsed: boolean }>("/api/admin/game", 5000);
   // "Adjust state during render" (setState in the body, guarded by a
-  // prev-value comparison) rather than an effect, same as useGlitchKey.ts —
-  // avoids the react-hooks/set-state-in-effect lint rule.
+  // prev-value comparison) rather than an effect, same as useGlitchKey.ts.
+  // This avoids the react-hooks/set-state-in-effect lint rule.
   const [prevGameData, setPrevGameData] = useState(gameData);
   const [code, setCode] = useState<string | null>(null);
   const [swapUsed, setSwapUsed] = useState(false);
@@ -67,7 +67,7 @@ export default function SwapConfig({ onChanged }: { onChanged: () => void }) {
           </NeonButton>
         </div>
         <p className="text-xs text-neon-100/40">
-          Hide this code physically however you like — the platform doesn&apos;t encode or transform it. Players type it in
+          Hide this code physically however you like. The platform doesn&apos;t encode or transform it. Players type it in
           exactly as you write it here.
         </p>
 
@@ -83,12 +83,12 @@ export default function SwapConfig({ onChanged }: { onChanged: () => void }) {
             <p className="pt-1 text-xs text-neon-100/40">
               Status:{" "}
               <span className={swapUsed ? "text-amber-400" : "text-neon-400"}>
-                {swapUsed ? "already claimed this game" : "available — not yet claimed"}
+                {swapUsed ? "already claimed this game" : "available, not yet claimed"}
               </span>
             </p>
           </div>
         ) : (
-          <p className="text-xs text-neon-100/30">No swap card set — the feature stays hidden from players until you set one.</p>
+          <p className="text-xs text-neon-100/30">No swap card set. The feature stays hidden from players until you set one.</p>
         )}
       </div>
     </TerminalPanel>

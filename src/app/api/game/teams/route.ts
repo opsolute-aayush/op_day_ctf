@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionByCode } from "@/lib/game";
 import { parseMembers, isMemberActive } from "@/lib/json";
 
-// Public, minimal team list for the join screen — just enough for a player
+// Public, minimal team list for the join screen. Just enough for a player
 // to recognize and pick their own team. No puzzle content, no progress
 // data. Scoped by the 6-digit session code every player enters before
 // seeing any team list, since any number of independent sessions can be
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       teamNumber: t.teamNumber,
       name: t.name,
       color: t.color,
-      // Just the one flag — lets a rejoining player tell finished squads
+      // Just the one flag, so a rejoining player can tell finished squads
       // apart from ones still playing, without leaking any puzzle/progress
       // detail beyond that.
       completed: t.progress?.completed ?? false,

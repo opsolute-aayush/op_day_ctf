@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/adminGuard";
 import { getConnectedPlayers } from "@/lib/game";
 
 // Unlike the register page's live roster (see /api/game/teams), this is NOT
-// filtered by the ~15s heartbeat window — a member only drops off here via
+// filtered by the ~15s heartbeat window. A member only drops off here via
 // an explicit Leave Team/kick, so someone reading a physical clue with their
 // phone locked still shows as connected. See getConnectedPlayers.
 export async function GET() {

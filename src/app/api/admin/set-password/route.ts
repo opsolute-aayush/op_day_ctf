@@ -6,7 +6,7 @@ import { logActivity } from "@/lib/game";
 
 const schema = z.object({ newPassword: z.string().min(8, "At least 8 characters").max(200) });
 
-// Requires an existing admin session — changes the password for whichever
+// Requires an existing admin session. Changes the password for whichever
 // session the caller's cookie is scoped to.
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin();

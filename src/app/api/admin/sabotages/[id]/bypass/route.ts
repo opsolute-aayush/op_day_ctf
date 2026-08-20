@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/adminGuard";
 import { logActivity } from "@/lib/game";
 
-// Force-clears a sabotage without the target having to solve it — for when
+// Force-clears a sabotage without the target having to solve it. For when
 // a team is genuinely stuck or the admin wants to wave it off.
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin();

@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { getTeamFromCookies } from "@/lib/auth";
 import { getConnectedPlayers } from "@/lib/game";
 
-// Player-facing version of the admin overview panel — every squad in the
-// same session, not just your own, so the standby screen feels like a live
-// room instead of a solo waiting page.
+// Player-facing version of the admin overview panel. It shows every squad
+// in the same session, not just your own, so the standby screen feels like
+// a live room instead of a solo waiting page.
 export async function GET() {
   const teamAuth = await getTeamFromCookies();
   if (!teamAuth) {

@@ -135,7 +135,7 @@ export default function Leaderboard({ refreshKey }: { refreshKey: number }) {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="py-6 text-center text-neon-100/30">
-                  No teams yet — add some from the Team Puzzles tab.
+                  No teams yet. Add some from the Team Puzzles tab.
                 </td>
               </tr>
             )}

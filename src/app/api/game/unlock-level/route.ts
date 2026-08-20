@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
   if (targetLevel >= totalLevels) {
     return NextResponse.json(
-      { error: "All physical levels are unlocked — head to the final sentence screen." },
+      { error: "All physical levels are unlocked. Head to the final sentence screen." },
       { status: 400 }
     );
   }
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   const unlockedLevels = parseIntArray(progress.unlockedLevels);
   if (!unlockedLevels.includes(targetLevel)) unlockedLevels.push(targetLevel);
 
-  // Reveals the clue only — currentLevel doesn't advance until verify-word
+  // Reveals the clue only. currentLevel doesn't advance until verify-word
   // confirms the physical word, so a password alone can't skip verification.
   await prisma.teamProgress.update({
     where: { teamId: teamAuth.teamId },

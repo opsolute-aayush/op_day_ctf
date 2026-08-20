@@ -1,4 +1,4 @@
-# Cipher — Easy: Atbash + Reverse + ASCII
+# Easy Cipher: Atbash + Reverse + ASCII
 
 [← Back to Cipher overview](../README.md)
 

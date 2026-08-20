@@ -5,11 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 export interface UnlockedClue {
   levelNumber: number;
   locationClue: string;
-  // Only present once the team has typed the word and it's been confirmed —
-  // unlocking the level via password alone never reveals it.
+  // Only present once the team has typed the word and it's been confirmed.
+  // Unlocking the level via password alone never reveals it.
   wordReward?: string;
   hint?: string;
-  // "Ye Lee" — admin-authored, holds the *next* level's encoded password.
+  // "Ye Lee": admin-authored, holds the *next* level's encoded password.
   cipherMessage?: string;
 }
 
@@ -68,7 +68,7 @@ export function useTeamStatus(pollMs = 3000) {
         if (cancelled) return;
         setStatus(data.status);
       } catch {
-        // transient network error — next poll will retry
+        // transient network error: next poll will retry
       } finally {
         if (!cancelled) setLoading(false);
       }

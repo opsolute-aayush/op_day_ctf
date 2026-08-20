@@ -12,8 +12,8 @@ import { useState } from "react";
  * first, and only turns it on once `value` genuinely changes afterward.
  *
  * Uses React's "adjust state during render" pattern (a setState call in the
- * component body, guarded by a prev-value comparison) rather than an effect —
- * this lets React re-render with the new state before anything is ever
+ * component body, guarded by a prev-value comparison) rather than an effect.
+ * This lets React re-render with the new state before anything is ever
  * painted, instead of an effect flashing the old, unanimated state for a
  * frame before catching up.
  */

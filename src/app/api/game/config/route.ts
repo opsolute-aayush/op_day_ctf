@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionByCode } from "@/lib/game";
 
-// Public, minimal game state for a given session code — no clues/passwords/
-// sentence leak here.
+// Public, minimal game state for a given session code. No clues, passwords,
+// or sentence data leak here.
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code")?.trim() ?? "";
   if (!/^\d{6}$/.test(code)) {

@@ -2,7 +2,7 @@
 
 // Sounds auto-discover from public/sounds/<category>/ (wrong_pass, right_pass,
 // help, winning, intro, outro, button, settings, hacking, alert, resolve, art) via
-// GET /api/sounds/<category> — drop a file in, no registration needed. The
+// GET /api/sounds/<category>. Drop a file in, no registration needed. The
 // one-shot categories fall back to a synthesized chime when empty; the
 // full-track categories (intro, outro, settings) just stay silent with no assets.
 
@@ -69,7 +69,7 @@ function playFile(category: Category, filename: string, volume: number) {
     const audio = new Audio(`/sounds/${category}/${encodeURIComponent(filename)}`);
     audio.volume = volume;
     void audio.play().catch(() => {
-      // Autoplay can be blocked before any user gesture has landed — safe to ignore.
+      // Autoplay can be blocked before any user gesture has landed. Safe to ignore.
     });
   } catch {
     // ignore
@@ -130,7 +130,7 @@ export function playRandomWrongPasswordSound(baseVolume = 0.6) {
   if (!settings.sfxEnabled) return;
   const volume = baseVolume * settings.sfxVolume;
   void playRandomFromCategory("wrong_pass", volume, () => {
-    // No files dropped in yet — a low, jarring double-buzz.
+    // No files dropped in yet. Falls back to a low, jarring double-buzz.
     playSynthChime(
       [
         [180, 0, 0.15],
@@ -146,7 +146,7 @@ export function playRightPasswordSound(baseVolume = 0.5) {
   if (!settings.sfxEnabled) return;
   const volume = baseVolume * settings.sfxVolume;
   void playRandomFromCategory("right_pass", volume, () => {
-    // Two quick rising blips — a satisfying "unlocked" chirp.
+    // Two quick rising blips: a satisfying "unlocked" chirp.
     playSynthChime(
       [
         [880, 0, 0.12],
@@ -231,7 +231,7 @@ export function playAlertSound(baseVolume = 0.55) {
   });
 }
 
-/** For the team that just cleared a sabotage — their own decode, or an admin bypass/revert. */
+/** For the team that just cleared a sabotage: their own decode, or an admin bypass/revert. */
 export function playResolveSound(baseVolume = 0.5) {
   const settings = getSettings();
   if (!settings.sfxEnabled) return;
@@ -249,9 +249,9 @@ export function playResolveSound(baseVolume = 0.5) {
 }
 
 /**
- * A looping background-music channel for one category — start() is
+ * A looping background-music channel for one category. start() is
  * idempotent (safe to call repeatedly, e.g. on every status poll, without
- * restarting an already-playing track) and reacts live to the Music
+ * restarting an already-playing track). It also reacts live to the Music
  * setting (mute/volume) without needing to be restarted.
  */
 function createLoopingMusicChannel(category: Category) {
@@ -268,7 +268,7 @@ function createLoopingMusicChannel(category: Category) {
     audio.volume = baseVolume * settings.musicVolume;
     if (audio.paused) {
       void audio.play().catch(() => {
-        // Still blocked (no user gesture yet) — the next start() call retries.
+        // Still blocked (no user gesture yet). The next start() call retries.
       });
     }
   }
@@ -295,7 +295,7 @@ function createLoopingMusicChannel(category: Category) {
       el.volume = baseVolume * settings.musicVolume;
       audio = el;
       void el.play().catch(() => {
-        // Autoplay blocked before any user gesture landed — safe to ignore.
+        // Autoplay blocked before any user gesture landed. Safe to ignore.
         audio = null;
       });
     } catch {
@@ -323,13 +323,13 @@ const settingsChannel = createLoopingMusicChannel("settings");
 export const startSettingsMusic = settingsChannel.start;
 export const stopSettingsMusic = settingsChannel.stop;
 
-/** Fire-and-forget, plays once — call ~7s after a team fully completes the hunt. */
+/** Fire-and-forget, plays once. Call ~7s after a team fully completes the hunt. */
 export function playOutroMusic(baseVolume = 0.5) {
   const settings = getSettings();
   if (!settings.musicEnabled) return;
   const volume = baseVolume * settings.musicVolume;
   void playRandomFromCategory("outro", volume, () => {
-    // No outro track dropped in yet — nothing meaningful to synthesize.
+    // No outro track dropped in yet, so there's nothing meaningful to synthesize.
   });
 }
 
@@ -339,12 +339,12 @@ export function playArtTouchSound(baseVolume = 0.4) {
   if (!settings.sfxEnabled) return;
   const volume = baseVolume * settings.sfxVolume;
   void playRandomFromCategory("art", volume, () => {
-    // No file dropped in yet — a quick glitchy tick.
+    // No file dropped in yet. Falls back to a quick glitchy tick.
     playSynthChime([[1200, 0, 0.05], [900, 0.04, 0.06]], volume, "square");
   });
 }
 
-/** Generic UI click feedback — see ClickSound.tsx for where this fires globally. */
+/** Generic UI click feedback. See ClickSound.tsx for where this fires globally. */
 export function playButtonClickSound(baseVolume = 0.3) {
   const settings = getSettings();
   if (!settings.sfxEnabled) return;

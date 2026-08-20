@@ -70,7 +70,7 @@ export default function GameControls({ onChanged }: { onChanged: () => void }) {
           </span>
           <p className="text-xs text-neon-100/40">
             {config.isFinished
-              ? "The hunt is over — nobody can unlock levels or submit sentences anymore."
+              ? "The hunt is over. Nobody can unlock levels or submit sentences anymore."
               : config.isActive
                 ? "Teams can unlock levels and submit sentences right now."
                 : "Teams are locked out until you hit Start."}
@@ -94,17 +94,17 @@ export default function GameControls({ onChanged }: { onChanged: () => void }) {
             <p className="mb-1.5 text-xs uppercase tracking-widest text-amber-400/70">Danger zone</p>
             <div className="flex flex-wrap items-center gap-3">
               <NeonButton variant="cyan" onClick={() => runAction("end")} disabled={config.isFinished}>
-                <Flag className="h-4 w-4" /> {confirmEnd ? "Confirm — end for everyone?" : "End Game"}
+                <Flag className="h-4 w-4" /> {confirmEnd ? "Confirm: end for everyone?" : "End Game"}
               </NeonButton>
               <NeonButton variant="danger" onClick={() => runAction("reset")}>
                 <RotateCcw className="h-4 w-4" /> {confirmReset ? "Confirm reset?" : "Reset Game"}
               </NeonButton>
             </div>
             <p className="mt-2 text-xs text-neon-100/40">
-              <span className="text-amber-400/80">End Game</span> is the only thing that stops the hunt — a team
-              finishing its own sentence never ends it for anyone else, they just get their own results screen.
+              <span className="text-amber-400/80">End Game</span> is the only thing that stops the hunt. A team
+              finishing its own sentence never ends it for anyone else. That team just gets its own results screen.
               <br />
-              <span className="text-danger-400/80">Reset</span> wipes all team progress back to Level 1 — teams
+              <span className="text-danger-400/80">Reset</span> wipes all team progress back to Level 1. Teams
               stay joined, and each team&apos;s passwords/clues/words/sentence (set in Team Puzzles) are untouched.
             </p>
           </div>

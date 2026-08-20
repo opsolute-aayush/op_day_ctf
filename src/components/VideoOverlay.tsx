@@ -8,8 +8,8 @@ import ChromaKeyVideo from "@/components/ChromaKeyVideo";
 const MAX_CLIP_MS = 9000;
 
 // right_pass/help used to pop up top-left, but PlayerStatsPanel's
-// signal-monitor already mirrors every clip category — showing those two
-// there as well was the same video playing twice on screen at once. Same
+// signal-monitor already mirrors every clip category. Showing those two
+// there as well meant the same video played twice on screen at once. Same
 // story for winning, now mirrored by the winner page's own VideoMonitor.
 // This popup only handles wrong_pass, anchored bottom-center.
 const POPUP_CATEGORIES: VideoClipEventDetail["category"][] = ["wrong_pass"];

@@ -47,7 +47,7 @@ export default function PasswordModal({ levelNumber, onClose, onUnlocked }: Pass
       playRightFeedback();
       setTimeout(onUnlocked, 700);
     } catch {
-      setError("Network error — try again.");
+      setError("Network error. Try again.");
       setStatus("denied");
       setTimeout(() => setStatus((s) => (s === "denied" ? "idle" : s)), 550);
     }

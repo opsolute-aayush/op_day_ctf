@@ -4,7 +4,7 @@ import { signAdminToken, setAdminCookie } from "@/lib/auth";
 import { logActivity } from "@/lib/game";
 import { checkRateLimit } from "@/lib/rateLimit";
 
-// No auth required — creating a session IS how a master gets their first
+// No auth required: creating a session IS how a master gets their first
 // credential for it. The password is returned here exactly once.
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? "local";

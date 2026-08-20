@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { TEAM_COOKIE, verifyTeamToken } from "@/lib/jwt";
 
 // UX-level route guarding only. Every API route re-validates the team/admin
-// session and game state server-side — this just avoids flashing protected
+// session and game state server-side. This just avoids flashing protected
 // pages to a browser with no session before the client redirects.
 const PROTECTED_PREFIXES = ["/play", "/final", "/winner"];
 

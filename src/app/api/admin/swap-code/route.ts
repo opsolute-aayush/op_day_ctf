@@ -6,7 +6,7 @@ import { logActivity } from "@/lib/game";
 
 const schema = z.object({ code: z.string().trim().min(3).max(60) });
 
-// Sets (or replaces) the session's single swap code — the admin authors the
+// Sets (or replaces) the session's single swap code. The admin authors the
 // plaintext themselves and hides/obscures it physically however they like.
 // The platform never encodes or transforms it; players type in exactly what
 // the admin wrote here.

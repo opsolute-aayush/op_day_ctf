@@ -15,7 +15,7 @@ const schema = z.object({
 const MAX_ATTEMPTS = 10;
 const WINDOW_MS = 60_000;
 
-// A correct password only unlocks a level's clue — the physical word itself
+// A correct password only unlocks a level's clue. The physical word itself
 // has to be typed in here and confirmed before it counts toward the final
 // sentence. This proves the team actually found the card, not just guessed
 // or brute-forced the password.
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
   const verifiedWordLevels = parseIntArray(progress.verifiedWordLevels);
   if (verifiedWordLevels.includes(levelNumber)) {
-    // Already confirmed — idempotent no-op instead of an error.
+    // Already confirmed, so this is an idempotent no-op instead of an error.
     const status = await buildTeamStatus(teamAuth.teamId);
     return NextResponse.json({ status, alreadyVerified: true });
   }
@@ -80,13 +80,13 @@ export async function POST(req: NextRequest) {
   if (!isMatch) {
     await logActivity(teamAuth.sessionId, teamAuth.teamId, "WRONG_WORD", { levelNumber, submitted: parsed.data.word });
     return NextResponse.json(
-      { error: "Wrong word — check what you found at the location." },
+      { error: "Wrong word. Check what you found at the location." },
       { status: 401 }
     );
   }
 
   verifiedWordLevels.push(levelNumber);
-  // The only thing that advances currentLevel — see unlock-level's comment.
+  // The only thing that advances currentLevel; see unlock-level's comment.
   await prisma.teamProgress.update({
     where: { teamId: teamAuth.teamId },
     data: {

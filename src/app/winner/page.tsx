@@ -53,7 +53,7 @@ export default function WinnerPage() {
     );
   }
 
-  // Leaves this team the same way "Leave Team" on /play does — removes just
+  // Leaves this team the same way "Leave Team" on /play does: removes just
   // this member's name from the roster and clears their cookie. TeamProgress
   // (completed/completedAt), the session's winningTeamId, and this team's
   // whole puzzle are never touched, so the finish stays on the board exactly
@@ -97,17 +97,17 @@ export default function WinnerPage() {
       </Link>
 
       <div className="relative z-10 flex w-full max-w-5xl flex-col items-center gap-10 md:flex-row md:items-start md:justify-center">
-        {/* Left — the interactive ASCII portrait: sweeps with a continuous
-            mesh-line scan, and ripples outward from a tap/click. Drop an
+        {/* Left: the interactive ASCII portrait, which sweeps with a continuous
+            mesh-line scan and ripples outward from a tap/click. Drop an
             image into public/arts/winner/ to activate it. Left untouched
-            by the glitch-flicker treatment below — it's already alive on its own. */}
+            by the glitch-flicker treatment below since it's already alive on its own. */}
         <div className="w-full md:w-2/5 md:sticky md:top-16">
           <AsciiWinnerPortrait accentColor={status.team.color} />
         </div>
 
-        {/* Right — exactly three blocks: the headline, the team/rank line,
+        {/* Right side has exactly three blocks: the headline, the team/rank line,
             and mission.log. Each flickers on its own continuous loop (see
-            .glitch-flicker in globals.css — the same tearing/RGB-split
+            .glitch-flicker in globals.css, the same tearing/RGB-split
             reveal used for nav transitions, just slower and looping) instead
             of a single whole-page effect, so they never glitch in unison. */}
         <div className="flex w-full flex-col items-center gap-6 text-center md:w-3/5">
@@ -177,7 +177,7 @@ export default function WinnerPage() {
               {playingAgain ? "Resetting…" : confirmPlayAgain ? "Confirm? This finish stays on the board" : "Play Again"}
             </NeonButton>
             <p className="text-xs text-neon-100/30">
-              Your rank and time are saved for good — you&apos;ll just need a fresh join to play another round.
+              Your rank and time are saved for good. You&apos;ll just need a fresh join to play another round.
             </p>
           </div>
         </div>

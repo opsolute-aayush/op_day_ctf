@@ -6,7 +6,7 @@ import TerminalPanel from "@/components/TerminalPanel";
 import { usePolledFetch } from "@/hooks/usePolledFetch";
 
 // White stand-in color for someone who's joined the session but hasn't
-// picked a team yet — there's no team color to show them in.
+// picked a team yet. There's no team color to show them in.
 const LOBBY_COLOR = "#FFFFFF";
 
 interface ConnectedPlayer {

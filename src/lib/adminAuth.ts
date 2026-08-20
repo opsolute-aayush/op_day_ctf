@@ -3,14 +3,14 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 // Each session has its own admin password, generated at creation time and
-// returned once in the API response — never stored or shown in plaintext again.
+// returned once in the API response. It's never stored or shown in plaintext again.
 
 function generateRandomPassword(): string {
   return crypto.randomBytes(6).toString("hex");
 }
 
 function generateSixDigitCode(): string {
-  // Always exactly 6 digits, including a possible leading zero — "042817" is
+  // Always exactly 6 digits, including a possible leading zero. "042817" is
   // a valid code, just as easy to read off a screen as any other.
   return String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
 }
@@ -21,7 +21,7 @@ async function generateUniqueSessionCode(): Promise<string> {
     const existing = await prisma.gameSession.findUnique({ where: { code } });
     if (!existing) return code;
   }
-  throw new Error("Could not generate a unique session code — try again.");
+  throw new Error("Could not generate a unique session code. Try again.");
 }
 
 /** Creates a brand-new session with its own 6-digit code and admin password. */

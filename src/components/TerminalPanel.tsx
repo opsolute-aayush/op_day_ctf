@@ -6,8 +6,8 @@ interface TerminalPanelProps {
   className?: string;
 }
 
-// CSS entrance animation (.fade-slide-in in globals.css), not Framer Motion —
-// see RouteTransition.tsx for why a JS-driven fade would break here.
+// CSS entrance animation (.fade-slide-in in globals.css), not Framer Motion.
+// See RouteTransition.tsx for why a JS-driven fade would break here.
 export default function TerminalPanel({ children, title, className = "" }: TerminalPanelProps) {
   return (
     <div className={`fade-slide-in terminal-panel rounded-lg overflow-hidden ${className}`}>

@@ -20,7 +20,7 @@ function smoothstep(t: number): number {
 
 /**
  * Plays a green-screen clip with the green background keyed out live, frame
- * by frame, via canvas pixel manipulation — so it reads as a subject
+ * by frame, via canvas pixel manipulation, so it reads as a subject
  * composited into the page instead of a rectangle of green. The source
  * <video> itself stays hidden; only the processed canvas is shown.
  */
@@ -64,7 +64,7 @@ export default function ChromaKeyVideo({ src, onEnded, className = "" }: ChromaK
           data[i + 3] = alpha;
 
           // Spill suppression, proportional to how keyed-out this pixel
-          // is — pulls green-tinted fringe pixels toward neutral instead of
+          // is. Pulls green-tinted fringe pixels toward neutral instead of
           // leaving a green halo around the subject's edges.
           if (alpha < 255 && greenness > 0) {
             const suppress = 1 - alpha / 255;
@@ -81,8 +81,8 @@ export default function ChromaKeyVideo({ src, onEnded, className = "" }: ChromaK
     }
 
     video.addEventListener("play", handlePlay);
-    // Start muted — that's what guarantees the browser actually lets play()
-    // through regardless of gesture/engagement history — then unmute right
+    // Start muted: that's what guarantees the browser actually lets play()
+    // through regardless of gesture/engagement history. Unmute right
     // after playback has genuinely started. Toggling .muted on an already-
     // playing element isn't a new autoplay attempt, so this isn't blocked
     // the way calling play() unmuted from the start intermittently was.

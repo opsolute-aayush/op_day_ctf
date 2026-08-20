@@ -1,7 +1,7 @@
 "use client";
 
-// Which public/arts/settings/ image this device was randomly assigned —
-// picked once and persisted, so the same user keeps seeing the same
+// Which public/arts/settings/ image this device was randomly assigned.
+// Picked once and persisted, so the same user keeps seeing the same
 // character-art render across visits instead of it changing on them.
 // Different users (different devices) still land on different images.
 
@@ -21,6 +21,6 @@ export function setAssignedArtFile(file: string): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, file);
   } catch {
-    // localStorage unavailable — falls back to a fresh random pick next load.
+    // localStorage unavailable. Falls back to a fresh random pick next load.
   }
 }

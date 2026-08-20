@@ -14,7 +14,7 @@ function CopyButton({ value }: { value: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // Clipboard access can be blocked in some contexts — silently ignore.
+      // Clipboard access can be blocked in some contexts. Silently ignore it.
     }
   }
 
@@ -43,13 +43,13 @@ export default function SessionCreatedPanel({
       <div className="space-y-4 text-left">
         <p className="flex items-start gap-2 text-sm text-amber-400">
           <KeyRound className="mt-0.5 h-4 w-4 shrink-0" />
-          Save these now — the password won&apos;t be shown again. You can set a new one any time from the Security
+          Save these now. The password won&apos;t be shown again. You can set a new one any time from the Security
           tab.
         </p>
 
         <div className="space-y-1.5">
           <label className="text-xs uppercase tracking-widest text-neon-400/80">
-            Session Code — share with players
+            Session Code: share with players
           </label>
           <div className="flex items-center gap-2">
             <span className="flex-1 rounded-md border border-panel-border bg-void-2 px-3 py-2.5 text-center font-display text-xl tracking-[0.3em] text-neon-400">
@@ -70,7 +70,7 @@ export default function SessionCreatedPanel({
         </div>
 
         <NeonButton variant="cyan" className="w-full" onClick={onContinue} data-sfx-nav>
-          I&apos;ve saved this — Continue
+          I&apos;ve saved this. Continue
         </NeonButton>
       </div>
     </TerminalPanel>

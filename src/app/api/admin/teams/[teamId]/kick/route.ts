@@ -7,10 +7,10 @@ import { removeMemberPresence, logActivity } from "@/lib/game";
 const schema = z.object({ name: z.string().min(1) });
 
 // Removes one player from a team's roster without touching the rest of the
-// squad — the admin-triggered equivalent of that player hitting Leave Team
-// themselves. Their browser keeps its cookie and can still act as the team
-// until they rejoin, but they drop off every roster/presence list
-// immediately and their name is freed up to rejoin under.
+// squad. It's the admin-triggered equivalent of that player hitting Leave
+// Team themselves. Their browser keeps its cookie and can still act as the
+// team until they rejoin, but they drop off every roster/presence list
+// immediately, and their name is freed up to rejoin under.
 export async function POST(req: NextRequest, ctx: { params: Promise<{ teamId: string }> }) {
   const admin = await requireAdmin();
   if (admin instanceof NextResponse) return admin;

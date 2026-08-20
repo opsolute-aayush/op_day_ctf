@@ -4,8 +4,8 @@ import { getSessionByCode } from "@/lib/game";
 import { touchLobbyPresence } from "@/lib/lobbyPresence";
 
 // Called on a plain interval by /register while a device sits on the
-// "Select Your Squad" screen — no auth beyond the session code, since
-// nobody has a team cookie yet at this point.
+// "Select Your Squad" screen. There's no auth beyond the session code,
+// since nobody has a team cookie yet at this point.
 const schema = z.object({
   code: z.string().trim().regex(/^\d{6}$/),
   deviceId: z.string().min(1).max(100),

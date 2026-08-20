@@ -15,7 +15,7 @@ export default function FinalPage() {
   const [order, setOrder] = useState<string[] | null>(null);
   const [seededForTeam, setSeededForTeam] = useState<string | null>(null);
   const [manualText, setManualText] = useState("");
-  // Typing is the default — drag-and-drop is opt-in for those who want it,
+  // Typing is the default. Drag-and-drop is opt-in for those who want it,
   // since a plain text box is the more familiar/less confusing starting point.
   const [useManual, setUseManual] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export default function FinalPage() {
       }
       router.replace("/winner");
     } catch {
-      setError("Network error — try again.");
+      setError("Network error. Try again.");
       setSubmitting(false);
     }
   }
@@ -100,7 +100,7 @@ export default function FinalPage() {
           </div>
 
           {/* Same glitch-reveal keyframe used for admin tabs, /play's
-              standby↔levels swap, and register's step change — kept
+              standby↔levels swap, and register's step change. Kept
               consistent across the app instead of popping in instantly. */}
           <div key={useManual ? "manual" : "drag"} className="glitch-reveal">
           {useManual ? (

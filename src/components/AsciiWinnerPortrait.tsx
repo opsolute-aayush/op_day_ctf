@@ -6,10 +6,11 @@ import { playArtTouchSound } from "@/lib/sfx";
 // Same ASCII-from-image pipeline as AsciiOperative (public/arts/<category>/,
 // no code changes to add art), but repurposed as the winner page's hero
 // visual instead of a faint background silhouette: bigger, centered, and
-// interactive — a continuous scanning "mesh line" sweep plus a click/tap
-// ripple that flickers characters outward from the touch point. Inspired by
-// jmswrnr.com's 3D ASCII head (mesh-line + ripple interaction) without the
-// WebGL/3D engine — this app needs to run reliably on phones at a live event.
+// interactive. It adds a continuous scanning "mesh line" sweep plus a
+// click/tap ripple that flickers characters outward from the touch point.
+// Inspired by jmswrnr.com's 3D ASCII head (mesh-line + ripple interaction)
+// without the WebGL/3D engine, since this app needs to run reliably on
+// phones at a live event.
 const CATEGORY = "winner";
 const COLS = 56;
 const CHAR_ASPECT = 0.55;
@@ -77,7 +78,7 @@ export default function AsciiWinnerPortrait({ accentColor }: { accentColor?: str
     };
   }, []);
 
-  // Ambient idle flicker — a handful of cells re-roll to a glitch glyph and
+  // Ambient idle flicker. A handful of cells re-roll to a glitch glyph and
   // revert, same mechanic as AsciiOperative, so the portrait never sits
   // perfectly still even with no interaction.
   useEffect(() => {
@@ -101,7 +102,7 @@ export default function AsciiWinnerPortrait({ accentColor }: { accentColor?: str
     return () => clearInterval(interval);
   }, [grid]);
 
-  // Continuous "mesh line" scan — a bright row sweeps top-to-bottom and
+  // Continuous "mesh line" scan: a bright row sweeps top-to-bottom and
   // loops, standing in for the reference piece's rotating mesh-line motion.
   useEffect(() => {
     if (grid.length === 0) return;
@@ -119,7 +120,7 @@ export default function AsciiWinnerPortrait({ accentColor }: { accentColor?: str
     };
   }, [grid]);
 
-  // Click/tap ripple — flickers cells in expanding rings outward from the
+  // Click/tap ripple: flickers cells in expanding rings outward from the
   // touch point, each ring firing a little later than the last.
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (grid.length === 0 || !containerRef.current) return;

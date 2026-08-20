@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { signAdminToken, setAdminCookie } from "@/lib/auth";
 import { verifySessionLogin } from "@/lib/adminAuth";
 
-// Logs a master back into a session they already created — see
+// Logs a master back into a session they already created. See
 // POST /api/admin/sessions for how a brand-new session (and its first
 // password) gets created in the first place.
 const schema = z.object({

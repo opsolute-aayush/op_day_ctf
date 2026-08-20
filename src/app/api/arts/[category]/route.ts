@@ -3,7 +3,7 @@ import { readdir } from "fs/promises";
 import path from "path";
 
 // Mirrors /api/sounds/[category] and /api/videos/[category] for
-// public/arts/<category> — drop image files in, no code changes needed;
+// public/arts/<category>. Drop image files in and no code changes are needed.
 // AsciiOperative picks a random one and re-picks on its own timer.
 const CATEGORIES = ["settings", "winner"] as const;
 type Category = (typeof CATEGORIES)[number];

@@ -1,6 +1,6 @@
 import { Bot, Ghost, Skull, Bug, Radar, Cpu, Fingerprint, Eye, Zap, Binary } from "lucide-react";
 
-// Deterministic per-team "hacker badge" avatar — no uploads needed. Same
+// Deterministic per-team "hacker badge" avatar. No uploads needed. Same
 // team number always renders the same icon, so it's a stable visual identity
 // everywhere (join screen, play hub, leaderboard, winner screen).
 const ICONS = [Bot, Ghost, Skull, Bug, Radar, Cpu, Fingerprint, Eye, Zap, Binary];

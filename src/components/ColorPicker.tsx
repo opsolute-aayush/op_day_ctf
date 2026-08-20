@@ -3,7 +3,7 @@
 import { Check, Palette } from "lucide-react";
 
 // Same palette the admin's zero-input "Add Team" button cycles through
-// (src/app/api/admin/teams/route.ts) — keeps every color a player can pick
+// (src/app/api/admin/teams/route.ts). Keeps every color a player can pick
 // consistent with the ones teams start out with.
 const PALETTE = ["#39FF14", "#00F0FF", "#FF2ECC", "#FFD400", "#FF6A00", "#B026FF", "#FF3B3B", "#3B82F6"];
 

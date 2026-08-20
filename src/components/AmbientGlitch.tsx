@@ -1,10 +1,10 @@
 import type { CSSProperties } from "react";
 
 // Fixed, hand-picked nodes (not Math.random) so server and client render the
-// same markup — see MatrixRain for why runtime randomization needs a mount
+// same markup. See MatrixRain for why runtime randomization needs a mount
 // gate. Each node glitches in and out on its own short, independently-timed
-// loop (two bursts per cycle — see globals.css), so across the whole set
-// something is always flickering somewhere without ever looking synced.
+// loop (two bursts per cycle, see globals.css). That keeps something
+// flickering somewhere across the whole set without ever looking synced.
 const NODES = [
   { top: "6%", left: "4%", text: "0x7F3A9C2E", duration: "5.5s", delay: "0s" },
   { top: "14%", left: "88%", text: "ケアウエオ", duration: "6.5s", delay: "0.9s" },

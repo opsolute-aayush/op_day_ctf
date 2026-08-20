@@ -35,7 +35,7 @@ const sabotageCapSchema = z.object({
 });
 
 // Sets the session-wide sabotage cap + cooldown and immediately resets every
-// team's remaining count to the new cap — a live dial the admin can turn
+// team's remaining count to the new cap. It's a live dial the admin can turn
 // up/down mid-game, not just a default for new teams. The cooldown itself
 // only affects future launches (existing lastSabotageAt stamps are untouched).
 export async function PUT(req: NextRequest) {
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
   if (parsed.data.action === "start") {
     const session = await prisma.gameSession.update({
       where: { id: sessionId },
-      // Only stamp startedAt the first time — resuming from a pause keeps
+      // Only stamp startedAt the first time. Resuming from a pause keeps
       // the original clock running for accurate "time to finish" tracking.
       data: { isActive: true, startedAt: current.startedAt ?? new Date() },
     });
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (parsed.data.action === "end") {
-    // Only action that locks the hunt for everyone — also clears joined-member
+    // Only action that locks the hunt for everyone. It also clears joined-member
     // rosters, since those names are only meaningful for the event that just ended.
     const [session] = await prisma.$transaction([
       prisma.gameSession.update({

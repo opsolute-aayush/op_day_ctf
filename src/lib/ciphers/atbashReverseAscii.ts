@@ -3,7 +3,7 @@
 // shuffle + ASCII decimal -> Base64.
 
 import type { CipherMethod } from "./types";
-import { resolveWords, shuffle, toBase64 } from "./shared";
+import { fromBase64, resolveWords, shuffle, toBase64 } from "./shared";
 
 const ATBASH_UPPER = "ZYXWVUTSRQPONMLKJIHGFEDCBA";
 const ATBASH_LOWER = "zyxwvutsrqponmlkjihgfedcba";
@@ -45,5 +45,14 @@ export const atbashReverseAsciiCipher: CipherMethod = {
     const base64 = toBase64(asciiGroups.join(" | "));
 
     return { base64, answerIndex, decoys: words.slice(1) };
+  },
+  decode({ base64, answerIndex }) {
+    const groups = fromBase64(base64).split(" | ");
+    const mirrored = groups[answerIndex - 1]
+      .split(" ")
+      .map((n) => String.fromCharCode(parseInt(n, 10)))
+      .join("");
+    // Atbash and full reversal are both self-inverse, so re-running them undoes the encode.
+    return atbashEncode(reverseWord(mirrored));
   },
 };

@@ -18,7 +18,7 @@ export async function GET() {
   return NextResponse.json({ teams });
 }
 
-// Zero-input team creation, scoped to the admin's own session — players can
+// Zero-input team creation, scoped to the admin's own session. Players can
 // never create teams themselves (see /api/auth/join-team).
 export async function POST() {
   const admin = await requireAdmin();

@@ -53,9 +53,9 @@ export default function PlayPage() {
   }, [status?.activeHint]);
 
   // Alerts the team being sabotaged or having its board swapped by someone
-  // else — the team that performed either action gets its own immediate
-  // "hacking" sound from the button click itself, so this only ever needs
-  // to fire for the passive/affected side.
+  // else. The team that performed the action already gets its own immediate
+  // "hacking" sound from the button click, so this only needs to fire for
+  // the passive, affected side.
   useEffect(() => {
     const sabotageId = status?.activeSabotage?.id ?? null;
     if (sabotageId && sabotageId !== lastSabotageIdRef.current) {
@@ -284,7 +284,7 @@ export default function PlayPage() {
       )}
 
       {/* Same glitch-reveal keyframe the admin dashboard uses when
-          switching tabs — reused here (fresh key remounting the div, not
+          switching tabs. Reused here (fresh key remounting the div, not
           Framer Motion) so the standby↔level-list swap feels consistent
           with the rest of the app instead of popping in instantly. */}
       <div key={standbyGlitch.key} className={standbyGlitch.className}>
@@ -297,7 +297,7 @@ export default function PlayPage() {
                 Waiting for Game Master to start OP Day CTF
               </p>
               <p className="text-xs text-neon-100/40">
-                Decode the physical whiteboard cipher once the countdown ends — it holds your Level 1 password.
+                Decode the physical whiteboard cipher once the countdown ends. It holds your Level 1 password.
               </p>
             </div>
           </TerminalPanel>

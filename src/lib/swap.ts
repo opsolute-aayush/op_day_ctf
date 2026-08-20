@@ -16,7 +16,7 @@ interface ProgressFields {
   verifiedWordLevels: string;
   hintReleasedLevel: number | null;
   completed: boolean;
-  completedAt: string | null; // ISO — null means not completed
+  completedAt: string | null; // ISO string, or null if not completed
 }
 
 interface LevelContent {
@@ -66,7 +66,7 @@ function progressUpdateData(p: ProgressFields) {
 
 /**
  * Whether this session has a swap card configured, whether it's already
- * been claimed, and — for `teamId` specifically — the active swap's id if
+ * been claimed, and, for `teamId` specifically, the active swap's id if
  * this team was the passive partner (didn't click confirm themselves, so
  * the client needs a signal to know to alert them). Never set for the
  * initiator: they already get immediate feedback from their own action.
@@ -126,9 +126,9 @@ async function loadSnapshot(teamId: string): Promise<TeamSnapshot | null> {
 /**
  * Applies `incoming`'s board (level content + winning sentence) and progress
  * onto `teamId`. Callers must have already filtered `incoming.levels` down
- * to level numbers `teamId` actually still has a row for — teamId/levelNumber
- * themselves (the unique key) are never touched, only the content columns,
- * so a pre-filtered list can never collide with or 404 against another row.
+ * to level numbers `teamId` actually still has a row for. The teamId/levelNumber
+ * pair itself (the unique key) is never touched, only the content columns.
+ * A pre-filtered list can therefore never collide with or 404 against another row.
  */
 function applySnapshot(teamId: string, incoming: TeamSnapshot) {
   return [
@@ -179,8 +179,8 @@ export async function executeSwap(params: {
       return { error: "Team not found." };
     }
 
-    // Only level numbers both teams actually have get their content traded —
-    // see applySnapshot's comment. Level content only, matched by number:
+    // Only level numbers both teams actually have get their content traded.
+    // See applySnapshot's comment. Level content only, matched by number:
     // each team keeps its own set of LevelConfig rows, just with the other
     // team's password/clue/word/hint written into them.
     const commonLevels = new Set(partnerSnapshot.levels.map((l) => l.levelNumber));
@@ -227,7 +227,7 @@ export async function revertSwap(sessionId: string, swapId: string): Promise<{ e
   const partnerRestore: TeamSnapshot = JSON.parse(row.partnerSnapshot);
 
   // A level an admin deleted since this swap happened has nothing left to
-  // restore content onto — filter those out rather than 404ing the whole revert.
+  // restore content onto. Filter those out rather than 404ing the whole revert.
   const [initiatorLevels, partnerLevels] = await Promise.all([
     existingLevelNumbers(row.initiatorTeamId),
     existingLevelNumbers(row.partnerTeamId),
@@ -245,7 +245,7 @@ export async function revertSwap(sessionId: string, swapId: string): Promise<{ e
   return { ok: true };
 }
 
-// Called by Game Reset — restores every team's original board content before
+// Called by Game Reset. Restores every team's original board content before
 // progress gets wiped, so "puzzles are untouched by reset" stays true even
 // if a swap had mixed two teams' passwords/clues/words together.
 export async function revertAllActiveSwaps(sessionId: string): Promise<void> {

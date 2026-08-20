@@ -32,7 +32,7 @@ export default function AdminPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Loops for as long as the authenticated dashboard is open, same channel
-  // as the player Settings page — stops the moment the admin signs out.
+  // as the player Settings page. Stops the moment the admin signs out.
   useEffect(() => {
     if (!isAdmin) return;
     startSettingsMusic();
@@ -146,7 +146,7 @@ export default function AdminPage() {
               <div className="space-y-4">
                 <BackButton onClick={() => setAuthMode("choose")} />
                 <p className="text-left text-sm text-neon-100/70">
-                  Spins up a brand-new, independent game — its own teams, puzzles, and leaderboard. You&apos;ll get a
+                  Spins up a brand-new, independent game: its own teams, puzzles, and leaderboard. You&apos;ll get a
                   6-digit code for players to join with, and a password shown once.
                 </p>
                 {loginError && (
@@ -242,7 +242,7 @@ export default function AdminPage() {
       </nav>
 
       {/* Same glitch-reveal keyframe RouteTransition uses for real page
-          navigations — reused here (via a fresh key remounting the div, not
+          navigations. Reused here (via a fresh key remounting the div, not
           Framer Motion) so tab switches inside the dashboard feel consistent
           with the rest of the app instead of a plain smooth fade. */}
       <div key={tab} className="glitch-reveal">
@@ -289,7 +289,7 @@ export default function AdminPage() {
 }
 
 // Bracket "key hint" styling (inspired by controller-hint bars like [B] Cancel)
-// adapted to our terminal theme — a bordered glyph chip plus the label.
+// adapted to our terminal theme: a bordered glyph chip plus the label.
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
     <button onClick={onClick} className="group flex items-center gap-2 text-xs text-neon-100/50 hover:text-neon-100/90">

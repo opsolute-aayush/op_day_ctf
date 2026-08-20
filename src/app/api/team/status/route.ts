@@ -8,7 +8,7 @@ export async function GET() {
     return NextResponse.json({ error: "Not registered" }, { status: 401 });
   }
 
-  // Polled every few seconds from /play, /final, /winner — doubles as this
+  // Polled every few seconds from /play, /final, /winner. It doubles as this
   // member's presence heartbeat for the register page's "active now" display.
   if (teamAuth.memberName) {
     await touchMemberPresence(teamAuth.teamId, teamAuth.memberName);

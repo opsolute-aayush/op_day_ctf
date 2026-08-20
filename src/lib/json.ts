@@ -12,8 +12,8 @@ export interface TeamMember {
   lastSeenAt: string; // ISO timestamp, refreshed on every /api/team/status poll
 }
 
-// A member counts as "active" if we've heard from their browser recently —
-// refreshed on every status poll from /play or /winner (3-5s intervals), so
+// A member counts as "active" if we've heard from their browser recently.
+// Refreshed on every status poll from /play or /winner (3-5s intervals), so
 // 15s tolerates a couple of missed polls without flickering.
 const ACTIVE_WINDOW_MS = 15_000;
 
@@ -22,7 +22,7 @@ export function isMemberActive(lastSeenAt: string, now = Date.now()): boolean {
 }
 
 // Team.members stores this as a JSON string. Older rows may still hold a
-// plain string[] (pre-presence-tracking) — treated as members who joined
+// plain string[] (pre-presence-tracking), treated as members who joined
 // but have never been seen active.
 export function parseMembers(json: string): TeamMember[] {
   try {

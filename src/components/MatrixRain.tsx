@@ -15,9 +15,9 @@ interface MatrixRainProps {
   className?: string;
 }
 
-/** Cheap CSS-only "digital rain" backdrop — a handful of falling glyph columns. */
+/** Cheap CSS-only "digital rain" backdrop: a handful of falling glyph columns. */
 export default function MatrixRain({ columns = 10, className = "" }: MatrixRainProps) {
-  // Glyphs randomize only after mount — doing it during render would produce
+  // Glyphs randomize only after mount. Doing it during render would produce
   // different text on server vs. client and trigger a hydration mismatch.
   const mounted = useSyncExternalStore(
     noopSubscribe,

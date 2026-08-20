@@ -3,7 +3,7 @@ import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
 
-// CSS stagger (fade-slide-in + animationDelay), not Framer Motion — see
+// CSS stagger (fade-slide-in + animationDelay), not Framer Motion. See
 // RouteTransition.tsx for why this page can't depend on JS to become visible.
 const STAGGER_STEP_S = 0.12;
 

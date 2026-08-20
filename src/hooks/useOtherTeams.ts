@@ -11,7 +11,7 @@ export interface OtherTeam {
 
 /**
  * Loads every other team in the session (for a "pick a target squad" list),
- * once `trigger` becomes true — shared by PlayerStatsPanel's sabotage and
+ * once `trigger` becomes true. Shared by PlayerStatsPanel's sabotage and
  * swap pickers, which differ only in what opens them (the sabotage button
  * vs. a verified swap code).
  */

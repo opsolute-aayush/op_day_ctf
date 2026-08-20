@@ -49,7 +49,7 @@ function Slider({
   );
 }
 
-/** Shared by /settings (players) and the admin dashboard's Sound tab — same device-local prefs either way. */
+/** Shared by /settings (players) and the admin dashboard's Sound tab: same device-local prefs either way. */
 export default function AudioVideoSettings() {
   const settings: OpDaySettings = useSyncExternalStore(subscribeToSettingsStore, getSettings, () => DEFAULT_SETTINGS);
 

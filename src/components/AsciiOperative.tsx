@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getAssignedArtFile, setAssignedArtFile } from "@/lib/artIdentity";
 
-// Drop image files into public/arts/settings/ — no code changes needed,
+// Drop image files into public/arts/settings/. No code changes needed:
 // GET /api/arts/settings picks them up automatically (same convention as
 // public/sounds/<category> and public/videos/<category>).
 const CATEGORY = "settings";
@@ -14,7 +14,7 @@ const CHAR_ASPECT = 0.55;
 // Sparse -> dense, using the exact character set requested plus a few
 // Chinese characters at the dense end for the brightest pixels.
 const DENSITY = [" ", ":", ";", "!", "?", "/", "1", "0", "#", "@", "人", "機", "電"];
-// What a cell can flicker into mid-glitch — swapped back to the real
+// What a cell can flicker into mid-glitch. It swaps back to the real
 // (brightness-derived) character a moment later.
 const GLITCH_ALPHABET = ["1", "0", "@", "!", "?", "/", ";", ":", "人", "機", "電"];
 
@@ -26,7 +26,7 @@ function imageToGrid(img: HTMLImageElement, cols: number): string[][] {
   const ctx = canvas.getContext("2d");
   if (!ctx) return [];
   // Letting the browser scale the whole image down to a cols×rows canvas
-  // in one drawImage call does the downsampling/averaging for us — each
+  // in one drawImage call does the downsampling/averaging for us. Each
   // resulting pixel is effectively one character cell's brightness.
   ctx.drawImage(img, 0, 0, cols, rows);
   const { data } = ctx.getImageData(0, 0, cols, rows);
@@ -47,7 +47,7 @@ function imageToGrid(img: HTMLImageElement, cols: number): string[][] {
 
 /**
  * A character-art render of one image assigned to this device, living as a
- * fixed background layer pinned to the right side of the viewport — not a
+ * fixed background layer pinned to the right side of the viewport, not a
  * panel in the page's content flow. Callers must keep their own content
  * clear of that region (see settings/page.tsx's content column width) since
  * nothing is meant to ever render on top of it here.
@@ -95,9 +95,9 @@ export default function AsciiOperative() {
   }, []);
 
   // Periodically flickers a handful of cells (or a whole row/column) inside
-  // the art's own silhouette to a random glitch character, then reverts —
-  // driven via direct span refs, not React state, so it never re-renders
-  // the whole grid just to swap a few characters.
+  // the art's own silhouette to a random glitch character, then reverts.
+  // This is driven via direct span refs, not React state, so it never
+  // re-renders the whole grid just to swap a few characters.
   useEffect(() => {
     if (grid.length === 0) return;
 
@@ -142,8 +142,8 @@ export default function AsciiOperative() {
       className="pointer-events-none fixed inset-y-0 right-0 z-0 hidden w-[52%] items-center justify-center overflow-hidden lg:flex"
       style={{
         // Fades the art's left edge into the ambient grid instead of a hard
-        // rectangle boundary — makes the empty space in front of it (where
-        // the content column ends) read as atmosphere, not a layout gap.
+        // rectangle boundary. That makes the empty space in front of it
+        // (where the content column ends) read as atmosphere, not a layout gap.
         maskImage: "linear-gradient(to right, transparent, black 14%)",
         WebkitMaskImage: "linear-gradient(to right, transparent, black 14%)",
       }}

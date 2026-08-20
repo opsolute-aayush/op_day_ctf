@@ -19,11 +19,11 @@ export default function SabotageConfig({ onChanged }: { onChanged: () => void })
   const [cooldownDraft, setCooldownDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  // Only prefills the drafts from the server once — otherwise the poll
+  // Only prefills the drafts from the server once. Otherwise the poll
   // would stomp on whatever the admin is mid-typing in those fields. Uses
   // React's "adjust state during render" pattern (setState in the body,
   // guarded by a prev-value comparison) rather than an effect, same as
-  // useGlitchKey.ts — avoids the react-hooks/set-state-in-effect lint rule.
+  // useGlitchKey.ts. This avoids the react-hooks/set-state-in-effect lint rule.
   const [draftsSeeded, setDraftsSeeded] = useState(false);
 
   if (gameData !== prevGameData) {
