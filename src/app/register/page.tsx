@@ -338,14 +338,6 @@ export default function RegisterPage() {
                             }`}
                             style={selected ? { borderColor: team.color, boxShadow: `0 0 16px ${team.color}55` } : undefined}
                           >
-                            {team.completed && (
-                              <span
-                                className="hud-cut-sm absolute right-1.5 top-1.5 z-10 flex items-center gap-1 border border-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-400"
-                                title="This squad already finished the hunt"
-                              >
-                                <Trophy className="h-2.5 w-2.5" /> Done
-                              </span>
-                            )}
                             {selected && (
                               <>
                                 <span
@@ -373,6 +365,14 @@ export default function RegisterPage() {
                             <span className="block w-full truncate text-sm font-semibold" style={selected ? { color: team.color } : undefined}>
                               {team.name}
                             </span>
+                            {team.completed && (
+                              <span
+                                className="hud-cut-sm flex items-center gap-1 border border-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-400"
+                                title="This squad already finished the hunt"
+                              >
+                                <Trophy className="h-2.5 w-2.5" /> Completed
+                              </span>
+                            )}
                             {team.members.length === 0 ? (
                               <span className="block truncate text-[11px] text-neon-100/40">no agents yet</span>
                             ) : (

@@ -154,11 +154,15 @@ export default function LevelCard({
           )}
 
           {cipherMessage && (
-            <div className="rounded-md border border-neon-500/30 bg-void-2/60 p-2.5">
-              <p className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-neon-500/70">
+            <div className="space-y-1">
+              <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-neon-400/80">
                 <Binary className="h-3 w-3 shrink-0" /> Ye Lee — decode for the next password
               </p>
-              <p className="break-all font-mono text-xs text-neon-100/90">{cipherMessage}</p>
+              {/* Same border/background treatment as the "Enter word" box below —
+                  a static field-shaped box, not just a line of text. */}
+              <div className="w-full break-all rounded-md border border-panel-border bg-void-2 px-3 py-2 font-mono text-xs text-neon-100">
+                {cipherMessage}
+              </div>
             </div>
           )}
 
