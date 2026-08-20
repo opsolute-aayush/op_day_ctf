@@ -3,7 +3,7 @@
 [![Build and push Docker image](https://github.com/opsolute-aayush/op_day_ctf/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/opsolute-aayush/op_day_ctf/actions/workflows/docker-publish.yml)
 [![Docker Hub](https://img.shields.io/docker/v/aayushop/opday-ctf?sort=semver&label=docker&logo=docker)](https://hub.docker.com/r/aayushop/opday-ctf/tags)
 [![Docker Pulls](https://img.shields.io/docker/pulls/aayushop/opday-ctf?label=pulls&logo=docker)](https://hub.docker.com/r/aayushop/opday-ctf)
-[![Status](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fopsolute-aayush%2Fop_day_ctf%2Fstatus%2Fstatus.json)](https://aegios.co.in)
+[![Status](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fopsolute-aayush%2Fop_day_ctf%2Fstatus%2Fstatus.json&cacheSeconds=300)](https://aegios.co.in)
 
 A physical + digital scavenger hunt. Teams decode a cipher, find hidden word cards, and race to build a final sentence. One self-contained Next.js app, no external services needed.
 
