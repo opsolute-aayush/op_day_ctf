@@ -154,9 +154,12 @@ export default function LevelCard({
           )}
 
           {cipherMessage && (
-            <p className="flex items-start gap-1.5 break-all font-mono text-[11px] text-neon-500/80">
-              <Binary className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Ye Lee — decode for the next password: {cipherMessage}
-            </p>
+            <div className="rounded-md border border-neon-500/30 bg-void-2/60 p-2.5">
+              <p className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-neon-500/70">
+                <Binary className="h-3 w-3 shrink-0" /> Ye Lee — decode for the next password
+              </p>
+              <p className="break-all font-mono text-xs text-neon-100/90">{cipherMessage}</p>
+            </div>
           )}
 
           <AnimatePresence mode="wait">

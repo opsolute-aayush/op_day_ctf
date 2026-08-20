@@ -22,7 +22,14 @@ export async function GET(req: NextRequest) {
   const teams = await prisma.team.findMany({
     where: { sessionId: session.id },
     orderBy: { teamNumber: "asc" },
-    select: { id: true, teamNumber: true, name: true, color: true, members: true },
+    select: {
+      id: true,
+      teamNumber: true,
+      name: true,
+      color: true,
+      members: true,
+      progress: { select: { completed: true } },
+    },
   });
 
   const now = Date.now();
@@ -32,6 +39,10 @@ export async function GET(req: NextRequest) {
       teamNumber: t.teamNumber,
       name: t.name,
       color: t.color,
+      // Just the one flag — lets a rejoining player tell finished squads
+      // apart from ones still playing, without leaking any puzzle/progress
+      // detail beyond that.
+      completed: t.progress?.completed ?? false,
       members: parseMembers(t.members).map((m) => ({ name: m.name, active: isMemberActive(m.lastSeenAt, now) })),
     })),
   });

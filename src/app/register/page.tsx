@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Terminal, Users, Check, ChevronRight, KeyRound, ArrowLeft } from "lucide-react";
+import { Terminal, Users, Check, ChevronRight, KeyRound, ArrowLeft, Trophy } from "lucide-react";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
@@ -25,6 +25,7 @@ interface JoinableTeam {
   teamNumber: number;
   name: string;
   color: string;
+  completed: boolean;
   members: JoinableMember[];
 }
 
@@ -337,6 +338,14 @@ export default function RegisterPage() {
                             }`}
                             style={selected ? { borderColor: team.color, boxShadow: `0 0 16px ${team.color}55` } : undefined}
                           >
+                            {team.completed && (
+                              <span
+                                className="hud-cut-sm absolute right-1.5 top-1.5 z-10 flex items-center gap-1 border border-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-400"
+                                title="This squad already finished the hunt"
+                              >
+                                <Trophy className="h-2.5 w-2.5" /> Done
+                              </span>
+                            )}
                             {selected && (
                               <>
                                 <span
