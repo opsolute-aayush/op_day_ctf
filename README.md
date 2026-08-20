@@ -2,7 +2,7 @@
 
 [![Build and push Docker image](https://github.com/opsolute-aayush/op_day_ctf/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/opsolute-aayush/op_day_ctf/actions/workflows/docker-publish.yml)
 
-A hybrid physical/digital scavenger hunt. Teams decode a physical cipher, hunt for word cards hidden around a venue, and race to assemble a final sentence. One self-contained Next.js app — no external services required.
+A physical + digital scavenger hunt. Teams decode a cipher, find hidden word cards, and race to build a final sentence. One self-contained Next.js app — no external services needed.
 
 ## Quick start
 
@@ -10,15 +10,15 @@ A hybrid physical/digital scavenger hunt. Teams decode a physical cipher, hunt f
 npm run start:event
 ```
 
-Installs dependencies, creates the database, and opens the app in your browser. Safe to re-run any time.
+Installs everything, sets up the database, and opens the app. Safe to re-run anytime.
 
 ## How it works
 
-- A **Game Master** creates a **session** at `/admin` and gets a 6-digit code + a password (shown once).
+- A **Game Master** creates a **session** at `/admin` and gets a 6-digit code + password (shown once).
 - **Players** enter that code at `/register`, pick a team, and play at `/play`.
-- One deployment can run many sessions at once — each is fully independent (own teams, puzzles, leaderboard).
-- Each team has its own passwords, clues, words, and final sentence, so teams can't share answers.
-- A correct password reveals a location clue. The team must then type the *exact word* found at that location to actually collect it and advance.
+- One deployment can run many sessions at once, each fully separate (own teams, puzzles, leaderboard).
+- Each team has its own passwords, clues, words, and final sentence — teams can't share answers.
+- A correct password reveals a location clue. The team must then type the exact word found there to collect it and move on.
 
 ## Running it
 
@@ -45,27 +45,27 @@ docker run -d -p 3000:3000 \
 
 Open `http://localhost:3000/admin` → **Create New Session**.
 
-The `-v opday_data:/app/data` volume keeps the SQLite file (and the `JWT_SECRET` you pass in) across restarts.
+The `-v opday_data:/app/data` volume keeps the SQLite file (and your `JWT_SECRET`) across restarts.
 
-Want to run this on a different machine/VM without cloning the repo, a real domain, HTTPS, and auto-updates instead of plain HTTP? See **Deploying on a VM** below — it already builds and pushes `aayushop/opday-ctf` for you via GitHub Actions.
+Need a different machine/VM, a real domain, HTTPS, and auto-updates instead of plain HTTP? See **Deploying on a VM** below — it already builds and pushes `aayushop/opday-ctf` via GitHub Actions.
 
-### 3. Docker Compose (recommended — works the same on a laptop or a VM)
+### 3. Docker Compose (recommended — same steps on a laptop or a VM)
 
 ```bash
 git clone <this repo> && cd opday-ctf
 npm run compose:up
 ```
 
-That's the whole setup. This one command creates `.env`, generates a `JWT_SECRET`, detects this machine's IP, builds the image, and starts it on port 80 — every time, on any machine. Open the URL it prints, e.g. `http://<IP>/admin`, and create a session.
+That's the whole setup. One command creates `.env`, generates a `JWT_SECRET`, detects the machine's IP, builds the image, and starts it on port 80. Open the printed URL, e.g. `http://<IP>/admin`, and create a session.
 
-**On a cloud VM**, also do this:
+**On a cloud VM**, also:
 
 - Open port 80 in the VM's firewall / security group.
-- Share the VM's **public** IP with players — not the private one the script detects (that's only for the venue-wifi case below).
+- Share the VM's **public** IP with players, not the private one the script detects (that's only for shared venue wifi, below).
 
 **Custom domain (`aegios.co.in`):**
 
-- One shared venue wifi → `npm run compose:dns`, or add `<IP> aegios.co.in` to each device's hosts file.
+- Shared venue wifi → run `npm run compose:dns`, or add `<IP> aegios.co.in` to each device's hosts file.
 - Real internet domain → point its DNS **A record** at the VM's public IP (Docker can't do this step for you).
 
 ### 4. A cloud host without Docker (Render, Fly.io, a VPS)
@@ -80,7 +80,7 @@ Set `JWT_SECRET` in the platform's env vars and mount a persistent disk (the SQL
 
 ## Deploying on a VM (production, HTTPS, auto-updating)
 
-The full production setup for a real domain: nginx terminates HTTPS for `aegios.co.in`, Let's Encrypt provides the cert and renews itself, and Watchtower auto-updates the app whenever you push a new image. No repo clone on the VM — just the `docker/` folder — and nothing to run there again after the first setup.
+Full production setup for a real domain: nginx handles HTTPS for `aegios.co.in`, Let's Encrypt issues and renews the cert, and Watchtower auto-updates the app on every new image. No repo clone needed on the VM — just the `docker/` folder — and nothing to run there again after setup.
 
 **Before starting:**
 - `aegios.co.in`'s DNS A record already points at the VM's public IP.
@@ -98,7 +98,7 @@ curl -SL https://github.com/docker/compose/releases/latest/download/docker-compo
 chmod +x ~/.docker/cli-plugins/docker-compose
 ```
 
-**2. Copy just the `docker/` folder onto the VM** — scp/rsync from your repo, no clone needed:
+**2. Copy just the `docker/` folder to the VM** (scp/rsync, no clone needed):
 
 ```bash
 scp -r docker/ your-vm:~/opday-ctf/
@@ -116,13 +116,13 @@ DOCKER_TAG=latest
 EOF
 ```
 
-**4. Bootstrap the Let's Encrypt certificate — once:**
+**4. Bootstrap the Let's Encrypt certificate (once):**
 
 ```bash
 ./certbot-init.sh
 ```
 
-**5. Bring the stack up:**
+**5. Start the stack:**
 
 ```bash
 docker compose -p opday-ctf -f docker-compose.prod.yml up -d
@@ -130,16 +130,16 @@ docker compose -p opday-ctf -f docker-compose.prod.yml up -d
 
 Open `https://aegios.co.in/admin` → **Create New Session**.
 
-**Deploying a change from then on is automatic** — `.github/workflows/docker-publish.yml` builds and pushes `aayushop/opday-ctf:latest` on every push to `main`. Watchtower notices the new image within 5 minutes and pulls + restarts the app on its own. Nothing to run on the VM, and nothing to run on your own machine either.
+**Future updates deploy automatically** — `.github/workflows/docker-publish.yml` builds and pushes `aayushop/opday-ctf:latest` on every push to `main`. Watchtower checks every 5 minutes and pulls + restarts the app on its own. Nothing to run on the VM or on your machine.
 
-The workflow needs two repository secrets set once, under **Settings → Secrets and variables → Actions**:
+The workflow needs two repo secrets, set once under **Settings → Secrets and variables → Actions**:
 
 | Secret | Value |
 |---|---|
 | `DOCKERHUB_USERNAME` | Docker Hub username (`aayushop`) |
-| `DOCKERHUB_TOKEN` | A Docker Hub **access token** (Account Settings → Personal access tokens) — not the account password |
+| `DOCKERHUB_TOKEN` | A Docker Hub **access token** (Account Settings → Personal access tokens), not the password |
 
-To build and push by hand instead (e.g. CI is down, or you're testing before those secrets are set):
+To build and push by hand instead (CI down, or testing before secrets are set):
 
 ```bash
 docker buildx build --platform linux/amd64 -f docker/Dockerfile -t aayushop/opday-ctf:latest --push .
@@ -150,9 +150,9 @@ docker buildx build --platform linux/amd64 -f docker/Dockerfile -t aayushop/opda
 | Service | Job |
 |---|---|
 | `app` | The game itself — only reachable through `nginx`, never exposed directly |
-| `nginx` | Terminates HTTPS, redirects port 80 → 443, reloads every 12h for renewed certs |
-| `certbot` | Renews the Let's Encrypt cert automatically every 12h |
-| `watchtower` | Checks Docker Hub every 5 min; pulls + restarts `app` alone when a new image lands |
+| `nginx` | Handles HTTPS, redirects port 80 → 443, reloads every 12h for renewed certs |
+| `certbot` | Renews the Let's Encrypt cert every 12h |
+| `watchtower` | Checks Docker Hub every 5 min; pulls + restarts `app` when a new image lands |
 
 ## Environment variables
 
@@ -160,12 +160,12 @@ docker buildx build --platform linux/amd64 -f docker/Dockerfile -t aayushop/opda
 |---|---|---|
 | `DATABASE_URL` | yes | SQLite file path, e.g. `file:./dev.db` |
 | `JWT_SECRET` | yes | Signs session tokens. Rotating it logs everyone out. |
-| `NODE_ENV` | prod only | Set `production` behind HTTPS so cookies are marked `Secure`. |
-| `HOST_IP` | no | LAN IP for the optional Docker Compose `dns` profile — auto-detected and written by `npm run compose:up`/`compose:dns`, only set it by hand to override. |
+| `NODE_ENV` | prod only | Set to `production` behind HTTPS so cookies are marked `Secure`. |
+| `HOST_IP` | no | LAN IP for the Docker Compose `dns` profile — auto-set by `npm run compose:up`/`compose:dns`; only set by hand to override. |
 | `DOCKER_IMAGE` / `DOCKER_TAG` | `docker-compose.prod.yml` only | Which pushed image to pull, e.g. `aayushop/opday-ctf` / `latest`. |
-| `LETSENCRYPT_EMAIL` | `docker-compose.prod.yml` only | Email Let's Encrypt sends renewal/expiry notices to. |
+| `LETSENCRYPT_EMAIL` | `docker-compose.prod.yml` only | Email for Let's Encrypt renewal/expiry notices. |
 
-There's no admin password to configure — each session generates its own when created, changeable any time from the dashboard's Security tab.
+No admin password to set up front — each session generates its own, changeable anytime from the dashboard's Security tab.
 
 ## Scripts
 
@@ -183,29 +183,22 @@ There's no admin password to configure — each session generates its own when c
 
 - **Teams pick their own color** — a neon swatch picker at join time or from `/play`.
 - **Self-service hints** — 2 free hints per team; the admin can also release one for free.
-- **Live leaderboard** for players — everyone can see everyone's progress, not just the admin.
-- **Sound effects, video clips, background music** — drop files into `public/sounds/<category>/` or `public/videos/<category>/` (`wrong_pass`, `right_pass`, `help`, `winning`, `hacking`, `alert`, plus `intro`/`outro` for music) and they play automatically. No code changes needed. `hacking` plays for whichever team just launched a sabotage or executed a swap; `alert` plays for the team on the other end of it.
-- **Player settings** at `/settings` — mute or adjust volume for sound/video/music, per device.
-- **Non-blocking wins** — a team finishing never stops the hunt for anyone else. Only the admin's **End Game** does that.
+- **Live leaderboard** — every player sees everyone's progress, not just the admin.
+- **Sound, video, music** — drop files into `public/sounds/<category>/` or `public/videos/<category>/` (`wrong_pass`, `right_pass`, `help`, `winning`, `hacking`, `alert`, plus `intro`/`outro` for music) and they auto-play. No code changes needed. `hacking` plays for the team that just launched a sabotage or swap; `alert` plays for the team on the other end.
+- **Player settings** at `/settings` — mute or adjust volume per device.
+- **Non-blocking wins** — a team finishing doesn't stop the hunt for others. Only the admin's **End Game** does that.
 
 ## Cipher
 
-Every level has a **Ye Lee** field, admin-typed like the location clue or hint — but instead of describing this level, it's a Base64 string that decodes to the *next* level's password. A team sees it the moment they unlock the current level, and must decode it to know what to type for the one after.
+Each level's **Ye Lee** field holds a Base64 string that decodes to the next level's password. Generated from the admin dashboard's Team Management tab.
 
-The admin dashboard's Team Management tab has a **cipher-selector.sh** tool to generate that string: type the real word, hit **Easy**, and it runs the string through 4 layers, innermost to outermost:
-
-1. **Caesar shift +5** — every letter shifts 5 positions in the alphabet (case preserved), e.g. `A → F`. Applied to the real word plus 4 auto-generated decoy words of the same length.
-2. **Hex** — each shifted word is converted to its ASCII hex representation.
-3. **Shuffle + binary** — the 5 hex strings are shuffled into a random order (so the real word's position among the 5 is never fixed), then each is converted to an 8-bit binary sequence.
-4. **Base64** — the 5 binary strings are joined with a single space and the whole thing is Base64-encoded — that's the string pasted into Ye Lee.
-
-The tool also shows which of the 5 shuffled positions holds the real word and what the decoys were — admin reference only, never shown to teams. See `src/lib/cipher.ts` for the implementation and `cipher.md` for the original spec. (The Medium/Hard/Intense tiers are placeholders for future encoding schemes — only Easy is implemented today.)
+Full details: **[cipher.md](cipher.md)**.
 
 ## Security
 
-- Team/session creation and joins are all validated server-side, not just hidden in the UI.
+- Team/session creation and joins are validated server-side, not just in the UI.
 - A team's password, clues, and words are scoped to its own session and team ID — no cross-session or cross-team access, even with a guessed ID.
-- The winning sentence and word rewards are never sent to the client before they're actually earned.
+- The winning sentence and word rewards are never sent to the client before they're earned.
 - Passwords and session credentials are bcrypt-hashed; sensitive comparisons happen server-side only.
 
 ## Project structure
@@ -227,4 +220,4 @@ public/
 
 ## Scaling
 
-Built for one Node.js process (a laptop or single small VM) — that's the realistic setup for a one-day internal event. Rate limiting is in-memory and "realtime" updates are polling, both fine at this scale. Deploy to a platform with a persistent disk and a long-running process (Render, Fly.io, a VPS, or Docker with a volume) — not a stateless serverless platform, since the SQLite file needs to persist.
+Built for one Node.js process (a laptop or small VM) — the realistic setup for a one-day internal event. Rate limiting is in-memory and "realtime" updates are polling, both fine at this scale. Deploy to a platform with a persistent disk and a long-running process (Render, Fly.io, a VPS, or Docker with a volume) — not stateless serverless, since the SQLite file needs to persist.

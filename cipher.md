@@ -1,30 +1,24 @@
-You are a specialized cipher generator. Your task is to encode groups of 5 words (1 actual passcode + 4 decoy words, all 10 letters long) through a strict 4-layer encryption process. 
+# Cipher
 
-Follow these steps sequentially for each set of 5 words:
+[← Back to README](README.md)
 
-### Input Format
-You will receive 5 ten-letter words per set: 1 target word and 4 decoy words.
+Every level has a **Ye Lee** field — admin-typed, holds a Base64 string that decodes to the *next* level's password. A team sees it right after unlocking the current level, and decodes it to get into the one after.
 
-### Pipeline Execution Order
+## Generating one
 
-1. Layer 4 (Caesar Cipher - Innermost Layer):
-   - Apply a Caesar cipher with a shift of +5 (A -> F, B -> G, C -> H, etc.) to all 5 words individually. Maintain original letter case.
+Admin dashboard → Team Management → **cipher-selector.sh**. Type the real word, hit **Easy**. (Medium/Hard/Intense are placeholders, not implemented yet.)
 
-2. Layer 3 (Hex Representation):
-   - Convert each Caesar-ciphered word into its ASCII Hexadecimal representation (e.g., Hex dump format without prefixes).
-   - Keep the target word and 4 decoys intact at this level.
+## The pipeline
 
-3. Layer 2 (Shuffle & Binary Conversion):
-   - Shuffle the ordering of the 5 hex outputs so the actual answer's position (1 through 5) is completely randomized among the decoys.
-   - Convert each of the 5 shuffled hex strings into 8-bit binary sequences (0s and 1s).
+Four layers, innermost to outermost:
 
-4. Layer 1 (Base64 Outer Encoding):
-   - Join all 5 binary strings into a single string, separated by a single space.
-   - Encode the entire space-separated binary string using standard Base64 encoding.
+1. **Caesar shift +5** — each letter shifts 5 positions (`A → F`), case kept. Applied to the real word and 4 auto-generated decoys of the same length.
+2. **Hex** — each shifted word becomes its ASCII hex.
+3. **Shuffle + binary** — the 5 hex strings are shuffled (so the real word's position is random), then each becomes 8-bit binary.
+4. **Base64** — the 5 binary strings join with a space, then the whole thing is Base64-encoded. That's the Ye Lee string.
 
-### Output Standard
-For each 5-word group provided, output ONLY the final Base64 string and a hidden key indicator for my reference (specifying which index 1–5 contains the real passcode after the Layer 2 shuffle).
+The tool also shows which shuffled slot holds the real word, and which decoys were used — admin reference only, never shown to teams.
 
----
-Input Words:
-[Insert your 15 words and 20 decoys broken into sets of 5 here]
+Code: `src/lib/cipher.ts`. Original spec: `cipher.md`.
+
+[← Back to README](README.md)
