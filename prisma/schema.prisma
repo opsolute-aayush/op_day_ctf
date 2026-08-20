@@ -22,6 +22,7 @@ model GameSession {
   startedAt               DateTime?
   sabotageCreditsPerTeam  Int            @default(2) // admin-configurable: how many sabotages each team may launch this game
   sabotageCooldownSeconds Int            @default(0) // admin-configurable: seconds a team must wait between its own sabotage launches; 0 disables the cooldown
+  helpCreditsPerTeam      Int            @default(2) // admin-configurable: how many self-service "Help" button uses each team gets this game
   swapCode                String? // admin-authored plaintext a team must find-and-enter to redeem the hidden swap card; null disables the feature. The admin hides/obscures this physically however they like. The platform never transforms or encodes it.
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt

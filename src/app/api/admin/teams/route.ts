@@ -41,7 +41,12 @@ export async function POST() {
       name: `Team ${teamNumber}`,
       color: PALETTE[(teamNumber - 1) % PALETTE.length],
       members: "[]",
-      progress: { create: { sabotageCreditsRemaining: session?.sabotageCreditsPerTeam ?? 2 } },
+      progress: {
+        create: {
+          sabotageCreditsRemaining: session?.sabotageCreditsPerTeam ?? 2,
+          helpCreditsRemaining: session?.helpCreditsPerTeam ?? 2,
+        },
+      },
     },
   });
 

@@ -49,7 +49,7 @@ export async function GET() {
       totalLevels,
       unlockedLevels,
       attempts: attemptsByTeam.get(team.id) ?? 0,
-      helpCreditsRemaining: progress?.helpCreditsRemaining ?? 2,
+      helpCreditsRemaining: progress?.helpCreditsRemaining ?? session.helpCreditsPerTeam,
       completed: progress?.completed ?? false,
       completedAt: progress?.completedAt ?? null,
       isFirstToFinish: session.winningTeamId === team.id,

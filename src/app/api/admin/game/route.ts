@@ -24,6 +24,7 @@ export async function GET() {
     startedAt: session.startedAt,
     sabotageCreditsPerTeam: session.sabotageCreditsPerTeam,
     sabotageCooldownSeconds: session.sabotageCooldownSeconds,
+    helpCreditsPerTeam: session.helpCreditsPerTeam,
     swapCode: session.swapCode,
     swapUsed: Boolean(activeSwap),
   });
@@ -32,6 +33,10 @@ export async function GET() {
 const sabotageCapSchema = z.object({
   sabotageCreditsPerTeam: z.number().int().min(0).max(20),
   sabotageCooldownSeconds: z.number().int().min(0).max(3600),
+});
+
+const helpCapSchema = z.object({
+  helpCreditsPerTeam: z.number().int().min(0).max(20),
 });
 
 // Sets the session-wide sabotage cap + cooldown and immediately resets every
@@ -44,34 +49,61 @@ export async function PUT(req: NextRequest) {
   const { sessionId } = admin;
 
   const body = await req.json().catch(() => null);
-  const parsed = sabotageCapSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid value" }, { status: 400 });
+
+  // Dispatch on which key is present rather than trying both schemas blind,
+  // so a bad helpCreditsPerTeam value reports its own error instead of the
+  // unrelated "sabotageCreditsPerTeam missing" one.
+  if (body && typeof body === "object" && "helpCreditsPerTeam" in body) {
+    const helpParsed = helpCapSchema.safeParse(body);
+    if (!helpParsed.success) {
+      return NextResponse.json({ error: helpParsed.error.issues[0]?.message ?? "Invalid value" }, { status: 400 });
+    }
+    const teamIds = (await prisma.team.findMany({ where: { sessionId }, select: { id: true } })).map((t) => t.id);
+    await prisma.$transaction([
+      prisma.gameSession.update({
+        where: { id: sessionId },
+        data: { helpCreditsPerTeam: helpParsed.data.helpCreditsPerTeam },
+      }),
+      prisma.teamProgress.updateMany({
+        where: { teamId: { in: teamIds } },
+        data: { helpCreditsRemaining: helpParsed.data.helpCreditsPerTeam },
+      }),
+    ]);
+    await logActivity(sessionId, null, "HELP_CAP_CHANGED", {
+      helpCreditsPerTeam: helpParsed.data.helpCreditsPerTeam,
+    });
+
+    return NextResponse.json({ helpCreditsPerTeam: helpParsed.data.helpCreditsPerTeam });
   }
 
-  const teamIds = (await prisma.team.findMany({ where: { sessionId }, select: { id: true } })).map((t) => t.id);
-  await prisma.$transaction([
-    prisma.gameSession.update({
-      where: { id: sessionId },
-      data: {
-        sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam,
-        sabotageCooldownSeconds: parsed.data.sabotageCooldownSeconds,
-      },
-    }),
-    prisma.teamProgress.updateMany({
-      where: { teamId: { in: teamIds } },
-      data: { sabotageCreditsRemaining: parsed.data.sabotageCreditsPerTeam },
-    }),
-  ]);
-  await logActivity(sessionId, null, "SABOTAGE_CAP_CHANGED", {
-    sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam,
-    sabotageCooldownSeconds: parsed.data.sabotageCooldownSeconds,
-  });
+  const sabotageParsed = sabotageCapSchema.safeParse(body);
+  if (sabotageParsed.success) {
+    const teamIds = (await prisma.team.findMany({ where: { sessionId }, select: { id: true } })).map((t) => t.id);
+    await prisma.$transaction([
+      prisma.gameSession.update({
+        where: { id: sessionId },
+        data: {
+          sabotageCreditsPerTeam: sabotageParsed.data.sabotageCreditsPerTeam,
+          sabotageCooldownSeconds: sabotageParsed.data.sabotageCooldownSeconds,
+        },
+      }),
+      prisma.teamProgress.updateMany({
+        where: { teamId: { in: teamIds } },
+        data: { sabotageCreditsRemaining: sabotageParsed.data.sabotageCreditsPerTeam },
+      }),
+    ]);
+    await logActivity(sessionId, null, "SABOTAGE_CAP_CHANGED", {
+      sabotageCreditsPerTeam: sabotageParsed.data.sabotageCreditsPerTeam,
+      sabotageCooldownSeconds: sabotageParsed.data.sabotageCooldownSeconds,
+    });
 
-  return NextResponse.json({
-    sabotageCreditsPerTeam: parsed.data.sabotageCreditsPerTeam,
-    sabotageCooldownSeconds: parsed.data.sabotageCooldownSeconds,
-  });
+    return NextResponse.json({
+      sabotageCreditsPerTeam: sabotageParsed.data.sabotageCreditsPerTeam,
+      sabotageCooldownSeconds: sabotageParsed.data.sabotageCooldownSeconds,
+    });
+  }
+
+  return NextResponse.json({ error: sabotageParsed.error.issues[0]?.message ?? "Invalid value" }, { status: 400 });
 }
 
 const actionSchema = z.object({ action: z.enum(["start", "pause", "end", "reset"]) });
@@ -138,7 +170,7 @@ export async function POST(req: NextRequest) {
         completed: false,
         completedAt: null,
         hintReleasedLevel: null,
-        helpCreditsRemaining: 2,
+        helpCreditsRemaining: current.helpCreditsPerTeam,
         sabotageCreditsRemaining: current.sabotageCreditsPerTeam,
         lastSabotageAt: null,
       },

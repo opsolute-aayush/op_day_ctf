@@ -15,6 +15,7 @@ import LevelsEditor from "@/components/admin/LevelsEditor";
 import GameControls from "@/components/admin/GameControls";
 import SabotageConfig from "@/components/admin/SabotageConfig";
 import SabotageLog from "@/components/admin/SabotageLog";
+import HelpConfig from "@/components/admin/HelpConfig";
 import SwapConfig from "@/components/admin/SwapConfig";
 import SwapLog from "@/components/admin/SwapLog";
 import AudioVideoSettings from "@/components/AudioVideoSettings";
@@ -269,6 +270,7 @@ export default function AdminPage() {
                 <GameControls onChanged={() => setRefreshKey((k) => k + 1)} />
               </div>
               <div className="space-y-6">
+                <HelpConfig onChanged={() => setRefreshKey((k) => k + 1)} />
                 <SabotageConfig onChanged={() => setRefreshKey((k) => k + 1)} />
                 <SwapConfig onChanged={() => setRefreshKey((k) => k + 1)} />
               </div>
