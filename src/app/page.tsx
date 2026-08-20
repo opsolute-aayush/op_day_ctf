@@ -2,6 +2,7 @@ import Link from "next/link";
 import GlitchTitle from "@/components/GlitchTitle";
 import TerminalPanel from "@/components/TerminalPanel";
 import NeonButton from "@/components/NeonButton";
+import ReportIssueButton from "@/components/ReportIssueButton";
 
 // CSS stagger (fade-slide-in + animationDelay), not Framer Motion. See
 // RouteTransition.tsx for why this page can't depend on JS to become visible.
@@ -53,6 +54,8 @@ export default function LandingPage() {
           </Link>
         </div>
       </div>
+
+      <ReportIssueButton />
     </main>
   );
 }

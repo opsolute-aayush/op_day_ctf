@@ -18,6 +18,7 @@ import PlayerStatsPanel from "@/components/PlayerStatsPanel";
 import GameRules from "@/components/GameRules";
 import SabotageModal from "@/components/SabotageModal";
 import ColorPicker from "@/components/ColorPicker";
+import ReportIssueButton from "@/components/ReportIssueButton";
 import { getPlayerName } from "@/lib/playerIdentity";
 import { startIntroMusic, stopIntroMusic } from "@/lib/sfx";
 import { playHelpFeedback, playWrongWordFeedback, playRightFeedback, playAlertFeedback } from "@/lib/gameFeedback";
@@ -183,6 +184,7 @@ export default function PlayPage() {
 
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-1 gap-6 px-4 py-8 lg:grid-cols-[260px_1fr_320px] lg:items-start">
+      <ReportIssueButton />
       {status.activeSabotage && <SabotageModal sabotage={status.activeSabotage} onResolved={refresh} />}
 
       <aside className="lg:sticky lg:top-8 lg:order-1">
