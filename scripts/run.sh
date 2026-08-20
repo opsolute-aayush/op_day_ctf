@@ -35,6 +35,7 @@ fi
 echo "==> Syncing database schema..."
 npx prisma generate >/dev/null
 npx prisma db push >/dev/null
+npx tsx prisma/seed-cipher-hints.ts >/dev/null
 
 PORT="${PORT:-3000}"
 URL="http://localhost:${PORT}"

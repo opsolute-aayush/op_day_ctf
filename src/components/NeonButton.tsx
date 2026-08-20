@@ -3,7 +3,7 @@
 import { forwardRef } from "react";
 import { motion, type HTMLMotionProps } from "framer-motion";
 
-type Variant = "primary" | "ghost" | "danger" | "cyan";
+type Variant = "primary" | "ghost" | "danger" | "cyan" | "amber" | "magenta";
 
 interface NeonButtonProps extends Omit<HTMLMotionProps<"button">, "ref"> {
   variant?: Variant;
@@ -17,6 +17,10 @@ const variantClasses: Record<Variant, string> = {
   danger:
     "bg-danger-400/10 border-danger-400 text-danger-400 hover:bg-danger-400/20 focus-visible:ring-danger-400",
   cyan: "bg-cyan-400/10 border-cyan-400 text-cyan-400 hover:bg-cyan-400/20 focus-visible:ring-cyan-400",
+  amber:
+    "bg-amber-400/10 border-amber-400 text-amber-400 hover:bg-amber-400/20 focus-visible:ring-amber-400",
+  magenta:
+    "bg-magenta-400/10 border-magenta-400 text-magenta-400 hover:bg-magenta-400/20 focus-visible:ring-magenta-400",
 };
 
 const NeonButton = forwardRef<HTMLButtonElement, NeonButtonProps>(

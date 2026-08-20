@@ -32,6 +32,14 @@ interface LevelDraft {
   password: string;
 }
 
+// Severity ramp for the difficulty buttons: cool to hot as the cipher gets harder.
+const DIFFICULTY_VARIANT: Record<Difficulty, "cyan" | "amber" | "danger" | "magenta"> = {
+  easy: "cyan",
+  medium: "amber",
+  hard: "danger",
+  intense: "magenta",
+};
+
 function toDraft(level: Level): LevelDraft {
   return {
     locationClue: level.locationClue,
@@ -136,10 +144,6 @@ function CipherSelector() {
                 {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               </button>
             </div>
-            <p className="text-xs text-neon-100/30">
-              When a technique needs a grid or key a team can&apos;t guess, it&apos;s already appended above. Copy
-              the whole box into Ye Lee.
-            </p>
             {methodUsed && (
               <p className="text-xs text-cyan-400/80">
                 <span className="text-neon-100/40">Method used (admin only, never shown to teams):</span>{" "}
@@ -152,7 +156,7 @@ function CipherSelector() {
             {(["easy", "medium", "hard", "intense"] as const).map((difficulty) => (
               <NeonButton
                 key={difficulty}
-                variant={difficulty === "easy" ? "cyan" : "ghost"}
+                variant={DIFFICULTY_VARIANT[difficulty]}
                 onClick={() => runDifficulty(difficulty)}
                 disabled={!password.trim()}
                 className="px-2 py-1.5 text-xs capitalize"
@@ -264,23 +268,6 @@ export default function LevelsEditor({ onChanged }: { onChanged: () => void }) {
       </div>
 
       <div className="space-y-6">
-        <TerminalPanel title="how-this-works.txt" className="border-cyan-400/20">
-          <ol className="space-y-1 text-sm text-neon-100/70">
-            <li>
-              <span className="text-cyan-400">1.</span> Click <span className="text-cyan-400">Add Team</span> once
-              per physical group. No typing needed, each gets a number automatically.
-            </li>
-            <li>
-              <span className="text-cyan-400">2.</span> Pick a team and fill in its passwords, clues, words, and
-              final sentence.
-            </li>
-            <li>
-              <span className="text-cyan-400">3.</span> Head to <span className="text-cyan-400">Game Control</span>{" "}
-              to start the hunt once every team is configured.
-            </li>
-          </ol>
-        </TerminalPanel>
-
         <CipherSelector />
       </div>
     </div>

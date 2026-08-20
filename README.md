@@ -1,6 +1,7 @@
 # OP Day CTF
 
 [![Build and push Docker image](https://github.com/opsolute-aayush/op_day_ctf/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/opsolute-aayush/op_day_ctf/actions/workflows/docker-publish.yml)
+[![Docker Hub](https://img.shields.io/docker/v/aayushop/opday-ctf?sort=semver&label=docker&logo=docker)](https://hub.docker.com/r/aayushop/opday-ctf/tags)
 
 A physical + digital scavenger hunt. Teams decode a cipher, find hidden word cards, and race to build a final sentence. One self-contained Next.js app, no external services needed.
 

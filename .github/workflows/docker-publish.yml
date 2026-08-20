@@ -71,6 +71,7 @@ jobs:
           docker buildx build --platform linux/amd64 -f docker/Dockerfile \
             -t aayushop/opday-ctf:${{ inputs.version }} \
             -t aayushop/opday-ctf:latest \
+            --provenance=false \
             --push .
 
       - name: Delete older version tags from Docker Hub
