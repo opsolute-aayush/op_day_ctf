@@ -1,5 +1,7 @@
 # OP Day CTF
 
+[![Build and push Docker image](https://github.com/opsolute-aayush/op_day_ctf/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/opsolute-aayush/op_day_ctf/actions/workflows/docker-publish.yml)
+
 A hybrid physical/digital scavenger hunt. Teams decode a physical cipher, hunt for word cards hidden around a venue, and race to assemble a final sentence. One self-contained Next.js app — no external services required.
 
 ## Quick start
@@ -43,22 +45,9 @@ docker run -d -p 3000:3000 \
 
 Open `http://localhost:3000/admin` → **Create New Session**.
 
-**Running it on a different machine/VM without cloning the repo:** build once, push to a registry, then just pull and run.
+The `-v opday_data:/app/data` volume keeps the SQLite file (and the `JWT_SECRET` you pass in) across restarts.
 
-```bash
-# once, on a machine with this repo
-docker build -f docker/Dockerfile -t youruser/opday-ctf .
-docker push youruser/opday-ctf
-
-# on the other machine/VM — no repo needed
-echo "JWT_SECRET=$(openssl rand -base64 48)" > .env
-docker pull youruser/opday-ctf
-docker run -d -p 80:3000 --env-file .env -v opday_data:/app/data youruser/opday-ctf
-```
-
-The `--env-file .env` keeps the same `JWT_SECRET` across restarts — regenerating it every run logs everyone out.
-
-Want a real domain, HTTPS, and auto-updates instead of plain HTTP? See **Deploying on a VM** below.
+Want to run this on a different machine/VM without cloning the repo, a real domain, HTTPS, and auto-updates instead of plain HTTP? See **Deploying on a VM** below — it already builds and pushes `aayushop/opday-ctf` for you via GitHub Actions.
 
 ### 3. Docker Compose (recommended — works the same on a laptop or a VM)
 
@@ -141,13 +130,20 @@ docker compose -p opday-ctf -f docker-compose.prod.yml up -d
 
 Open `https://aegios.co.in/admin` → **Create New Session**.
 
-**Deploying a change from then on is just this — nothing to run on the VM:**
+**Deploying a change from then on is automatic** — `.github/workflows/docker-publish.yml` builds and pushes `aayushop/opday-ctf:latest` on every push to `main`. Watchtower notices the new image within 5 minutes and pulls + restarts the app on its own. Nothing to run on the VM, and nothing to run on your own machine either.
+
+The workflow needs two repository secrets set once, under **Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+|---|---|
+| `DOCKERHUB_USERNAME` | Docker Hub username (`aayushop`) |
+| `DOCKERHUB_TOKEN` | A Docker Hub **access token** (Account Settings → Personal access tokens) — not the account password |
+
+To build and push by hand instead (e.g. CI is down, or you're testing before those secrets are set):
 
 ```bash
-docker build --platform linux/amd64 -f docker/Dockerfile -t aayushop/opday-ctf . && docker push aayushop/opday-ctf
+docker buildx build --platform linux/amd64 -f docker/Dockerfile -t aayushop/opday-ctf:latest --push .
 ```
-
-Watchtower notices the new image within 5 minutes and pulls + restarts the app on its own.
 
 **What's running:**
 
@@ -191,6 +187,19 @@ There's no admin password to configure — each session generates its own when c
 - **Sound effects, video clips, background music** — drop files into `public/sounds/<category>/` or `public/videos/<category>/` (`wrong_pass`, `right_pass`, `help`, `winning`, `hacking`, `alert`, plus `intro`/`outro` for music) and they play automatically. No code changes needed. `hacking` plays for whichever team just launched a sabotage or executed a swap; `alert` plays for the team on the other end of it.
 - **Player settings** at `/settings` — mute or adjust volume for sound/video/music, per device.
 - **Non-blocking wins** — a team finishing never stops the hunt for anyone else. Only the admin's **End Game** does that.
+
+## Cipher
+
+Every level has a **Ye Lee** field, admin-typed like the location clue or hint — but instead of describing this level, it's a Base64 string that decodes to the *next* level's password. A team sees it the moment they unlock the current level, and must decode it to know what to type for the one after.
+
+The admin dashboard's Team Management tab has a **cipher-selector.sh** tool to generate that string: type the real word, hit **Easy**, and it runs the string through 4 layers, innermost to outermost:
+
+1. **Caesar shift +5** — every letter shifts 5 positions in the alphabet (case preserved), e.g. `A → F`. Applied to the real word plus 4 auto-generated decoy words of the same length.
+2. **Hex** — each shifted word is converted to its ASCII hex representation.
+3. **Shuffle + binary** — the 5 hex strings are shuffled into a random order (so the real word's position among the 5 is never fixed), then each is converted to an 8-bit binary sequence.
+4. **Base64** — the 5 binary strings are joined with a single space and the whole thing is Base64-encoded — that's the string pasted into Ye Lee.
+
+The tool also shows which of the 5 shuffled positions holds the real word and what the decoys were — admin reference only, never shown to teams. See `src/lib/cipher.ts` for the implementation and `cipher.md` for the original spec. (The Medium/Hard/Intense tiers are placeholders for future encoding schemes — only Easy is implemented today.)
 
 ## Security
 
