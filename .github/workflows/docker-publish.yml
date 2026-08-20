@@ -1,16 +1,5 @@
 name: Build and push Docker image
 
-# Runs the exact same command used to release by hand — see README.md's
-# "Deploying a change" section:
-#
-#   docker buildx build --platform linux/amd64 -f docker/Dockerfile \
-#     -t aayushop/opday-ctf:latest --push .
-#
-# linux/amd64 because that's what docker-compose.prod.yml and the EC2 host
-# run — GitHub's ubuntu-latest runner is already amd64, so this builds
-# natively (no QEMU emulation needed, unlike doing this on Apple Silicon).
-# Watchtower on the host polls the "latest" tag every 5 minutes and
-# redeploys on its own once a new image lands.
 on:
   push:
     branches: [main]
