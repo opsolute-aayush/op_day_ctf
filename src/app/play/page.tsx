@@ -318,6 +318,7 @@ export default function PlayPage() {
             let state: LevelCardState = "locked";
             if (unlocked) state = "completed";
             else if (levelNumber === status.currentLevel) state = "active";
+            const isCurrentLevel = levelNumber === status.currentLevel;
 
             return (
               <LevelCard
@@ -327,7 +328,8 @@ export default function PlayPage() {
                 state={state}
                 locationClue={clue?.locationClue}
                 wordReward={clue?.wordReward}
-                hint={state === "active" ? status.activeHint : null}
+                hint={isCurrentLevel ? status.activeHint : null}
+                isCurrentLevel={isCurrentLevel}
                 cipherMessage={clue?.cipherMessage}
                 hintAvailable={status.hintAvailable}
                 helpCreditsRemaining={status.helpCreditsRemaining}

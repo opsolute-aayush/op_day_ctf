@@ -25,6 +25,11 @@ interface LevelCardProps {
   onRequestHint?: () => void;
   requestingHint?: boolean;
   onVerifyWord?: (levelNumber: number, word: string) => Promise<WordVerifyResult>;
+  // True while this level is still the team's currentLevel (password
+  // solved but word not yet verified counts as "still current"). Hints
+  // stay available for the whole time a level is current, not just while
+  // its password is unsolved.
+  isCurrentLevel?: boolean;
 }
 
 export default function LevelCard({
@@ -41,9 +46,48 @@ export default function LevelCard({
   onRequestHint,
   requestingHint,
   onVerifyWord,
+  isCurrentLevel,
 }: LevelCardProps) {
   const clickable = state === "active";
-  const showHelpButton = state === "active" && !hint && hintAvailable && (helpCreditsRemaining ?? 0) > 0;
+  const showHelpButton = isCurrentLevel && !hint && hintAvailable && (helpCreditsRemaining ?? 0) > 0;
+
+  const hintSection = (hint || showHelpButton) && (
+    <AnimatePresence mode="wait">
+      {hint ? (
+        <motion.p
+          key="hint"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="flex items-start gap-1.5 text-xs text-cyan-400"
+        >
+          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Hint: {hint}
+        </motion.p>
+      ) : showHelpButton ? (
+        <motion.button
+          key="help-button"
+          type="button"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRequestHint?.();
+          }}
+          disabled={requestingHint}
+          data-sfx-exempt
+          className="flex items-center gap-1.5 rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-cyan-400 hover:bg-cyan-400/20 disabled:opacity-50"
+        >
+          {requestingHint ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <LifeBuoy className="h-3.5 w-3.5" />
+          )}
+          Ask for a hint ({helpCreditsRemaining} left)
+        </motion.button>
+      ) : null}
+    </AnimatePresence>
+  );
 
   const [wordDraft, setWordDraft] = useState("");
   const [wordError, setWordError] = useState<string | null>(null);
@@ -103,41 +147,7 @@ export default function LevelCard({
         <div className="mt-2 space-y-2">
           <p className="text-sm text-neon-100/80">Password required to decrypt this level.</p>
 
-          <AnimatePresence mode="wait">
-            {hint ? (
-              <motion.p
-                key="hint"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="flex items-start gap-1.5 text-xs text-cyan-400"
-              >
-                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Hint: {hint}
-              </motion.p>
-            ) : showHelpButton ? (
-              <motion.button
-                key="help-button"
-                type="button"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRequestHint?.();
-                }}
-                disabled={requestingHint}
-                data-sfx-exempt
-                className="flex items-center gap-1.5 rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-cyan-400 hover:bg-cyan-400/20 disabled:opacity-50"
-              >
-                {requestingHint ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <LifeBuoy className="h-3.5 w-3.5" />
-                )}
-                Ask for a hint ({helpCreditsRemaining} left)
-              </motion.button>
-            ) : null}
-          </AnimatePresence>
+          {hintSection}
 
           <span className="mt-1 inline-block text-xs font-semibold uppercase tracking-widest text-amber-400">
             Tap to enter password →
@@ -165,6 +175,8 @@ export default function LevelCard({
               </div>
             </div>
           )}
+
+          {hintSection}
 
           <AnimatePresence mode="wait">
             {wordReward ? (
