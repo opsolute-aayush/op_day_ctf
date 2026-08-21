@@ -49,11 +49,14 @@ export default function LevelCard({
   isCurrentLevel,
 }: LevelCardProps) {
   const clickable = state === "active";
-  const showHelpButton = isCurrentLevel && !hint && hintAvailable && (helpCreditsRemaining ?? 0) > 0;
+  // The credit pool is a flat, level-independent budget: the button stays
+  // clickable (spending another credit and re-revealing the hint) for as
+  // long as credits remain, even after this level's hint has been shown.
+  const showHelpButton = isCurrentLevel && hintAvailable && (helpCreditsRemaining ?? 0) > 0;
 
   const hintSection = (hint || showHelpButton) && (
-    <AnimatePresence mode="wait">
-      {hint ? (
+    <div className="space-y-2">
+      {hint && (
         <motion.p
           key="hint"
           initial={{ opacity: 0, height: 0 }}
@@ -62,7 +65,8 @@ export default function LevelCard({
         >
           <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Hint: {hint}
         </motion.p>
-      ) : showHelpButton ? (
+      )}
+      {showHelpButton && (
         <motion.button
           key="help-button"
           type="button"
@@ -85,8 +89,8 @@ export default function LevelCard({
           )}
           Ask for a hint ({helpCreditsRemaining} left)
         </motion.button>
-      ) : null}
-    </AnimatePresence>
+      )}
+    </div>
   );
 
   const [wordDraft, setWordDraft] = useState("");

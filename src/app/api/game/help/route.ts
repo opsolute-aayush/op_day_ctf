@@ -40,25 +40,23 @@ export async function POST() {
     return NextResponse.json({ error: "No hint is available for this level." }, { status: 400 });
   }
 
-  // Already revealed (e.g. the admin gave it for free), so don't charge a credit again.
-  const alreadyRevealed = progress.hintReleasedLevel === progress.currentLevel;
-
-  if (!alreadyRevealed) {
-    if (progress.helpCreditsRemaining <= 0) {
-      return NextResponse.json({ error: "You're out of hint requests for this hunt." }, { status: 403 });
-    }
-    await prisma.teamProgress.update({
-      where: { teamId: teamAuth.teamId },
-      data: {
-        hintReleasedLevel: progress.currentLevel,
-        helpCreditsRemaining: { decrement: 1 },
-      },
-    });
-    await logActivity(teamAuth.sessionId, teamAuth.teamId, "HELP_USED", {
-      levelNumber: progress.currentLevel,
-      remaining: progress.helpCreditsRemaining - 1,
-    });
+  // Every request spends a credit and re-reveals the hint, even if this
+  // level's hint was already shown before — the credit pool is a flat,
+  // level-independent budget, not a one-time-per-level unlock.
+  if (progress.helpCreditsRemaining <= 0) {
+    return NextResponse.json({ error: "You're out of hint requests for this hunt." }, { status: 403 });
   }
+  await prisma.teamProgress.update({
+    where: { teamId: teamAuth.teamId },
+    data: {
+      hintReleasedLevel: progress.currentLevel,
+      helpCreditsRemaining: { decrement: 1 },
+    },
+  });
+  await logActivity(teamAuth.sessionId, teamAuth.teamId, "HELP_USED", {
+    levelNumber: progress.currentLevel,
+    remaining: progress.helpCreditsRemaining - 1,
+  });
 
   const status = await buildTeamStatus(teamAuth.teamId);
   return NextResponse.json({ status });
