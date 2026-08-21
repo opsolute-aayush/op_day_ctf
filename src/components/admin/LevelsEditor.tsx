@@ -282,6 +282,7 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
 
   const [levels, setLevels] = useState<Level[]>([]);
   const [drafts, setDrafts] = useState<Record<number, LevelDraft>>({});
+  const [genNote, setGenNote] = useState<Record<number, string>>({});
   const [savingLevel, setSavingLevel] = useState<number | null>(null);
   const [newLevel, setNewLevel] = useState<LevelDraft>({
     locationClue: "",
@@ -331,6 +332,37 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
 
   function updateDraft(levelNumber: number, patch: Partial<LevelDraft>) {
     setDrafts((prev) => ({ ...prev, [levelNumber]: { ...prev[levelNumber], ...patch } }));
+  }
+
+  // Ye Lee for level N must decode to level N+1's password, or the puzzle is unsolvable. Generating
+  // it here (instead of the disconnected cipher-selector.sh scratchpad) reads that password straight
+  // out of the next level's own draft/newLevel.password field, so the two can never drift apart.
+  function generateCipherFor(levelNumber: number, difficulty: Difficulty) {
+    const isLast = levelNumber === levels.length;
+    const targetWord = isLast ? newLevel.password : drafts[levelNumber + 1]?.password ?? "";
+    if (!targetWord.trim()) {
+      setError(
+        isLast
+          ? "Type the password for the new level below first, then generate this level's Ye Lee from it."
+          : `Type Level ${levelNumber + 1}'s new password first, then generate this level's Ye Lee from it.`
+      );
+      return;
+    }
+    try {
+      const result = generateCipherForDifficulty(difficulty, targetWord);
+      const payload = result.teamReference ? `${result.base64}\n\n${result.teamReference}` : result.base64;
+      updateDraft(levelNumber, { cipherMessage: payload });
+      setGenNote((prev) => ({
+        ...prev,
+        [levelNumber]: `${result.methodLabel}. Decodes to "${targetWord.trim().toUpperCase()}" — matches ${
+          isLast ? "the new level's" : `Level ${levelNumber + 1}'s`
+        } password. Self-verified ✓`,
+      }));
+      setError(null);
+    } catch (err) {
+      setGenNote((prev) => ({ ...prev, [levelNumber]: "" }));
+      setError(err instanceof Error ? err.message : "Failed to encrypt.");
+    }
   }
 
   async function saveSentence() {
@@ -493,17 +525,35 @@ function TeamPuzzleEditor({ teamId, onChanged }: { teamId: string; onChanged: ()
               />
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs uppercase tracking-widest text-neon-400/80">Ye Lee</label>
-                <textarea
-                  rows={2}
-                  value={draft.cipherMessage}
-                  onChange={(e) => updateDraft(level.levelNumber, { cipherMessage: e.target.value })}
-                  placeholder="Required: encoded password for the NEXT level, paste from cipher-selector.sh"
-                  className="w-full resize-none rounded-md border border-panel-border bg-void-2 px-3 py-2.5 font-mono text-xs text-neon-100 placeholder:text-neon-100/30 outline-none focus:border-neon-500 focus:ring-1 focus:ring-neon-500"
-                />
                 <p className="text-xs text-neon-100/30">
                   Shown to this team once they unlock this level. It&apos;s the clue for the level after this one, not
-                  this level&apos;s own password.
+                  this level&apos;s own password. Generate it below from{" "}
+                  {level.levelNumber === levels.length ? "the new level's" : `Level ${level.levelNumber + 1}'s`}{" "}
+                  password so the two always match.
                 </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {(["easy", "medium", "hard", "intense"] as const).map((difficulty) => (
+                    <NeonButton
+                      key={difficulty}
+                      variant={DIFFICULTY_VARIANT[difficulty]}
+                      onClick={() => generateCipherFor(level.levelNumber, difficulty)}
+                      className="px-2 py-1.5 text-xs capitalize"
+                    >
+                      {difficulty}
+                    </NeonButton>
+                  ))}
+                </div>
+                <textarea
+                  readOnly
+                  rows={2}
+                  value={draft.cipherMessage}
+                  placeholder="Generate above, or paste manually if you must"
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="w-full resize-none rounded-md border border-panel-border bg-void-2 px-3 py-2.5 font-mono text-xs text-neon-100 placeholder:text-neon-100/30 outline-none focus:border-neon-500 focus:ring-1 focus:ring-neon-500"
+                />
+                {genNote[level.levelNumber] && (
+                  <p className="text-xs text-cyan-400/80">{genNote[level.levelNumber]}</p>
+                )}
               </div>
               <div className="flex items-center gap-3 pt-1">
                 <NeonButton onClick={() => saveLevel(level.levelNumber)} disabled={savingLevel === level.levelNumber}>
